@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UR Esports Training Report Preview</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #05070b;
+        --panel: rgba(11, 17, 28, 0.72);
+        --panel-strong: rgba(14, 22, 35, 0.9);
+        --line: rgba(159, 203, 255, 0.14);
+        --line-hot: rgba(111, 190, 255, 0.46);
+        --text: #eef6ff;
+        --muted: #8494a8;
+        --cyan: #68e8ff;
+        --blue: #5379ff;
+        --violet: #8b5cff;
+        --green: #35e59d;
+        --rose: #ff597d;
+        --amber: #ffc45c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        overflow-x: hidden;
+        background:
+          radial-gradient(circle at 72% 18%, rgba(104, 232, 255, 0.16), transparent 30rem),
+          radial-gradient(circle at 24% 78%, rgba(83, 121, 255, 0.15), transparent 34rem),
+          linear-gradient(145deg, #05070b 0%, #07101a 48%, #020407 100%);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: 0;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+        background-size: 72px 72px;
+        mask-image: radial-gradient(circle at 62% 26%, black, transparent 70%);
+        opacity: 0.38;
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(90deg, transparent, rgba(104, 232, 255, 0.055), transparent);
+        transform: translateX(-100%);
+        animation: scan 8s ease-in-out infinite;
+      }
+
+      #flow-canvas {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        opacity: 0.86;
+      }
+
+      .shell {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        padding: 28px 18px;
+        border-right: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(8, 13, 22, 0.78), rgba(6, 8, 14, 0.5));
+        backdrop-filter: blur(24px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 6px 8px 28px;
+      }
+
+      .brand-mark {
+        width: 42px;
+        height: 42px;
+        border: 1px solid rgba(216, 230, 243, 0.24);
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.18), rgba(104, 232, 255, 0.08)),
+          rgba(12, 20, 34, 0.9);
+        box-shadow: 0 0 28px rgba(104, 232, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      }
+
+      .brand-mark img {
+        width: 28px;
+        height: 28px;
+        object-fit: contain;
+        filter: drop-shadow(0 0 10px rgba(104, 232, 255, 0.52));
+      }
+
+      .brand-kicker,
+      .panel-note,
+      .section-kicker,
+      .date-chip {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .brand-title {
+        margin: 2px 0 0;
+        font-size: 15px;
+        font-weight: 750;
+      }
+
+      .nav {
+        display: grid;
+        gap: 8px;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 42px;
+        padding: 0 14px;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        color: #a4b3c4;
+      }
+
+      .nav-item::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(164, 179, 196, 0.38);
+      }
+
+      .nav-item.active {
+        color: var(--text);
+        border-color: rgba(104, 232, 255, 0.28);
+        background: linear-gradient(90deg, rgba(104, 232, 255, 0.13), rgba(83, 121, 255, 0.05));
+      }
+
+      .nav-item.active::before {
+        background: var(--cyan);
+        box-shadow: 0 0 16px var(--cyan);
+      }
+
+      .main {
+        padding: 30px clamp(22px, 3.8vw, 52px) 44px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 26px;
+      }
+
+      .page-title {
+        margin: 0;
+        font-size: clamp(34px, 4.4vw, 62px);
+        line-height: 0.95;
+        font-weight: 820;
+      }
+
+      .page-subtitle {
+        max-width: 700px;
+        margin: 12px 0 0;
+        color: #9eb0c4;
+        line-height: 1.7;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .date-chip,
+      .sync-button {
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 0 14px;
+      }
+
+      .date-chip {
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.035);
+        backdrop-filter: blur(18px);
+      }
+
+      .sync-button {
+        border: 1px solid rgba(104, 232, 255, 0.32);
+        color: #061018;
+        background: linear-gradient(135deg, #f9fdff, #8cefff 52%, #6f8cff);
+        box-shadow: 0 0 28px rgba(104, 232, 255, 0.18);
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        margin: 28px 0 18px;
+      }
+
+      .metric,
+      .panel,
+      .player-card,
+      .table-wrap {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025)),
+          var(--panel);
+        backdrop-filter: blur(22px);
+        box-shadow: 0 18px 54px rgba(0, 0, 0, 0.22);
+      }
+
+      .metric::after,
+      .panel::after,
+      .player-card::after,
+      .table-wrap::after {
+        content: "";
+        position: absolute;
+        inset: -1px;
+        pointer-events: none;
+        background: linear-gradient(110deg, transparent 0%, rgba(255, 255, 255, 0.18) 45%, transparent 62%);
+        transform: translateX(-120%);
+        animation: glint 6.3s ease-in-out infinite;
+      }
+
+      .metric {
+        min-height: 112px;
+        border-radius: 18px;
+        padding: 16px;
+      }
+
+      .metric-label {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .metric-value {
+        margin: 12px 0 0;
+        font-size: 34px;
+        line-height: 1;
+        font-weight: 820;
+      }
+
+      .metric-detail {
+        margin: 9px 0 0;
+        color: #90a2b8;
+        font-size: 12px;
+      }
+
+      .section-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.95fr) minmax(440px, 1.05fr);
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .panel {
+        min-height: 390px;
+        border-radius: 24px;
+        padding: 20px;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .panel-title {
+        margin: 0;
+        font-size: 19px;
+        font-weight: 760;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        height: 28px;
+        padding: 0 10px;
+        border: 1px solid rgba(104, 232, 255, 0.18);
+        border-radius: 999px;
+        color: var(--cyan);
+        background: rgba(104, 232, 255, 0.08);
+        font-size: 12px;
+      }
+
+      .issue-chart {
+        display: grid;
+        gap: 13px;
+      }
+
+      .issue-row {
+        display: grid;
+        grid-template-columns: 58px 1fr 42px;
+        align-items: center;
+        gap: 12px;
+        color: #b7c6d7;
+        font-size: 13px;
+      }
+
+      .issue-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--c);
+        box-shadow: 0 0 14px var(--c);
+      }
+
+      .bar-track {
+        height: 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        height: 100%;
+        width: var(--w);
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--c), rgba(255, 255, 255, 0.74));
+        box-shadow: 0 0 22px color-mix(in srgb, var(--c) 64%, transparent);
+        transform-origin: left;
+        animation: grow 1.1s ease both;
+      }
+
+      .drill-preview {
+        margin-top: 22px;
+        padding: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .mini-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .mini-cell {
+        min-height: 58px;
+        border-radius: 14px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .mini-cell strong {
+        display: block;
+        font-size: 18px;
+      }
+
+      .mini-cell span {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .players-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .player-card {
+        min-height: 260px;
+        border-radius: 22px;
+        padding: 16px;
+      }
+
+      .player-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 15px;
+        display: grid;
+        place-items: center;
+        color: #061018;
+        font-weight: 820;
+        background: linear-gradient(135deg, #f9fdff, #68e8ff 58%, #6f8cff);
+        box-shadow: 0 0 24px rgba(104, 232, 255, 0.22);
+      }
+
+      .player-name {
+        margin: 16px 0 0;
+        font-size: 19px;
+        font-weight: 780;
+      }
+
+      .mistake-total {
+        margin: 8px 0 2px;
+        font-size: 42px;
+        line-height: 1;
+        font-weight: 820;
+      }
+
+      .breakdown {
+        display: grid;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .breakdown-row {
+        display: grid;
+        grid-template-columns: 42px 1fr 24px;
+        align-items: center;
+        gap: 8px;
+        color: #a8b8cb;
+        font-size: 12px;
+      }
+
+      .thin-track {
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        overflow: hidden;
+      }
+
+      .thin-fill {
+        height: 100%;
+        width: var(--w);
+        border-radius: inherit;
+        background: var(--c);
+      }
+
+      .table-wrap {
+        border-radius: 24px;
+        padding: 0;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 15px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        text-align: left;
+        font-size: 13px;
+      }
+
+      th {
+        color: #7f91a7;
+        font-weight: 650;
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      td {
+        color: #c4d1df;
+      }
+
+      tr {
+        transition: background 0.18s ease, transform 0.18s ease;
+      }
+
+      tbody tr:hover {
+        background: rgba(255, 255, 255, 0.045);
+      }
+
+      .map-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .map-tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        color: var(--color);
+        background: color-mix(in srgb, var(--color) 14%, transparent);
+      }
+
+      .result-win {
+        color: var(--green);
+      }
+
+      .result-loss {
+        color: var(--rose);
+      }
+
+      .issue-count {
+        color: var(--amber);
+        font-weight: 750;
+      }
+
+      @media (max-width: 1200px) {
+        .metrics,
+        .players-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .section-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 980px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: relative;
+          height: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+      }
+
+      @media (max-width: 680px) {
+        .main {
+          padding: 22px 16px 36px;
+        }
+
+        .topbar {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .controls {
+          justify-content: flex-start;
+        }
+
+        .metrics,
+        .players-grid,
+        .mini-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .table-wrap {
+          overflow-x: auto;
+        }
+
+        table {
+          min-width: 760px;
+        }
+      }
+
+      @keyframes scan {
+        0%,
+        38% {
+          transform: translateX(-100%);
+        }
+        62%,
+        100% {
+          transform: translateX(100%);
+        }
+      }
+
+      @keyframes glint {
+        0%,
+        45% {
+          transform: translateX(-120%);
+        }
+        70%,
+        100% {
+          transform: translateX(120%);
+        }
+      }
+
+      @keyframes grow {
+        from {
+          transform: scaleX(0);
+        }
+        to {
+          transform: scaleX(1);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="flow-canvas"></canvas>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark"><img src="/logo.png" alt="UR" /></div>
+          <div>
+            <p class="brand-kicker">UR Esports</p>
+            <p class="brand-title">CS2 Data Center</p>
+          </div>
+        </div>
+        <nav class="nav" aria-label="Preview navigation">
+          <div class="nav-item">赛训总览</div>
+          <div class="nav-item">分部成员</div>
+          <div class="nav-item">近期比赛</div>
+          <div class="nav-item active">赛训报告</div>
+          <div class="nav-item">战术总表</div>
+          <div class="nav-item">数据管理</div>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="section-kicker">Training report visual preview</p>
+            <h1 class="page-title">赛训报告</h1>
+            <p class="page-subtitle">
+              保留现有 dashboard 数据结构，重做为玻璃质感、流动高光和更清晰的下钻入口。此页使用模拟数据，不调用接口。
+            </p>
+          </div>
+          <div class="controls">
+            <span class="date-chip">2026-05-29 → 2026-06-04</span>
+            <span class="date-chip">最近 7 天</span>
+            <button class="sync-button">立即同步</button>
+          </div>
+        </header>
+
+        <section class="metrics" aria-label="Overview metrics">
+          <article class="metric">
+            <p class="metric-label">训练赛场次</p>
+            <p class="metric-value">18</p>
+            <p class="metric-detail">match_summary.length</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">总回合数</p>
+            <p class="metric-value">436</p>
+            <p class="metric-detail">overview.rounds</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">胜场</p>
+            <p class="metric-value result-win">11</p>
+            <p class="metric-detail">generated result</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">负场</p>
+            <p class="metric-value result-loss">7</p>
+            <p class="metric-detail">generated result</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">地图胜率</p>
+            <p class="metric-value">61%</p>
+            <p class="metric-detail">map_stats aggregate</p>
+          </article>
+        </section>
+
+        <section class="section-grid">
+          <article class="panel" aria-label="Issue distribution preview">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">问题类型分布</h2>
+                <p class="panel-note">对应 `issue_distribution`，点击柱状项可进入选手分布下钻。</p>
+              </div>
+              <span class="chip">Drilldown ready</span>
+            </div>
+
+            <div class="issue-chart">
+              <div class="issue-row" style="--c: var(--amber)"><span class="issue-label"><i class="dot"></i>道具</span><div class="bar-track"><div class="bar-fill" style="--w: 82%; --c: var(--amber)"></div></div><strong>31</strong></div>
+              <div class="issue-row" style="--c: var(--rose)"><span class="issue-label"><i class="dot"></i>走位</span><div class="bar-track"><div class="bar-fill" style="--w: 68%; --c: var(--rose)"></div></div><strong>26</strong></div>
+              <div class="issue-row" style="--c: var(--blue)"><span class="issue-label"><i class="dot"></i>枪法</span><div class="bar-track"><div class="bar-fill" style="--w: 55%; --c: var(--blue)"></div></div><strong>21</strong></div>
+              <div class="issue-row" style="--c: var(--cyan)"><span class="issue-label"><i class="dot"></i>沟通</span><div class="bar-track"><div class="bar-fill" style="--w: 42%; --c: var(--cyan)"></div></div><strong>16</strong></div>
+              <div class="issue-row" style="--c: var(--violet)"><span class="issue-label"><i class="dot"></i>战术</span><div class="bar-track"><div class="bar-fill" style="--w: 37%; --c: var(--violet)"></div></div><strong>14</strong></div>
+            </div>
+
+            <div class="drill-preview">
+              <p class="panel-note">下钻弹层概念：道具问题 · 队员分布</p>
+              <div class="mini-grid">
+                <div class="mini-cell"><strong>9</strong><span>0z</span></div>
+                <div class="mini-cell"><strong>7</strong><span>gLong</span></div>
+                <div class="mini-cell"><strong>6</strong><span>drace</span></div>
+                <div class="mini-cell"><strong>5</strong><span>4ever</span></div>
+                <div class="mini-cell"><strong>4</strong><span>Doomer</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel" aria-label="Player mistake stats preview">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">选手失误统计</h2>
+                <p class="panel-note">对应 `player_stats`，保留五类问题细分和点击选手下钻逻辑。</p>
+              </div>
+              <span class="chip">5 active players</span>
+            </div>
+
+            <div class="players-grid">
+              <article class="player-card">
+                <div class="player-top"><div class="avatar">0z</div><span class="chip">IGL</span></div>
+                <p class="player-name">0z</p>
+                <p class="mistake-total">21</p>
+                <p class="panel-note">次失误</p>
+                <div class="breakdown">
+                  <div class="breakdown-row"><span>道具</span><div class="thin-track"><div class="thin-fill" style="--w: 78%; --c: var(--amber)"></div></div><span>9</span></div>
+                  <div class="breakdown-row"><span>走位</span><div class="thin-track"><div class="thin-fill" style="--w: 52%; --c: var(--rose)"></div></div><span>6</span></div>
+                  <div class="breakdown-row"><span>战术</span><div class="thin-track"><div class="thin-fill" style="--w: 45%; --c: var(--violet)"></div></div><span>5</span></div>
+                </div>
+              </article>
+              <article class="player-card">
+                <div class="player-top"><div class="avatar">gL</div><span class="chip">RIF</span></div>
+                <p class="player-name">gLong</p>
+                <p class="mistake-total">18</p>
+                <p class="panel-note">次失误</p>
+                <div class="breakdown">
+                  <div class="breakdown-row"><span>枪法</span><div class="thin-track"><div class="thin-fill" style="--w: 70%; --c: var(--blue)"></div></div><span>8</span></div>
+                  <div class="breakdown-row"><span>道具</span><div class="thin-track"><div class="thin-fill" style="--w: 56%; --c: var(--amber)"></div></div><span>7</span></div>
+                  <div class="breakdown-row"><span>沟通</span><div class="thin-track"><div class="thin-fill" style="--w: 28%; --c: var(--cyan)"></div></div><span>3</span></div>
+                </div>
+              </article>
+              <article class="player-card">
+                <div class="player-top"><div class="avatar">dr</div><span class="chip">AWP</span></div>
+                <p class="player-name">drace</p>
+                <p class="mistake-total">16</p>
+                <p class="panel-note">次失误</p>
+                <div class="breakdown">
+                  <div class="breakdown-row"><span>走位</span><div class="thin-track"><div class="thin-fill" style="--w: 74%; --c: var(--rose)"></div></div><span>7</span></div>
+                  <div class="breakdown-row"><span>枪法</span><div class="thin-track"><div class="thin-fill" style="--w: 42%; --c: var(--blue)"></div></div><span>4</span></div>
+                  <div class="breakdown-row"><span>道具</span><div class="thin-track"><div class="thin-fill" style="--w: 36%; --c: var(--amber)"></div></div><span>3</span></div>
+                </div>
+              </article>
+              <article class="player-card">
+                <div class="player-top"><div class="avatar">4e</div><span class="chip">RIF</span></div>
+                <p class="player-name">4ever</p>
+                <p class="mistake-total">13</p>
+                <p class="panel-note">次失误</p>
+                <div class="breakdown">
+                  <div class="breakdown-row"><span>沟通</span><div class="thin-track"><div class="thin-fill" style="--w: 62%; --c: var(--cyan)"></div></div><span>5</span></div>
+                  <div class="breakdown-row"><span>战术</span><div class="thin-track"><div class="thin-fill" style="--w: 46%; --c: var(--violet)"></div></div><span>4</span></div>
+                  <div class="breakdown-row"><span>走位</span><div class="thin-track"><div class="thin-fill" style="--w: 32%; --c: var(--rose)"></div></div><span>3</span></div>
+                </div>
+              </article>
+              <article class="player-card">
+                <div class="player-top"><div class="avatar">Do</div><span class="chip">RIF</span></div>
+                <p class="player-name">Doomer</p>
+                <p class="mistake-total">11</p>
+                <p class="panel-note">次失误</p>
+                <div class="breakdown">
+                  <div class="breakdown-row"><span>道具</span><div class="thin-track"><div class="thin-fill" style="--w: 52%; --c: var(--amber)"></div></div><span>4</span></div>
+                  <div class="breakdown-row"><span>枪法</span><div class="thin-track"><div class="thin-fill" style="--w: 48%; --c: var(--blue)"></div></div><span>4</span></div>
+                  <div class="breakdown-row"><span>沟通</span><div class="thin-track"><div class="thin-fill" style="--w: 30%; --c: var(--cyan)"></div></div><span>2</span></div>
+                </div>
+              </article>
+            </div>
+          </article>
+        </section>
+
+        <section class="table-wrap" aria-label="Match records preview">
+          <div class="panel-head" style="padding: 20px 20px 0">
+            <div>
+              <h2 class="panel-title">比赛记录</h2>
+              <p class="panel-note">对应 `match_summary`，保留日期、对手、回合、问题、地图结果字段。</p>
+            </div>
+            <span class="chip">Click row → report detail</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>对手</th>
+                <th>回合</th>
+                <th>问题</th>
+                <th>地图结果</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>2026-06-04</td>
+                <td>TYLOO Academy</td>
+                <td>62</td>
+                <td class="issue-count">12</td>
+                <td><div class="map-tags"><span class="map-tag" style="--color: var(--green)">MIR 13-8</span><span class="map-tag" style="--color: var(--rose)">NUK 10-13</span><span class="map-tag" style="--color: var(--green)">ANC 13-9</span></div></td>
+              </tr>
+              <tr>
+                <td>2026-06-03</td>
+                <td>Mongolz.A</td>
+                <td>48</td>
+                <td class="issue-count">9</td>
+                <td><div class="map-tags"><span class="map-tag" style="--color: var(--green)">INF 13-7</span><span class="map-tag" style="--color: var(--green)">D2 13-11</span></div></td>
+              </tr>
+              <tr>
+                <td>2026-06-02</td>
+                <td>dy2k</td>
+                <td>52</td>
+                <td class="issue-count">16</td>
+                <td><div class="map-tags"><span class="map-tag" style="--color: var(--rose)">ANB 9-13</span><span class="map-tag" style="--color: var(--green)">OVP 13-10</span></div></td>
+              </tr>
+              <tr>
+                <td>2026-06-01</td>
+                <td>Rare Atom.Y</td>
+                <td>57</td>
+                <td class="issue-count">11</td>
+                <td><div class="map-tags"><span class="map-tag" style="--color: var(--green)">TRN 13-6</span><span class="map-tag" style="--color: var(--rose)">MIR 11-13</span><span class="map-tag" style="--color: var(--green)">NKE 13-8</span></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const canvas = document.getElementById("flow-canvas");
+      const ctx = canvas.getContext("2d");
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let width = 0;
+      let height = 0;
+      let points = [];
+
+      function resize() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        points = Array.from({ length: Math.min(86, Math.floor(width / 18)) }, (_, index) => ({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          speed: 0.18 + Math.random() * 0.48,
+          phase: Math.random() * Math.PI * 2,
+          size: index % 9 === 0 ? 1.8 : 1,
+        }));
+      }
+
+      function draw(time) {
+        ctx.clearRect(0, 0, width, height);
+        const t = time * 0.001;
+        for (const point of points) {
+          point.x += point.speed;
+          point.y += Math.sin(t + point.phase) * 0.16;
+          if (point.x > width + 40) {
+            point.x = -40;
+            point.y = Math.random() * height;
+          }
+
+          const tail = 104 + Math.sin(t + point.phase) * 38;
+          const gradient = ctx.createLinearGradient(point.x - tail, point.y, point.x, point.y);
+          gradient.addColorStop(0, "rgba(104, 232, 255, 0)");
+          gradient.addColorStop(1, "rgba(104, 232, 255, 0.28)");
+          ctx.strokeStyle = gradient;
+          ctx.lineWidth = point.size;
+          ctx.beginPath();
+          ctx.moveTo(point.x - tail, point.y);
+          ctx.lineTo(point.x, point.y);
+          ctx.stroke();
+        }
+
+        if (!reduceMotion) requestAnimationFrame(draw);
+      }
+
+      resize();
+      window.addEventListener("resize", resize);
+      if (!reduceMotion) requestAnimationFrame(draw);
+      else draw(0);
+    </script>
+  </body>
+</html>

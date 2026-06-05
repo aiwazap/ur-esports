@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Build output
+frontend/dist/
+.vite-cache/
+
+# Environment
+.env
+backend/.env
+*.env.local
+
+# Database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+backend/data/*.db*
+
+# Uploads (user data — back up separately)
+uploads/
+backend/uploads/
+*.tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# Logs
+*.log
+logs/
+pm2-*.log
+
+# Python venv
+backend/venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Sync cache
+tencent_sync/
+backend/tencent_sync/
