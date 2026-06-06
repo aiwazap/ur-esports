@@ -134,6 +134,63 @@ function UserFormModal({ mode, init, onClose, onSave, error }) {
 }
 
 /* ================================================================
+   赛程表单（创建 / 编辑复用）
+   ================================================================ */
+function ScheduleForm({ init, onSave, onClose }) {
+  const isEdit = !!init.editId;
+  const [f, setF] = useState(init.editId ? { ...init } : { match_date: '', match_time: '', opponent: '', event_name: '', match_type: 'official', bo_format: 'BO1', notes: '', division: 'cs2', location_type: 'online', source_link: '', stage: '', region: '' });
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!f.match_date || !f.opponent) return;
+    onSave(f);
+  };
+
+  const field = (label, key, opts = {}) => (
+    <div>
+      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      {opts.options ? (
+        <select value={f[key] || ''} onChange={e => setF({ ...f, [key]: e.target.value })}
+          className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2 text-white text-xs focus:border-ur-cyan focus:outline-none cursor-pointer">
+          {opts.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      ) : (
+        <input type={opts.type || 'text'} value={f[key] || ''} onChange={e => setF({ ...f, [key]: e.target.value })}
+          placeholder={opts.placeholder || ''} className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2 text-white text-xs focus:border-ur-cyan focus:outline-none placeholder:text-gray-600" />
+      )}
+    </div>
+  );
+
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        {field('日期 *', 'match_date', { type: 'date' })}
+        {field('时间', 'match_time', { type: 'time' })}
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {field('对手 *', 'opponent', { placeholder: '对手名称' })}
+        {field('赛事名称', 'event_name', { placeholder: '如 IEM Chengdu 2026' })}
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        {field('赛制', 'bo_format', { options: [{ value: 'BO1', label: 'BO1' }, { value: 'BO3', label: 'BO3' }, { value: 'BO5', label: 'BO5' }] })}
+        {field('类型', 'match_type', { options: [{ value: 'official', label: '正式赛' }, { value: 'scrim', label: '训练赛' }] })}
+        {field('方式', 'location_type', { options: [{ value: 'online', label: '线上' }, { value: 'offline', label: '线下' }, { value: 'hybrid', label: '混合' }] })}
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {field('阶段', 'stage', { placeholder: '如 Qualifier / 海选' })}
+        {field('区域', 'region', { placeholder: '如 Asia / China' })}
+      </div>
+      {field('来源链接', 'source_link', { placeholder: 'https://liquipedia.net/...' })}
+      {field('备注', 'notes', { placeholder: '额外说明' })}
+      <div className="flex gap-3 pt-2">
+        <button type="button" onClick={onClose} className="flex-1 py-2 text-xs border border-ur-border rounded-lg text-gray-400 hover:text-white hover:border-gray-500 transition-colors">取消</button>
+        <button type="submit" className="flex-1 py-2 text-xs font-display bg-ur-amber/80 text-ur-bg rounded-lg hover:bg-ur-amber transition-all">{isEdit ? '保存' : '添加'}</button>
+      </div>
+    </form>
+  );
+}
+
+/* ================================================================
    主组件
    ================================================================ */
 export default function Admin() {
@@ -158,6 +215,18 @@ export default function Admin() {
   /* ── Logs State ── */
   const [logs, setLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
+
+  /* ── Schedule State ── */
+  const [upcoming, setUpcoming] = useState([]);
+  const [upcomingLoading, setUpcomingLoading] = useState(false);
+  const [scheduleModal, setScheduleModal] = useState(null);
+  const [scheduleError, setScheduleError] = useState(null);
+  const [scheduleDelete, setScheduleDelete] = useState(null);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkResult, setLinkResult] = useState(null);
+
+  const EMPTY_SCHEDULE = { match_date: '', match_time: '', opponent: '', event_name: '', match_type: 'official', bo_format: 'BO1', notes: '', division: 'cs2', location_type: 'online', source_link: '', stage: '', region: '' };
 
   /* ── 数据加载 ── */
   const loadUsers = useCallback(async () => {
@@ -186,6 +255,46 @@ export default function Admin() {
   }, []);
 
   useEffect(() => { loadUsers(); loadLogs(); }, [loadUsers, loadLogs]);
+
+  /* ── 赛程管理 ── */
+  const loadUpcoming = useCallback(async () => {
+    setUpcomingLoading(true);
+    try { const { data } = await api.get('/admin/upcoming'); setUpcoming(data); } catch {}
+    setUpcomingLoading(false);
+  }, []);
+  useEffect(() => { loadUpcoming(); }, [loadUpcoming]);
+
+  const handleScheduleSave = async (form) => {
+    setScheduleError(null);
+    try {
+      if (scheduleModal?.editId) {
+        await api.put(`/admin/upcoming/${scheduleModal.editId}`, form);
+      } else {
+        await api.post('/admin/upcoming', form);
+      }
+      setScheduleModal(null);
+      loadUpcoming();
+      loadLogs();
+    } catch (e) {
+      setScheduleError(e.response?.data?.error || '保存失败');
+    }
+  };
+
+  const handleScheduleDelete = async (id) => {
+    try { await api.delete(`/admin/upcoming/${id}`); setScheduleDelete(null); loadUpcoming(); loadLogs(); } catch {}
+  };
+
+  const handleLinkLookup = async () => {
+    if (!linkUrl.trim()) return;
+    setLinkLoading(true); setLinkResult(null);
+    try {
+      const { data } = await api.post('/admin/lookup-tournament', { url: linkUrl.trim() });
+      setLinkResult(data);
+    } catch (e) {
+      setLinkResult({ error: e.response?.data?.error || '查询失败' });
+    }
+    setLinkLoading(false);
+  };
 
   /* ── JSON 导入逻辑 ── */
   const extractOpponentFromFilename = (filename) => {
@@ -510,14 +619,90 @@ export default function Admin() {
       </div>
 
       {/* ════════════════════════════════════════════════════════════
-          区块 3：赛程管理（占位）
+          区块 3：赛程管理
          ════════════════════════════════════════════════════════════ */}
       <div className="data-card mb-5">
-        <h3 className="font-display text-base font-semibold text-white mb-4 flex items-center gap-2">
-          <span className="w-1 h-4 rounded bg-ur-amber" />
-          赛程管理
-        </h3>
-        <p className="text-gray-500 text-sm text-center py-4">功能开发中 — 赛程导入 · 赛果更新</p>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-display text-base font-semibold text-white flex items-center gap-2">
+            <span className="w-1 h-4 rounded bg-ur-amber" />赛程管理
+          </h3>
+          <button onClick={() => { setScheduleError(null); setScheduleModal({}); }}
+            className="px-4 py-1.5 text-xs font-display bg-ur-amber/20 text-ur-amber border border-ur-amber/30 rounded-lg hover:bg-ur-amber/30 transition-all flex items-center gap-1.5">
+            + 添加赛事
+          </button>
+        </div>
+
+        {/* Link 查询区 */}
+        <div className="mb-4 p-3 bg-ur-bg rounded-lg border border-ur-border">
+          <label className="text-xs text-gray-500 mb-1.5 block">赛事链接查询（粘贴链接后自动抓取赛事名称）</label>
+          <div className="flex gap-2">
+            <input type="text" value={linkUrl} onChange={e => setLinkUrl(e.target.value)}
+              placeholder="https://liquipedia.net/counterstrike/..." className="flex-1 bg-ur-bg border border-ur-border rounded-lg px-3 py-2 text-white text-xs focus:border-ur-cyan focus:outline-none placeholder:text-gray-600" />
+            <button onClick={handleLinkLookup} disabled={linkLoading || !linkUrl.trim()}
+              className="px-4 py-2 text-xs font-display bg-ur-cyan/20 text-ur-cyan border border-ur-cyan/30 rounded-lg hover:bg-ur-cyan/30 disabled:opacity-40 transition-all">
+              {linkLoading ? '查询中...' : '查询'}
+            </button>
+          </div>
+          {linkResult && (
+            <div className="mt-2 p-2 bg-ur-indigo/10 border border-ur-indigo/20 rounded text-xs">
+              {linkResult.error ? (
+                <span className="text-ur-rose">{linkResult.error}</span>
+              ) : (
+                <div className="space-y-0.5">
+                  <p><span className="text-gray-500">页面标题:</span> <span className="text-gray-200">{linkResult.pageTitle}</span></p>
+                  {linkResult.ogTitle && <p><span className="text-gray-500">OG标题:</span> <span className="text-gray-200">{linkResult.ogTitle}</span></p>}
+                  {linkResult.description && <p><span className="text-gray-500">描述:</span> <span className="text-gray-400">{linkResult.description.slice(0,200)}</span></p>}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 赛程列表 */}
+        {upcomingLoading ? (
+          <div className="text-center py-6 text-gray-500 text-sm">加载中...</div>
+        ) : upcoming.length === 0 ? (
+          <div className="text-center py-6 text-gray-500 text-sm">暂无即将赛事</div>
+        ) : (
+          <div className="space-y-2">
+            {upcoming.map(m => (
+              <div key={m.id} className="bg-ur-bg rounded-lg px-4 py-3 border border-ur-border hover:border-gray-600 transition-colors group">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-white font-display text-sm">{m.event_name || '未命名赛事'}</span>
+                      <span className={`tag text-[10px] ${m.match_type === 'scrim' ? 'tag-draw' : 'bg-ur-amber/15 text-ur-amber border-ur-amber/30'}`}>
+                        {m.match_type === 'scrim' ? '训练赛' : '正式赛'}
+                      </span>
+                      <span className="tag bg-ur-cyan/10 text-ur-cyan border-ur-cyan/20 text-[10px]">{m.bo_format || '-'}</span>
+                      {m.location_type && m.location_type !== 'online' && (
+                        <span className="tag bg-ur-purple/15 text-ur-purple border-ur-purple/25 text-[10px]">{m.location_type === 'offline' ? '线下' : '混合'}</span>
+                      )}
+                      {m.stage && <span className="text-ur-amber text-[11px]">{m.stage}</span>}
+                      {m.region && <span className="text-gray-500 text-[11px]">{m.region}</span>}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                      <span className="font-mono">{m.match_date}</span>
+                      {m.match_time && <span>{m.match_time.slice(0,5)}</span>}
+                      <span className="text-white font-display">vs {m.opponent}</span>
+                      {m.notes && <span className="text-gray-500 truncate ml-2">{m.notes}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 ml-3 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => { setScheduleError(null); const { created_at, ...rest } = m; setScheduleModal({ editId: m.id, ...rest }); }}
+                      className="px-2 py-1 text-[11px] font-display rounded bg-ur-cyan/10 text-ur-cyan border border-ur-cyan/20 hover:bg-ur-cyan/20 transition-colors">编辑</button>
+                    <button onClick={() => setScheduleDelete(m.id)}
+                      className="px-2 py-1 text-[11px] font-display rounded bg-ur-rose/10 text-ur-rose border border-ur-rose/20 hover:bg-ur-rose/20 transition-colors">删除</button>
+                  </div>
+                </div>
+                {m.source_link && (
+                  <a href={m.source_link} target="_blank" rel="noopener noreferrer"
+                    className="text-[11px] text-ur-cyan/60 hover:text-ur-cyan mt-1.5 inline-block truncate max-w-full">{m.source_link}</a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ════════════════════════════════════════════════════════════
@@ -585,6 +770,36 @@ export default function Admin() {
                 确认删除
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 赛程删除确认 */}
+      {scheduleDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setScheduleDelete(null)}>
+          <div className="data-card w-full max-w-sm mx-4 space-y-4 animate-fade-up" onClick={e => e.stopPropagation()}>
+            <h3 className="font-display text-lg font-bold text-white">删除赛事</h3>
+            <p className="text-gray-400 text-sm">确认删除此赛事？此操作不可撤销。</p>
+            <div className="flex gap-3">
+              <button onClick={() => setScheduleDelete(null)} className="flex-1 py-2.5 text-sm border border-ur-border rounded-lg text-gray-400 hover:text-white hover:border-gray-500 transition-colors">取消</button>
+              <button onClick={() => handleScheduleDelete(scheduleDelete)} className="flex-1 py-2.5 text-sm font-display bg-ur-rose/80 text-white rounded-lg hover:bg-ur-rose transition-all">确认删除</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 赛程编辑/创建弹窗 */}
+      {scheduleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setScheduleModal(null)}>
+          <div className="data-card w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto space-y-3 animate-fade-up" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-lg font-bold text-white">{scheduleModal.editId ? '编辑赛事' : '添加赛事'}</h3>
+              <button type="button" onClick={() => setScheduleModal(null)} className="text-gray-500 hover:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            {scheduleError && <div className="p-2 bg-ur-rose/10 border border-ur-rose/30 rounded-lg text-xs text-ur-rose">{scheduleError}</div>}
+            <ScheduleForm init={scheduleModal} onSave={handleScheduleSave} onClose={() => setScheduleModal(null)} />
           </div>
         </div>
       )}

@@ -108,24 +108,101 @@ router.put('/user/:id', adminAuth, async (req, res) => {
   }
 });
 
-// 添加即将赛事
+// ============================================================
+// 即将赛事 — 完整 CRUD
+// ============================================================
+
+// 列表
+router.get('/upcoming', adminAuth, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT * FROM upcoming_matches ORDER BY match_date ASC'
+    );
+    res.json(rows);
+  } catch { res.status(500).json({ error: '获取失败' }); }
+});
+
+// 创建
 router.post('/upcoming', adminAuth, async (req, res) => {
-  const { match_date, match_time, opponent, event_name, match_type, bo_format, notes } = req.body;
+  const { match_date, match_time, opponent, event_name, match_type, bo_format, notes, division, location_type, source_link, stage, region } = req.body;
+  if (!match_date || !opponent) return res.status(400).json({ error: '日期和对手为必填项' });
   try {
     await db.query(
-      'INSERT INTO upcoming_matches (match_date,match_time,opponent,event_name,match_type,bo_format,notes,division) VALUES (?,?,?,?,?,?,?,?)',
-      [match_date, match_time, opponent, event_name, match_type||'official', bo_format, notes, 'cs2']
+      'INSERT INTO upcoming_matches (match_date,match_time,opponent,event_name,match_type,bo_format,notes,division,location_type,source_link,stage,region) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+      [match_date, match_time || null, opponent, event_name || null, match_type || 'official', bo_format || null, notes || null, division || 'cs2', location_type || 'online', source_link || null, stage || null, region || null]
+    );
+    await db.query(
+      "INSERT INTO operation_logs (user_id, action, details) VALUES (?, 'add_upcoming', ?)",
+      [req.user.id, `添加赛事: ${opponent} | ${event_name || '未命名'}`]
     );
     res.json({ message: '赛事已添加' });
   } catch { res.status(500).json({ error: '添加失败' }); }
 });
 
-// 删除赛事
-router.delete('/match/:id', adminAuth, async (req, res) => {
+// 编辑
+router.put('/upcoming/:id', adminAuth, async (req, res) => {
+  const { match_date, match_time, opponent, event_name, match_type, bo_format, notes, division, location_type, source_link, stage, region } = req.body;
+  if (!match_date || !opponent) return res.status(400).json({ error: '日期和对手为必填项' });
   try {
-    await db.query('DELETE FROM matches WHERE id=?', [req.params.id]);
-    res.json({ message: '删除成功' });
+    await db.query(
+      'UPDATE upcoming_matches SET match_date=?,match_time=?,opponent=?,event_name=?,match_type=?,bo_format=?,notes=?,division=?,location_type=?,source_link=?,stage=?,region=? WHERE id=?',
+      [match_date, match_time || null, opponent, event_name || null, match_type || 'official', bo_format || null, notes || null, division || 'cs2', location_type || 'online', source_link || null, stage || null, region || null, req.params.id]
+    );
+    await db.query(
+      "INSERT INTO operation_logs (user_id, action, details) VALUES (?, 'edit_upcoming', ?)",
+      [req.user.id, `编辑赛事: ${opponent} | ${event_name || '未命名'}`]
+    );
+    res.json({ message: '赛事已更新' });
+  } catch { res.status(500).json({ error: '更新失败' }); }
+});
+
+// 删除
+router.delete('/upcoming/:id', adminAuth, async (req, res) => {
+  try {
+    await db.query('DELETE FROM upcoming_matches WHERE id=?', [req.params.id]);
+    await db.query(
+      "INSERT INTO operation_logs (user_id, action, details) VALUES (?, 'delete_upcoming', ?)",
+      [req.user.id, `删除赛事 ID=${req.params.id}`]
+    );
+    res.json({ message: '赛事已删除' });
   } catch { res.status(500).json({ error: '删除失败' }); }
+});
+
+// 赛事信息查询（从链接抓取）
+router.post('/lookup-tournament', adminAuth, async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ error: '请提供赛事链接' });
+  try {
+    const https = require('https');
+    const http = require('http');
+    const lib = url.startsWith('https') ? https : http;
+    
+    const result = await new Promise((resolve, reject) => {
+      lib.get(url, { headers: { 'User-Agent': 'UR-Esports/2.0' }, timeout: 10000 }, (response) => {
+        let data = '';
+        response.on('data', chunk => data += chunk);
+        response.on('end', () => {
+          const titleMatch = data.match(/<title[^>]*>([^<]+)<\/title>/i);
+          const title = titleMatch ? titleMatch[1].trim() : '';
+          // Extract og:title or other metadata
+          const ogTitle = data.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i);
+          const desc = data.match(/<meta[^>]+name="description"[^>]+content="([^"]+)"/i);
+          resolve({ title, ogTitle: ogTitle ? ogTitle[1] : null, description: desc ? desc[1] : null });
+        });
+        response.on('error', reject);
+      }).on('error', reject).on('timeout', () => { reject(new Error('请求超时')); });
+    });
+    
+    res.json({ 
+      url,
+      pageTitle: result.title,
+      ogTitle: result.ogTitle,
+      description: result.description,
+      note: '请手动确认赛事名称、阶段和区域信息'
+    });
+  } catch (e) {
+    res.status(500).json({ error: '抓取失败: ' + e.message });
+  }
 });
 
 // 操作日志

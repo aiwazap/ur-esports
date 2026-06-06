@@ -83,6 +83,10 @@ CREATE TABLE IF NOT EXISTS upcoming_matches (
   bo_format TEXT,
   notes TEXT,
   division TEXT DEFAULT 'cs2' CHECK(division IN ('cs2','val')),
+  location_type TEXT DEFAULT 'online' CHECK(location_type IN ('online','offline','hybrid')),
+  source_link TEXT,
+  stage TEXT,
+  region TEXT,
   created_at TEXT DEFAULT (datetime('now','localtime'))
 );
 
