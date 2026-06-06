@@ -21,22 +21,39 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// 登录
+// 登录 — 用户名 + 密码
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
+  if (!username || !password)
+    return res.status(400).json({ error: '请输入用户名和密码' });
   try {
     const [rows] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
     if (!rows.length) return res.status(401).json({ error: '用户名或密码错误' });
+
     const user = rows[0];
+
+    // 待审核账号禁止登录
     if (user.role === 'pending') return res.status(403).json({ error: '账号待审核，请联系管理员' });
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ error: '用户名或密码错误' });
+
+    // 密码校验
+    const validPwd = await bcrypt.compare(password, user.password_hash);
+    if (!validPwd) return res.status(401).json({ error: '用户名或密码错误' });
+
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role, division: user.division },
+      { id: user.id, username: user.username, role: user.role, division: user.division, steam_id: user.steam_id },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
-    res.json({ token, user: { id: user.id, username: user.username, role: user.role, division: user.division } });
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        steam_id: user.steam_id,
+        role: user.role,
+        division: user.division
+      }
+    });
   } catch {
     res.status(500).json({ error: '登录失败' });
   }
