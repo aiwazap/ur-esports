@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   steam_id TEXT UNIQUE NOT NULL,
-  role TEXT DEFAULT 'pending' CHECK(role IN ('admin','player','coach','pending')),
+  role TEXT DEFAULT 'pending' CHECK(role IN ('admin','player','coach','pending','team_lead','analyst','manager','ceo')),
   division TEXT DEFAULT 'cs2' CHECK(division IN ('cs2','val','all')),
   created_at TEXT DEFAULT (datetime('now','localtime')),
   approved_at TEXT,

@@ -2,11 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../api';
 
 /* ── 常量 ── */
-const ROLE_MAP = { admin: '管理员', player: '选手', coach: '教练', pending: '待审核' };
+const ROLE_MAP = { admin: '管理员', player: '选手', coach: '教练', team_lead: '领队', analyst: '分析师', manager: '经理', ceo: 'CEO', pending: '待审核' };
 const ROLE_COLORS = {
   admin: 'bg-ur-purple/20 text-ur-purple border-ur-purple/30',
   player: 'bg-ur-cyan/15 text-ur-cyan border-ur-cyan/30',
   coach: 'bg-ur-amber/15 text-ur-amber border-ur-amber/30',
+  team_lead: 'bg-ur-indigo/15 text-ur-indigo border-ur-indigo/30',
+  analyst: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
+  manager: 'bg-orange-500/15 text-orange-400 border-orange-500/25',
+  ceo: 'bg-ur-rose/15 text-ur-rose border-ur-rose/30',
   pending: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
 };
 const DIVISION_MAP = { cs2: 'CS2', val: 'Valorant', all: '全部' };
@@ -95,6 +99,10 @@ function UserFormModal({ mode, init, onClose, onSave, error }) {
               <option value="admin">管理员</option>
               <option value="player">选手</option>
               <option value="coach">教练</option>
+              <option value="team_lead">领队</option>
+              <option value="analyst">分析师</option>
+              <option value="manager">经理</option>
+              <option value="ceo">CEO</option>
               <option value="pending">待审核</option>
             </select>
           </div>

@@ -55,7 +55,7 @@ router.post('/create-user', adminAuth, async (req, res) => {
   const { username, password, steam_id, role, division } = req.body;
   if (!username || !password || !steam_id || !role)
     return res.status(400).json({ error: '请填写用户名、密码、Steam64 ID 和职位' });
-  if (!['admin', 'player', 'coach', 'pending'].includes(role))
+  if (!['admin', 'player', 'coach', 'team_lead', 'analyst', 'manager', 'ceo', 'pending'].includes(role))
     return res.status(400).json({ error: '无效的职位' });
   try {
     const hash = await bcrypt.hash(password, 10);
@@ -81,7 +81,7 @@ router.put('/user/:id', adminAuth, async (req, res) => {
   const { username, steam_id, role, division, password } = req.body;
   if (!username || !steam_id || !role)
     return res.status(400).json({ error: '用户名、Steam64 ID 和职位为必填项' });
-  if (!['admin', 'player', 'coach', 'pending'].includes(role))
+  if (!['admin', 'player', 'coach', 'team_lead', 'analyst', 'manager', 'ceo', 'pending'].includes(role))
     return res.status(400).json({ error: '无效的职位' });
   try {
     if (password) {

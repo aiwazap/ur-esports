@@ -6,6 +6,10 @@ const ROLE_OPTIONS = [
   { value: 'admin', label: '管理员' },
   { value: 'player', label: '选手' },
   { value: 'coach', label: '教练' },
+  { value: 'team_lead', label: '领队' },
+  { value: 'analyst', label: '分析师' },
+  { value: 'manager', label: '经理' },
+  { value: 'ceo', label: 'CEO' },
 ];
 
 export default function Login() {
@@ -96,7 +100,7 @@ export default function Login() {
 
         <div>
           <label className="block text-xs text-gray-500 mb-1">职位</label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {ROLE_OPTIONS.map(opt => (
               <button
                 key={opt.value}
