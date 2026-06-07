@@ -997,6 +997,8 @@ router.get('/dashboard', auth, async (req, res) => {
         AND ts.opponent NOT IN ('OPPONENT', '未知', '___')
     `);
     // ── Match-level win rate (from matches table, map-level results) ──
+    // 数据完整性过滤：排除垃圾行（空日期/占位对手）
+    const matchIntegrityFilter = `match_date IS NOT NULL AND match_date != '' AND length(match_date) >= 8 AND opponent NOT IN ('match_data', 'OPPONENT', '___')`;
     const [[matchOverview]] = await db.query(`
       SELECT
         COUNT(*) as total_maps,
@@ -1006,7 +1008,16 @@ router.get('/dashboard', auth, async (req, res) => {
       FROM matches
       WHERE ${matchDateFilter}
         AND match_type = 'scrim'
+        AND ${matchIntegrityFilter}
     `);
+    // ── Data integrity warning ──
+    if (overview.total_matches > 0) {
+      const expectedMaxMaps = overview.total_matches * 5; // 一场训练赛最多5张图
+      const actualMaps = matchOverview.total_maps || 0;
+      if (actualMaps > expectedMaxMaps) {
+        console.warn(`[Dashboard Integrity] 数据异常: ${overview.total_matches} 场训练赛却有 ${actualMaps} 张地图记录 (预期上限 ${expectedMaxMaps})，请检查 matches 表数据`);
+      }
+    }
 
     // ── Issue Distribution ──
     const [issueDist] = await db.query(`
@@ -1049,6 +1060,7 @@ router.get('/dashboard', auth, async (req, res) => {
       FROM matches m
       WHERE m.${matchDateFilter}
         AND m.match_type = 'scrim'
+        AND ${matchIntegrityFilter}
       GROUP BY m.map_name
     `);
     const mapResults = {};
@@ -1100,23 +1112,42 @@ router.get('/dashboard', auth, async (req, res) => {
       ORDER BY ts.match_date DESC
     `);
 
+    // Build valid session keys from matchSummary (only these have complete training data)
+    // key format: "date|opponent" (lowercase, normalized)
+    const validSessionKeys = new Set(
+      matchSummary.map(m => {
+        const d = (m.match_date || '').split('T')[0];
+        return d + '|' + (m.opponent || '').toLowerCase();
+      })
+    );
+
     // Fetch all matches for date range and aggregate by date+opponent
     const [allMatches] = await db.query(`
       SELECT match_date, opponent, map_name, result, our_score, their_score, bo_format
       FROM matches
       WHERE ${matchDateFilter}
         AND match_type = 'scrim'
+        AND ${matchIntegrityFilter}
       ORDER BY match_date, opponent, map_name
     `);
 
-    // Group matches by date+opponent (case-insensitive), calculate aggregate results
+    // Group matches by date+opponent (case-insensitive)
+    // Only count matches that have a corresponding training session (三表联动校验)
     const matchesByKey = {};
+    const filteredMatches = [];
     for (const m of allMatches) {
-      const dateKey = m.match_date.split(' ')[0];
+      const dateKey = (m.match_date || '').split(' ')[0];
       const key = dateKey + '|' + (m.opponent || '').toLowerCase();
+      if (!validSessionKeys.has(key)) continue; // 跳过无训练日志对应的比赛记录
+      filteredMatches.push(m);
       if (!matchesByKey[key]) matchesByKey[key] = [];
       matchesByKey[key].push(m);
     }
+
+    // Recompute wins/losses from filtered matches (三表联动校验后的准确值)
+    const validatedMapWins = filteredMatches.filter(x => x.result === 'win').length;
+    const validatedMapLosses = filteredMatches.filter(x => x.result === 'loss').length;
+    const validatedMapDraws = filteredMatches.filter(x => x.result === 'draw').length;
 
     // Enrich matchSummary with aggregated match results
     const enrichedMatchSummary = matchSummary.map(m => {
@@ -1270,12 +1301,12 @@ router.get('/dashboard', auth, async (req, res) => {
     };
 
     // ── Build response ──
-    // 胜负统计使用 match 表（回合表 round_result 列空是正常的，胜负在 CS2_Match_Data 表里）
+    // 胜负统计：三表联动校验后使用 validated values（仅统计有训练日志的 match 数据）
     const totalMatches = overview.total_matches || 0;
     const totalRounds = overview.total_rounds || 0;
-    const mapWins = matchOverview.map_wins || 0;
-    const mapLosses = matchOverview.map_losses || 0;
-    const mapDraws = matchOverview.map_draws || 0;
+    const mapWins = validatedMapWins;
+    const mapLosses = validatedMapLosses;
+    const mapDraws = validatedMapDraws;
 
     // Special events in date range
     const [specialEventRows] = await db.query(
@@ -1293,8 +1324,8 @@ router.get('/dashboard', auth, async (req, res) => {
         win_rate: (mapWins + mapLosses) > 0 ? (mapWins / (mapWins + mapLosses) * 100).toFixed(1) : 0,
         rounds_with_issues: overview.rounds_with_issues || 0,
         issue_free_rate: totalRounds > 0 ? ((totalRounds - (overview.rounds_with_issues || 0)) / totalRounds * 100).toFixed(1) : 0,
-        // Match-level stats from matches table
-        match_total_maps: matchOverview.total_maps || 0,
+        // Match-level stats (三表联动校验: 仅统计有训练日志的比赛)
+        match_total_maps: validatedMapWins + validatedMapLosses + validatedMapDraws,
         match_wins: mapWins,
         match_losses: mapLosses,
         match_draws: mapDraws,
@@ -1527,12 +1558,14 @@ router.post('/import-match-json', auth, jsonUpload.single('file'), async (req, r
     const awayScore = match.away?.score || 0;
     const result = homeScore > awayScore ? 'win' : (homeScore < awayScore ? 'loss' : 'draw');
 
-    // 对手名解析优先级：用户填写 > 文件名提取 > JSON 内容 > DB training_sessions
-    let opponent = req.body.opponent || match.opponent || match.opponent_name || '';
-    if (!opponent && req.file.originalname) {
+    // 对手名解析优先级：文件名提取 > 用户填写 > JSON 内容 > DB training_sessions
+    // 文件名优先，避免残留的全局对手名污染本次导入
+    let opponent = '';
+    if (req.file.originalname) {
       const m = req.file.originalname.match(/^\d{4}[_-](.+?)_[Mm]\d+/);
       if (m) opponent = m[1];
     }
+    opponent = opponent || req.body.opponent || match.opponent || match.opponent_name || '';
 
     if (!opponent) {
       // Try to find opponent from training sessions on same date, ordered by most recently created
@@ -1682,8 +1715,10 @@ router.post('/import-match-json-batch', auth, jsonUpload.array('files', 50), asy
       const awayScore = match.away?.score || 0;
       const result = homeScore > awayScore ? 'win' : (homeScore < awayScore ? 'loss' : 'draw');
 
-      // 对手名解析优先级：用户填写 > 文件名提取 > JSON 内容 > DB training_sessions
-      let opponent = globalOpponent || getOpponentFromFilename(file.originalname) || match.opponent || match.opponent_name || '';
+      // 对手名解析优先级：文件名提取 > 用户填写 > JSON 内容 > DB training_sessions
+      // 文件名优先，避免上一次导入的 globalOpponent 残留污染本次导入
+      const fnOpponent = getOpponentFromFilename(file.originalname);
+      let opponent = fnOpponent || globalOpponent || match.opponent || match.opponent_name || '';
 
       // 最后兜底：从相同日期的训练赛次查找对手
       if (!opponent) {
