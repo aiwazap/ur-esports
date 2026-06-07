@@ -190,3 +190,84 @@ CREATE TABLE IF NOT EXISTS special_events (
 -- 初始超级管理员账号 (密码: URAdmin2026!)
 INSERT OR IGNORE INTO users (username, password_hash, steam_id, role, division, approved_at)
 VALUES ('admin', '$2b$10$rQZ9uAVBv5Q5Z5Z5Z5Z5ZeKQZ9uAVBv5Q5Z5Z5Z5Z5ZeKQZ9uAVB', '00000000000000000', 'admin', 'all', datetime('now','localtime'));
+
+-- ============================================
+-- v2.1 新增模块
+-- ============================================
+
+-- 选手外设表
+CREATE TABLE IF NOT EXISTS peripherals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  player_id INTEGER NOT NULL UNIQUE,
+  keyboard TEXT,
+  mouse TEXT,
+  headset TEXT,
+  mousepad TEXT,
+  monitor TEXT,
+  notes TEXT,
+  updated_by INTEGER,
+  updated_at TEXT DEFAULT (datetime('now','localtime')),
+  FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
+);
+
+-- 库存管理表
+CREATE TABLE IF NOT EXISTS inventory (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_type TEXT NOT NULL,
+  item_name TEXT,
+  current_count INTEGER DEFAULT 0,
+  max_count INTEGER DEFAULT 0,
+  notes TEXT,
+  updated_at TEXT DEFAULT (datetime('now','localtime')),
+  updated_by INTEGER
+);
+
+-- 训练计划表
+CREATE TABLE IF NOT EXISTS training_plans (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  plan_date TEXT NOT NULL,
+  start_time TEXT,
+  end_time TEXT,
+  title TEXT NOT NULL,
+  subtitle TEXT,
+  tags TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_by INTEGER,
+  created_at TEXT DEFAULT (datetime('now','localtime')),
+  updated_at TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_training_plans_date ON training_plans(plan_date);
+
+-- 对手情报表
+CREATE TABLE IF NOT EXISTS opponent_intel (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  opponent_name TEXT NOT NULL UNIQUE,
+  display_name TEXT,
+  hltv_url TEXT,
+  vrs_rank INTEGER,
+  region TEXT DEFAULT 'Asia',
+  map_preference TEXT,
+  core_players TEXT,
+  h2h_wins INTEGER DEFAULT 0,
+  h2h_losses INTEGER DEFAULT 0,
+  h2h_draws INTEGER DEFAULT 0,
+  last_match_date TEXT,
+  last_match_score TEXT,
+  last_match_result TEXT,
+  notes TEXT,
+  image_url TEXT,
+  source_link TEXT,
+  created_at TEXT DEFAULT (datetime('now','localtime')),
+  updated_at TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_opponent_intel_name ON opponent_intel(opponent_name);
+
+-- 系统配置表
+CREATE TABLE IF NOT EXISTS system_config (
+  config_key TEXT PRIMARY KEY NOT NULL,
+  config_value TEXT,
+  description TEXT,
+  updated_at TEXT DEFAULT (datetime('now','localtime'))
+);
+INSERT OR IGNORE INTO system_config (config_key, config_value, description) VALUES ('founded_date', '2025-03-27', '分部成立日期');
+INSERT OR IGNORE INTO system_config (config_key, config_value, description) VALUES ('vrs_rank', '43', 'VRS Asia 排名');

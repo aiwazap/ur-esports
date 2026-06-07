@@ -24,6 +24,11 @@ app.use('/api/stats', require('./routes/stats'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/training', require('./routes/training'));
 app.use('/api/config', require('./routes/config'));
+app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/peripherals', require('./routes/peripherals'));
+app.use('/api/inventory', require('./routes/inventory'));
+app.use('/api/training-plans', require('./routes/training-plans'));
+app.use('/api/opponent-intel', require('./routes/opponent-intel'));
 
 // ============ Internal: tencent_sync trigger (localhost only) ============
 const XLSX = require('xlsx');
