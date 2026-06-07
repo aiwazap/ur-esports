@@ -8,27 +8,79 @@ const fs = require('fs');
 
 const upload = multer({ dest: 'uploads/tmp/' });
 
-// 获取赛果列表 - 按训练赛分组
+// ─── 推断 BO 格式 ───
+function detectBoFormat(count) {
+  if (count >= 4) return 'BO5';
+  if (count >= 2) return 'BO3';
+  return 'BO1';
+}
+
+// 获取赛果列表 - 按比赛分组（支持训练赛/正式赛/全部 + 搜索 + 地图筛选 + 日期范围）
 router.get('/grouped', auth, async (req, res) => {
-  const { days } = req.query;
-  const dayFilter = days ? `AND m.match_date >= DATE('now', '-${parseInt(days)} days')` : '';
+  const { days, matchType, search, map, dateFrom, dateTo } = req.query;
+
+  // 构建动态 WHERE
+  const baseWhere = [
+    "m.division = 'cs2'",
+    "m.opponent NOT IN ('match_data', 'OPPONENT', '___')",
+    "m.match_date IS NOT NULL AND m.match_date != '' AND length(m.match_date) >= 8",
+    "m.map_name IS NOT NULL AND m.map_name != ''"
+  ];
+  const params = [];
+
+  // 比赛类型筛选（默认训练赛）
+  const mt = matchType || 'scrim';
+  if (mt !== 'all') {
+    baseWhere.push('m.match_type = ?');
+    params.push(mt);
+  }
+
+  // 日期筛选
+  if (dateFrom) {
+    baseWhere.push('m.match_date >= ?');
+    params.push(dateFrom);
+  } else if (days) {
+    baseWhere.push(`m.match_date >= DATE('now', '-${parseInt(days)} days')`);
+  }
+  if (dateTo) {
+    baseWhere.push('m.match_date <= ?');
+    params.push(dateTo);
+  }
+
+  // 对手搜索
+  if (search) {
+    baseWhere.push('m.opponent LIKE ?');
+    params.push(`%${search}%`);
+  }
+
+  // 地图筛选
+  if (map) {
+    baseWhere.push('m.map_name = ?');
+    params.push(map);
+  }
+
   try {
     const [rows] = await db.query(`
       SELECT m.id, m.match_date, m.opponent, m.map_name, m.our_score, m.their_score,
-             m.t_score, m.ct_score, m.pistol_rounds, m.result, m.notes, m.match_type
+             m.t_score, m.ct_score, m.pistol_rounds, m.result, m.notes, m.match_type,
+             m.bo_format
       FROM matches m
-      WHERE m.division = 'cs2' AND m.match_type = 'scrim' ${dayFilter}
+      WHERE ${baseWhere.join(' AND ')}
       ORDER BY m.match_date DESC, m.opponent, m.map_name
-    `);
-    // Group by opponent + date
+    `, params);
+
+    // 按 日期+对手 分组
     const groups = [];
     let current = null;
     for (const r of rows) {
       const dateStr = (r.match_date || '').split(' ')[0];
       const key = dateStr + '|' + r.opponent;
       if (!current || current.key !== key) {
-        if (current) groups.push(current);
-        current = { match_date: dateStr, opponent: r.opponent, key, maps: [] };
+        if (current) {
+          current.bo = current.bo_format || detectBoFormat(current.maps.length);
+          groups.push(current);
+        }
+        current = { match_date: dateStr, opponent: r.opponent, key, maps: [], match_type: r.match_type, bo_format: r.bo_format };
       }
       current.maps.push({
         id: r.id, map_name: r.map_name, our_score: r.our_score, their_score: r.their_score,
@@ -36,8 +88,52 @@ router.get('/grouped', auth, async (req, res) => {
         pistol_rounds: r.pistol_rounds || '', result: r.result, notes: r.notes
       });
     }
-    if (current) groups.push(current);
-    res.json(groups);
+    if (current) {
+      current.bo = current.bo_format || detectBoFormat(current.maps.length);
+      groups.push(current);
+    }
+
+    // ── 统计摘要 ──
+    const allMaps = groups.flatMap(g => g.maps);
+    const totalMaps = allMaps.length;
+    const totalWins = allMaps.filter(m => m.result === 'win').length;
+    const totalLosses = allMaps.filter(m => m.result === 'loss').length;
+    const totalDraws = allMaps.filter(m => m.result === 'draw').length;
+    const totalMatches = groups.length;
+    const matchWins = groups.filter(g => {
+      const w = g.maps.filter(m => m.result === 'win').length;
+      const l = g.maps.filter(m => m.result === 'loss').length;
+      return w > l;
+    }).length;
+    const matchLosses = groups.filter(g => {
+      const w = g.maps.filter(m => m.result === 'win').length;
+      const l = g.maps.filter(m => m.result === 'loss').length;
+      return l > w;
+    }).length;
+    const uniqueOpponents = [...new Set(groups.map(g => g.opponent))].length;
+
+    const stats = {
+      totalMaps, totalWins, totalLosses, totalDraws,
+      totalMatches, matchWins, matchLosses,
+      winRate: totalMaps > 0 ? Math.round((totalWins / totalMaps) * 100) : 0,
+      matchWinRate: totalMatches > 0 ? Math.round((matchWins / totalMatches) * 100) : 0,
+      uniqueOpponents,
+      periodDays: days ? parseInt(days) : (dateFrom ? null : 0),
+    };
+
+    res.json({ groups, stats });
+  } catch (e) {
+    res.status(500).json({ error: '获取失败: ' + e.message });
+  }
+});
+
+// 获取可选地图列表（去重）
+router.get('/maps', auth, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      "SELECT DISTINCT map_name FROM matches WHERE division='cs2' AND map_name IS NOT NULL AND map_name != '' ORDER BY map_name"
+    );
+    res.json(rows.map(r => r.map_name));
   } catch (e) {
     res.status(500).json({ error: '获取失败: ' + e.message });
   }
