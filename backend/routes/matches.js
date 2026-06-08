@@ -250,6 +250,12 @@ router.post('/import', adminAuth, upload.single('file'), async (req, res) => {
             const altMatch = sheetName.match(/^\d{4}_(.+)$/);
             opponent = altMatch ? altMatch[1].replace(/_/g, ' ') : sheetName;
           }
+          // 对手名归一化：统一常见拼写错误和别名
+          const OPPONENT_NORMALIZE = {
+            'mongolza': 'Mongolz.A', 'mongolz academy': 'Mongolz.A', 'mongolz.academy': 'Mongolz.A',
+            'nexvoid': 'NEXTVOID', 'nextvoid': 'NEXTVOID',
+          };
+          opponent = OPPONENT_NORMALIZE[(opponent || '').toLowerCase()] || opponent;
 
           // 跳过没有有效日期或对手的 sheet
           if (!dateVal || !opponent) {

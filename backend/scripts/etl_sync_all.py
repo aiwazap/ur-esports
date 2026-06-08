@@ -111,12 +111,29 @@ def execute(sql, params=()):
 BLOCKED_OPPONENTS = {'OPPONENT', '未知', '___', 'match_data', 'MATCH_DATA'}
 BLOCKED_MAP_NAMES = {'', 'UR 队员统计', '地图'}
 
+# Opponent name normalization — unify common misspellings and aliases
+OPPONENT_ALIASES = {
+    'mongolza': 'Mongolz.A',
+    'mongolz academy': 'Mongolz.A',
+    'mongolz.academy': 'Mongolz.A',
+    'nexvoid': 'NEXTVOID',
+    'nextvoid': 'NEXTVOID',
+}
+
+def normalize_opponent(name):
+    """Normalize opponent name using alias map (case-insensitive)."""
+    if not name:
+        return name
+    key = name.strip().lower()
+    return OPPONENT_ALIASES.get(key, name.strip())
+
 
 def get_or_create_session(match_date, opponent, event_name=None):
     """Get or create a training session. Skip placeholder opponents."""
     if not opponent or opponent.strip() in BLOCKED_OPPONENTS or not match_date or match_date.strip() == '':
         print(f"[ETL] 跳过无效session: date={match_date}, opponent={opponent}")
         return None
+    opponent = normalize_opponent(opponent)
     row = execute(
         "SELECT id FROM training_sessions WHERE match_date = ? AND opponent = ?",
         (match_date, opponent)
@@ -200,6 +217,7 @@ for sheet_name in wb2.sheetnames:
     info_text = str(rows[1][0] or '')
     opp_match = re.search(r'对手[：:]\s*([^(\n\r|]+)', info_text)
     opponent = opp_match.group(1).strip() if opp_match else '未知'
+    opponent = normalize_opponent(opponent)
 
     # Build match date
     date_str = f"2026-{sheet_name[:2]}-{sheet_name[2:]}"
@@ -512,6 +530,7 @@ for sheet_name in wb4.sheetnames:
     # Parse opponent from sheet name: 0525_TyLoo_M1 → TyLoo
     opp_match = re.search(r'^\d{4}_(.+?)_M\d$', sheet_name, re.IGNORECASE)
     opponent = opp_match.group(1).replace('_', ' ') if opp_match else sheet_name
+    opponent = normalize_opponent(opponent)
 
     # Data integrity: skip placeholder/junk opponents and dates
     if not date_str or date_str.strip() == '':

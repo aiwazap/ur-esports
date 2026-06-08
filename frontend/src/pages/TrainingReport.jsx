@@ -42,6 +42,7 @@ export default function TrainingReport() {
   const [opponentList, setOpponentList] = useState(null);
   const [opponentStats, setOpponentStats] = useState([]);
   const [opponentDetail, setOpponentDetail] = useState(null);
+  const [players, setPlayers] = useState([]);
 
   const load = async () => {
     setLoading(true);
@@ -58,6 +59,11 @@ export default function TrainingReport() {
     } catch(e) { console.error(e); }
   };
   useEffect(() => { load(); loadOpponentStats(); }, [start, end]);
+  useEffect(() => {
+    api.get('/players?division=cs2&status=active&team_type=roster').then(({ data }) => {
+      setPlayers(Array.isArray(data) ? data : []);
+    }).catch(() => {});
+  }, []);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -292,11 +298,21 @@ export default function TrainingReport() {
                        className="glass-panel rounded-[22px] p-4 cursor-pointer transition-all duration-200
                                   hover:border-cyan-400/25 hover:shadow-[0_0_32px_rgba(104,232,255,0.08)]">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="w-11 h-11 rounded-[15px] flex items-center justify-center text-sm font-extrabold text-[#061018]
-                                      bg-gradient-to-br from-[#f9fdff] via-cyan-400 to-blue-500
-                                      shadow-[0_0_24px_rgba(104,232,255,0.22)]">
-                        {p.name.substring(0,2)}
-                      </div>
+                      {(() => {
+                        const pl = players.find(pl => (pl.nickname||'').toLowerCase() === (p.id||'').toLowerCase());
+                        const avatar = pl?.avatar_url ? (
+                          <img src={pl.avatar_url} alt={p.name}
+                               className="w-11 h-11 rounded-[15px] object-cover
+                                          shadow-[0_0_24px_rgba(104,232,255,0.22)] border-2 border-white/10" />
+                        ) : (
+                          <div className="w-11 h-11 rounded-[15px] flex items-center justify-center text-sm font-extrabold text-[#061018]
+                                          bg-gradient-to-br from-[#f9fdff] via-cyan-400 to-blue-500
+                                          shadow-[0_0_24px_rgba(104,232,255,0.22)]">
+                            {p.name.substring(0,2)}
+                          </div>
+                        );
+                        return avatar;
+                      })()}
                       <span className="chip text-[11px]">{p.id === '0z' ? 'IGL' : p.id === 'drace' ? 'AWP' : 'RIF'}</span>
                     </div>
                     <p className="mt-4 text-lg font-bold text-white">{p.name}</p>
@@ -383,6 +399,7 @@ export default function TrainingReport() {
                       {o.total_maps||0}图
                       <span className="mx-1.5 text-gray-600">|</span>
                       W:{o.map_wins||0} L:{o.map_losses||0}
+                      {(o.map_draws||0) > 0 && <span> D:{o.map_draws}</span>}
                     </p>
                     <div className="flex justify-center gap-1 mt-1.5">
                       {Object.values(o.maps||{}).slice(0, 3).map((mp, i) => (

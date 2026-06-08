@@ -48,6 +48,7 @@ router.get('/overview', auth, async (req, res) => {
     const [upcomingRows] = await db.query(
       `SELECT * FROM upcoming_matches
        WHERE match_date >= date('now','localtime')
+         AND match_type = 'official'
        ORDER BY match_date ASC, match_time ASC
        LIMIT 1`
     );
@@ -364,7 +365,72 @@ router.get('/overview', auth, async (req, res) => {
     }
 
     // --------------------------------------------------------
-    // 13. 教练评语 (最近5场 matches 的 notes)
+    // 13. 上周失误TOP3 (周环比数据)
+    // --------------------------------------------------------
+    const [weeklyIssues] = await db.query(
+      `SELECT
+        CASE
+          WHEN issue_grenade = 1 THEN '道具配合'
+          WHEN issue_position = 1 THEN '走位站位'
+          WHEN issue_aim = 1 THEN '枪法瞄准'
+          WHEN issue_comms = 1 THEN '沟通交流'
+          WHEN issue_tactics = 1 THEN '战术执行'
+        END as issue_type,
+        COUNT(*) as cnt
+       FROM training_rounds
+       WHERE created_at >= date('now','localtime','-7 days')
+         AND (issue_grenade=1 OR issue_position=1 OR issue_aim=1 OR issue_comms=1 OR issue_tactics=1)
+       GROUP BY issue_type
+       ORDER BY cnt DESC
+       LIMIT 3`
+    );
+
+    const [weeklyWinLoss] = await db.query(
+      `SELECT
+        SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN result = 'loss' THEN 1 ELSE 0 END) as losses
+       FROM training_rounds
+       WHERE created_at >= date('now','localtime','-7 days')
+         AND round_result IN ('win','loss')`
+    );
+
+    // 上周数据 (用于环比)
+    const [lastWeekIssues] = await db.query(
+      `SELECT COUNT(*) as total_issue_rounds
+       FROM training_rounds
+       WHERE created_at >= date('now','localtime','-14 days')
+         AND created_at < date('now','localtime','-7 days')
+         AND (issue_grenade=1 OR issue_position=1 OR issue_aim=1 OR issue_comms=1 OR issue_tactics=1)`
+    );
+    const [thisWeekIssues] = await db.query(
+      `SELECT COUNT(*) as total_issue_rounds
+       FROM training_rounds
+       WHERE created_at >= date('now','localtime','-7 days')
+         AND (issue_grenade=1 OR issue_position=1 OR issue_aim=1 OR issue_comms=1 OR issue_tactics=1)`
+    );
+
+    const [lastWeekRounds] = await db.query(
+      `SELECT COUNT(*) as total FROM training_rounds
+       WHERE created_at >= date('now','localtime','-14 days')
+         AND created_at < date('now','localtime','-7 days')`
+    );
+    const [thisWeekRounds] = await db.query(
+      `SELECT COUNT(*) as total FROM training_rounds
+       WHERE created_at >= date('now','localtime','-7 days')`
+    );
+
+    const weeklyComparison = {
+      topIssues: weeklyIssues,
+      thisWeekWins: weeklyWinLoss[0]?.wins || 0,
+      thisWeekLosses: weeklyWinLoss[0]?.losses || 0,
+      thisWeekTotalRounds: thisWeekRounds[0]?.total || 0,
+      lastWeekTotalRounds: lastWeekRounds[0]?.total || 0,
+      thisWeekIssueRounds: thisWeekIssues[0]?.total_issue_rounds || 0,
+      lastWeekIssueRounds: lastWeekIssues[0]?.total_issue_rounds || 0,
+    };
+
+    // --------------------------------------------------------
+    // 14. 教练评语
     // --------------------------------------------------------
     const [coachNotes] = await db.query(
       `SELECT id, match_date, opponent, map_name, notes
@@ -420,6 +486,7 @@ router.get('/overview', auth, async (req, res) => {
         notes: n.notes,
       })),
       systemConfig,
+      weeklyComparison,
       missingData: {
         vrsRank: systemConfig.vrs_rank ? null : 'VRS排名未配置 — 管理员可在配置中手动输入',
         foundedDate: systemConfig.founded_date ? null : '成立日期未配置',
