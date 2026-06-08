@@ -147,16 +147,16 @@ export default function Tactics() {
       ) : filtered.length > 0 ? (
         <div className="glass-panel rounded-3xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-auto">
               <thead>
                 <tr className="text-[#7f91a7] font-semibold bg-white/[0.035]">
                   <th className="text-left py-3.5 px-4 font-medium whitespace-nowrap">战术编号</th>
                   <th className="text-left py-3.5 px-4 font-medium whitespace-nowrap">地图</th>
-                  <th className="text-center py-3.5 px-3 font-medium whitespace-nowrap w-[64px]">阵营</th>
-                  <th className="text-center py-3.5 px-3 font-medium whitespace-nowrap w-[64px]">局型</th>
+                  <th className="text-center py-3.5 px-3 font-medium whitespace-nowrap">阵营</th>
+                  <th className="text-center py-3.5 px-3 font-medium whitespace-nowrap">局型</th>
                   <th className="text-left py-3.5 px-4 font-medium whitespace-nowrap">战术名</th>
-                  <th className="text-left py-3.5 px-4 font-medium">默认目标</th>
-                  <th className="text-left py-3.5 px-4 font-medium hidden lg:table-cell">备注</th>
+                  <th className="text-left py-3.5 px-4 font-medium whitespace-nowrap">默认目标</th>
+                  <th className="text-left py-3.5 px-4 font-medium whitespace-nowrap hidden lg:table-cell">备注</th>
                 </tr>
               </thead>
               <tbody>
@@ -166,22 +166,22 @@ export default function Tactics() {
                     onClick={() => setSelected(t)}
                     className="border-b border-white/[0.06] hover:bg-white/[0.045] cursor-pointer transition-colors"
                   >
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 whitespace-nowrap">
                       <code className="text-xs font-mono px-2 py-0.5 rounded
-                                      bg-white/[0.06] text-ur-cyan whitespace-nowrap">
+                                      bg-white/[0.06] text-ur-cyan">
                         {t.tactic_id}
                       </code>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 whitespace-nowrap">
                       <span className="inline-flex items-center gap-2">
                         <span
                           className="w-2 h-2 rounded-full flex-shrink-0"
                           style={{ background: MAP_COLORS[t.map_name] || '#666' }}
                         />
-                        <span className="text-[#c4d1df] whitespace-nowrap">{t.map_name}</span>
+                        <span className="text-[#c4d1df]">{t.map_name}</span>
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-center">
+                    <td className="py-3 px-3 text-center whitespace-nowrap">
                       <span
                         className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-bold
                           ${t.team_side === 'T'
@@ -192,21 +192,21 @@ export default function Tactics() {
                         {t.team_side}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-center">
+                    <td className="py-3 px-3 text-center whitespace-nowrap">
                       <span className="text-xs px-2 py-0.5 rounded-full bg-white/[0.06] text-gray-300">
                         {t.round_type || '-'}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 whitespace-nowrap">
                       <span className="text-white font-semibold">{t.name || '-'}</span>
                     </td>
-                    <td className="py-3 px-4">
-                      <span className="text-[#9eb0c4] text-xs line-clamp-2 max-w-[260px]">
+                    <td className="py-3 px-4 max-w-0 w-full min-w-[160px]">
+                      <span className="text-[#9eb0c4] text-xs block overflow-hidden text-ellipsis whitespace-nowrap">
                         {t.description || '-'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 hidden lg:table-cell">
-                      <span className="text-[#6b7d95] text-xs line-clamp-1 max-w-[200px]">
+                    <td className="py-3 px-4 max-w-0 w-full min-w-[120px] hidden lg:table-cell">
+                      <span className="text-[#6b7d95] text-xs block overflow-hidden text-ellipsis whitespace-nowrap">
                         {t.details || '-'}
                       </span>
                     </td>
