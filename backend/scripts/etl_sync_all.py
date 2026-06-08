@@ -118,6 +118,9 @@ OPPONENT_ALIASES = {
     'mongolz.academy': 'Mongolz.A',
     'nexvoid': 'NEXTVOID',
     'nextvoid': 'NEXTVOID',
+    'thecube': 'THE QUBE',
+    'the qube': 'THE QUBE',
+    'the': 'THE QUBE',  # Truncated sheet name: "0608_vs_the"
 }
 
 def normalize_opponent(name):
@@ -170,6 +173,8 @@ execute("DELETE FROM tactics")  # Full refresh
 
 tactic_count = 0
 for row_idx, row in enumerate(ws.iter_rows(min_row=3, values_only=True)):
+    if not row or len(row) < 7:
+        continue  # Skip incomplete rows
     tactic_id = str(row[0] or '').strip()
     map_name = str(row[1] or '').strip()
     side = str(row[2] or '').strip()
@@ -224,6 +229,8 @@ for sheet_name in wb2.sheetnames:
 
     # Get or create session
     session_id = get_or_create_session(date_str, opponent)
+    if session_id is None:
+        continue  # Skip blocked/invalid sessions
     results['sessions'].append({'id': session_id, 'date': date_str, 'opponent': opponent})
 
     # Clear old briefing items

@@ -982,7 +982,7 @@ router.get('/dashboard', auth, async (req, res) => {
     dateCache.start = startDate;
     dateCache.end = endDate;
     dateCache.ts = Date.now();
-    // ── Overview (only sessions that have rounds, exclude placeholder opponents) ──
+    // ── Overview (count sessions even without rounds, but exclude placeholder opponents) ──
     const [[overview]] = await db.query(`
       SELECT
         COUNT(DISTINCT ts.id) as total_matches,
@@ -992,7 +992,7 @@ router.get('/dashboard', auth, async (req, res) => {
         SUM(CASE WHEN tr.round_result IS NOT NULL THEN 1 ELSE 0 END) as known_results,
         SUM(CASE WHEN (tr.issue_grenade + tr.issue_position + tr.issue_aim + tr.issue_comms + tr.issue_tactics) > 0 THEN 1 ELSE 0 END) as rounds_with_issues
       FROM training_sessions ts
-      INNER JOIN training_rounds tr ON ts.id = tr.session_id
+      LEFT JOIN training_rounds tr ON ts.id = tr.session_id
       WHERE ${dateFilter}
         AND ts.opponent NOT IN ('OPPONENT', '未知', '___')
     `);
@@ -1097,7 +1097,7 @@ router.get('/dashboard', auth, async (req, res) => {
     }
     enrichedMapStats.sort((a, b) => b.rounds - a.rounds || (b.match_wins + b.match_losses) - (a.match_wins + a.match_losses));
 
-    // ── Per-match Summary (aggregate all map results from matches table) ──
+    // ── Per-match Summary ──
     const [matchSummary] = await db.query(`
       SELECT
         ts.id, ts.match_date, ts.opponent,
@@ -1108,7 +1108,6 @@ router.get('/dashboard', auth, async (req, res) => {
       WHERE ${dateFilter}
         AND ts.opponent NOT IN ('OPPONENT', '未知', '___')
       GROUP BY ts.id
-      HAVING rounds > 0
       ORDER BY ts.match_date DESC
     `);
 

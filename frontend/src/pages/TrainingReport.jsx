@@ -70,9 +70,18 @@ export default function TrainingReport() {
     try {
       const res = await fetch('/api/internal/sync-tencent', { method: 'POST' });
       const d = await res.json();
-      alert('抓取完成！'+(d.etl?.status||''));
+      const syncInfo = d.sync || d.etl || {};
+      const results = syncInfo.results || {};
+      const parts = [];
+      if (results.tactics !== undefined) parts.push(`战术${results.tactics}`);
+      if (results.briefing !== undefined) parts.push(`简报${results.briefing}`);
+      if (results.rounds !== undefined) parts.push(`回合${results.rounds}`);
+      if (results.matches !== undefined) parts.push(`比赛${results.matches}`);
+      const msg = parts.length ? `同步完成！${parts.join('、')}` : (syncInfo.status || '完成');
+      alert(msg);
       load();
-    } catch { alert('抓取失败'); }
+      loadOpponentStats();
+    } catch { alert('同步失败'); }
     setSyncing(false);
   };
 
@@ -210,12 +219,13 @@ export default function TrainingReport() {
         </div>
       ) : (<>
         {/* ── Overview Metrics ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-5">
           <div onClick={() => setOpponentList(matchSummary)} className="cursor-pointer">
             <MetricCard label="训练赛场次" value={overview.total_matches} detail="点击查看对手" />
           </div>
-          <MetricCard label="总回合数" value={overview.total_rounds} detail="overview.rounds" />
+          <MetricCard label="总回合数" value={overview.total_rounds} />
           <MetricCard label="胜场" value={overview.total_wins} color="text-emerald-400" />
+          <MetricCard label="平局" value={overview.total_draws||0} color="text-gray-400" />
           <MetricCard label="负场" value={overview.total_losses} color="text-ur-rose" />
           <MetricCard label="地图胜率" value={`${overview.win_rate||0}%`} color="text-ur-cyan" />
         </div>

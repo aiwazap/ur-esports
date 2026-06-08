@@ -42,15 +42,47 @@ export default function Overview() {
   const [error, setError] = useState(null);
   const [modal, setModal] = useState(null);
   const [now, setNow] = useState(new Date());
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState(null);
 
-  useEffect(() => {
+  const fetchData = () => {
+    setLoading(true);
     api.get('/dashboard/overview')
       .then(r => setData(r.data))
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchData();
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  const handleHltvSync = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncMsg({ type: 'info', text: '⏳ 正在从 HLTV 同步比赛数据...（约需 2-5 分钟）' });
+    try {
+      const res = await api.post('/hltv-sync');
+      if (res.data.ok) {
+        const d = res.data;
+        const parts = [];
+        if (d.players_updated) parts.push(`${d.players_updated} 选手资料已更新`);
+        if (d.matches_inserted) parts.push(`${d.matches_inserted} 场新比赛`);
+        if (d.matches_updated) parts.push(`${d.matches_updated} 场已更新`);
+        if (parts.length === 0) parts.push('数据已是最新');
+        setSyncMsg({ type: 'success', text: `✅ ${parts.join('，')}` });
+        fetchData(); // 刷新页面数据
+      } else {
+        setSyncMsg({ type: 'error', text: `❌ 同步失败: ${res.data.error || '未知错误'}` });
+      }
+    } catch (e) {
+      setSyncMsg({ type: 'error', text: `❌ ${e.response?.data?.error || e.message}` });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   if (loading) return <div className="dashboard-root" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}><div className="db-kpi-value" style={{ color: 'var(--dash-primary)' }}>Loading...</div></div>;
   if (error) return <div className="dashboard-root"><div className="db-panel"><div className="db-panel-inner"><p style={{ color: 'var(--dash-danger)' }}>数据加载失败: {error}</p></div></div></div>;
@@ -98,7 +130,51 @@ export default function Overview() {
           value={kpi.foundedDate ? `${daysSince(kpi.foundedDate)}天` : '—'}
           valueColor="var(--dash-primary)"
           trend={<span style={{color:'var(--dash-text-dim)'}}>{kpi.foundedDate || ''} 成立</span>} />
+        {/* HLTV Sync */}
+        <button
+          onClick={handleHltvSync}
+          disabled={syncing}
+          className="db-sync-btn"
+          title="从 HLTV.org 同步 UR 战队正式比赛数据"
+          style={{
+            background: syncing ? 'var(--dash-bg-hover)' : 'linear-gradient(135deg, #2d3844, #3e4c54)',
+            color: '#fff',
+            border: '1px solid #4a5568',
+            borderRadius: 8,
+            padding: '8px 16px',
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: syncing ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            whiteSpace: 'nowrap',
+            opacity: syncing ? 0.7 : 1,
+            transition: 'all 0.3s',
+          }}
+          onMouseEnter={e => !syncing && (e.currentTarget.style.background = 'linear-gradient(135deg, #3e4c54, #4a5568)')}
+          onMouseLeave={e => !syncing && (e.currentTarget.style.background = 'linear-gradient(135deg, #2d3844, #3e4c54)')}
+        >
+          <span style={{fontSize:16}}>{syncing ? '⏳' : '🔄'}</span>
+          {syncing ? '同步中...' : '同步 HLTV'}
+        </button>
       </div>
+
+      {/* Sync status message */}
+      {syncMsg && (
+        <div style={{
+          padding: '8px 16px',
+          margin: '0 0 16px 0',
+          borderRadius: 8,
+          fontSize: 13,
+          fontWeight: 500,
+          background: syncMsg.type === 'success' ? 'rgba(72,199,142,0.1)' : syncMsg.type === 'error' ? 'rgba(241,70,104,0.1)' : 'rgba(72,146,235,0.1)',
+          color: syncMsg.type === 'success' ? '#48c78e' : syncMsg.type === 'error' ? '#f14668' : '#4892eb',
+          border: `1px solid ${syncMsg.type === 'success' ? 'rgba(72,199,142,0.3)' : syncMsg.type === 'error' ? 'rgba(241,70,104,0.3)' : 'rgba(72,146,235,0.3)'}`,
+        }}>
+          {syncMsg.text}
+        </div>
+      )}
 
       {/* ═══════ Top Row: 即将赛事 | 数据枢纽 | 训练对象 ═══════ */}
       <div className="db-top-row">

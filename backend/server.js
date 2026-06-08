@@ -193,19 +193,25 @@ app.post('/api/internal/sync-tencent', async (req, res) => {
     }
   }
 
-  // Trigger ETL
-  const scriptPath = path.join(__dirname, 'scripts', 'etl_sync_all.py');
+  // Trigger real-time sync from Tencent Docs API
+  const liveScript = path.join(__dirname, 'scripts', 'sync_tencent_api.py');
   const pythonExe = process.platform === 'win32'
     ? path.join(__dirname, 'venv', 'Scripts', 'python.exe')
     : 'python3';
 
-  execFile(pythonExe, [scriptPath],
-    { timeout: 120000, maxBuffer: 10 * 1024 * 1024 },
+  execFile(pythonExe, [liveScript],
+    { timeout: 180000, maxBuffer: 10 * 1024 * 1024, env: { ...process.env, DB_PATH: dbPath } },
     (error, stdout, stderr) => {
       if (error) {
-        return res.json({ synced, specialEvents, etl: { status: 'ETL失败', error: stderr || error.message } });
+        return res.json({ synced, specialEvents, sync: { status: '同步失败', error: stderr || error.message } });
       }
-      res.json({ synced, specialEvents, etl: { status: '完成', output: stdout.slice(0, 500) } });
+      // Extract JSON results from stdout
+      const jsonMatch = stdout.match(/__JSON__START__([\s\S]*)__JSON__END__/);
+      let syncResult = {};
+      if (jsonMatch) {
+        try { syncResult = JSON.parse(jsonMatch[1]); } catch {}
+      }
+      res.json({ synced, specialEvents, sync: { status: '完成', results: syncResult } });
     }
   );
 });

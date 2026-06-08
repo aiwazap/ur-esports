@@ -1,5 +1,22 @@
 # 赛训数据每日同步 - 执行历史
 
+## 2026-06-08 17:25
+
+**状态**: 成功（全部数据源拉取完成，ETL 抛异常已知问题）
+
+**CSV 抓取**:
+- training_0608.csv (1,547 bytes) ← RwSDaxCXEZpq / 0608_vs_THE CUBE（mirage + overpass 双图，对手 the QUBE）
+- briefing_0608.csv (497 bytes) ← RdZPkZDOwbor / 0608（对手 THE QUBE VRS20，overpass/mirage，M1+M2 双图有局型标记）
+- tactics.csv (2,829 bytes) ← RmUTqSwfBFGg / 战术总表（124条战术记录）
+- match_data.csv (175 bytes) ← RKOQAgoroMFO / 0525_TyLoo_M1（仅模板）
+
+**API 同步**: POST /api/internal/sync-tencent → 200 OK
+- 17 个文件覆盖到对应 Excel（briefing_0601~0608、tactics、match_data、training_0601~0608）
+- 特殊事件: 0601 标记放假，其余日期清除
+- ETL: 失败 — IndexError: tuple index out of range (etl_sync_all.py:176)，上周已知问题
+
+**变化**: 今日 13:46 时训练 sheet 为 0608_vs_OPPONENT（跳过），现已更新为 0608_vs_THE CUBE（含 mirage/overpass 双图训练数据）
+
 ## 2026-06-08 13:46
 
 **状态**: 成功（训练日志跳过，其余正常）

@@ -61,7 +61,7 @@ router.get('/overview', auth, async (req, res) => {
     // 4. 近五场赛事记录（详细）
     // --------------------------------------------------------
     const [recentMatches] = await db.query(
-      `SELECT id, match_date, opponent, map_name, our_score, their_score,
+      `SELECT id, match_date, opponent, map_name, our_score, their_score, t_score, ct_score, notes,
               CASE WHEN our_score > their_score THEN 'win'
                    WHEN our_score < their_score THEN 'loss'
                    ELSE 'draw' END as result
@@ -442,18 +442,10 @@ router.get('/overview', auth, async (req, res) => {
       lastWeekIssueRounds: lastWeekIssues[0]?.total_issue_rounds || 0,
     };
 
-    // --------------------------------------------------------
-    // 14. 教练评语
-    // --------------------------------------------------------
-    const [coachNotes] = await db.query(
-      `SELECT id, match_date, opponent, map_name, notes
-       FROM matches
-       WHERE notes IS NOT NULL AND notes != ''
-         AND opponent NOT IN ('', 'OPPONENT', '__', '未知')
-         AND opponent != '0525_match'
-       ORDER BY match_date DESC
-       LIMIT 10`
-    );
+    // ================================================================
+    // 14. 比赛记录（替代教练评语，含完整上下半场比分+训练日志）
+    // recentMatches already contains t_score/ct_score/notes from query above
+    // ================================================================
 
     // --------------------------------------------------------
     // Response
@@ -479,6 +471,11 @@ router.get('/overview', auth, async (req, res) => {
         map: m.map_name,
         score: `${m.our_score}:${m.their_score}`,
         result: m.result,
+        our_score: m.our_score,
+        their_score: m.their_score,
+        t_score: m.t_score || 0,
+        ct_score: m.ct_score || 0,
+        notes: m.notes || '',
       })),
       playerStats: mergedPlayerStats,
       hsStats: hsStatsFormatted,
@@ -491,13 +488,6 @@ router.get('/overview', auth, async (req, res) => {
       peripherals: peripherals,
       inventory: inventory,
       trainingPlan: trainingPlan,
-      coachNotes: coachNotes.map(n => ({
-        id: n.id,
-        date: n.match_date,
-        opponent: n.opponent,
-        map: n.map_name,
-        notes: n.notes,
-      })),
       systemConfig,
       weeklyComparison,
       missingData: {
