@@ -1,389 +1,325 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../api';
-import {
-  Trophy, TrendingUp, Activity, Calendar, MapIcon, Users, Target,
-  ChevronRight, X, AlertTriangle, Info, Loader2, Swords,
-  Monitor, Package, Clock, Eye, Edit3, Save, Plus, Trash2,
-  ExternalLink,
-} from 'lucide-react';
 
+// ── Utils ──
 const n = (v, d = 0) => (v != null ? Number(v).toFixed(d) : '—');
-const pct = (v) => (v != null ? Number(v).toFixed(1) + '%' : '—');
-
-const MAP_IMAGES = {
-  'Inferno': '/images/maps/inferno.png', 'Mirage': '/images/maps/mirage.png',
-  'Nuke': '/images/maps/nuke.png', 'Ancient': '/images/maps/ancient.png',
-  'Anubis': '/images/maps/anubis.png', 'Overpass': '/images/maps/overpass.png',
-  'Dust2': '/images/maps/dust2.png', 'Train': '/images/maps/train.png',
-  'Vertigo': '/images/maps/vertigo.png',
+const daysSince = (dateStr) => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr); if (isNaN(d.getTime())) return '—';
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
 };
 
-const WIN = 'text-emerald-400'; const LOSS = 'text-rose-400';
+// ── Style — replicates cs2-dashboard.html visual design ──
+const style = `
+.dash-wrap * { margin:0; padding:0; box-sizing:border-box; }
+.dash-wrap {
+  --p: #00d4ff; --pd: #0099cc; --pg: rgba(0,212,255,0.3);
+  --bg: #060b14; --bgc: rgba(16,24,48,0.85); --bgp: rgba(8,14,32,0.9);
+  --tp: #e2e8f0; --ts: #8b9ab0; --td: #5a6a85;
+  --suc: #00e676; --dan: #ff1744; --warn: #ffab00;
+  --bd: rgba(0,212,255,0.15); --bds: rgba(0,212,255,0.3);
+  font-family: 'Microsoft YaHei','PingFang SC',sans-serif; color:var(--tp); line-height:1.5;
+}
+.dash-wrap .panel {
+  background:var(--bgp); border:1px solid var(--bd); border-radius:8px; position:relative; overflow:visible;
+}
+.dash-wrap .panel::before,.dash-wrap .panel::after { content:''; position:absolute; width:8px; height:8px; border:2px solid var(--p); z-index:2; }
+.dash-wrap .panel::before { top:-1px; left:-1px; border-right:none; border-bottom:none; }
+.dash-wrap .panel::after { top:-1px; right:-1px; border-left:none; border-bottom:none; }
+.dash-wrap .panel-inner { position:relative; padding:18px; }
+.dash-wrap .panel-inner::before,.dash-wrap .panel-inner::after { content:''; position:absolute; width:8px; height:8px; border:2px solid var(--p); z-index:2; }
+.dash-wrap .panel-inner::before { bottom:-1px; left:-1px; border-right:none; border-top:none; }
+.dash-wrap .panel-inner::after { bottom:-1px; right:-1px; border-left:none; border-top:none; }
+.dash-wrap .panel-header { display:flex; align-items:center; gap:8px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--bd); }
+.dash-wrap .panel-icon { width:4px; height:16px; border-radius:2px; background:linear-gradient(135deg,var(--p),#0066cc); flex-shrink:0; }
+.dash-wrap .panel-icon.warn { background:linear-gradient(135deg,var(--warn),#ff6d00); }
+.dash-wrap .panel-icon.danger { background:linear-gradient(135deg,var(--dan),#d50000); }
+.dash-wrap .panel-title { font-size:14px; font-weight:600; letter-spacing:1px; }
+.dash-wrap .panel-badge { margin-left:auto; font-size:11px; padding:2px 10px; border-radius:4px; background:rgba(0,212,255,0.08); color:var(--p); border:1px solid var(--bd); white-space:nowrap; }
+.dash-wrap .grid-2 { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-bottom:16px; }
+.dash-wrap .glow-line { height:1px; background:linear-gradient(90deg,transparent,var(--p),transparent); margin:12px 0; opacity:0.25; }
+.dash-wrap .data-table { width:100%; border-collapse:collapse; font-size:12px; }
+.dash-wrap .data-table th { padding:9px 8px; text-align:left; color:var(--ts); font-weight:500; border-bottom:1px solid var(--bd); font-size:11px; letter-spacing:1px; }
+.dash-wrap .data-table td { padding:8px; color:var(--tp); border-bottom:1px solid rgba(0,212,255,0.04); }
+.dash-wrap .data-table tr { transition:background 0.2s; }
+.dash-wrap .data-table tr:hover td { background:rgba(0,212,255,0.06); }
+.dash-wrap .tag { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+.dash-wrap .tag-win { background:rgba(0,230,118,0.15); color:var(--suc); border:1px solid rgba(0,230,118,0.25); }
+.dash-wrap .tag-loss { background:rgba(255,23,68,0.15); color:var(--dan); border:1px solid rgba(255,23,68,0.25); }
+.dash-wrap .score-cell { font-family:Orbitron,monospace; font-weight:600; }
+.dash-wrap .stat-card { display:flex; flex-direction:column; align-items:center; padding:12px; background:rgba(0,212,255,0.03); border:1px solid var(--bd); border-radius:6px; }
+.dash-wrap .stat-label { font-size:11px; color:var(--td); margin-bottom:4px; }
+.dash-wrap .stat-value { font-family:Orbitron,monospace; font-size:20px; font-weight:600; }
 
-function daysSince(dateStr) {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '—';
-  return Math.floor((Date.now() - d.getTime()) / 86400000);
+/* KPI */
+.dash-wrap .kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:18px; }
+.dash-wrap .kpi-card { display:flex; align-items:center; gap:14px; padding:16px 18px; background:var(--bgp); border:1px solid var(--bd); border-radius:8px; position:relative; }
+.dash-wrap .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(135deg,var(--p),#0066cc); opacity:0.5; }
+.dash-wrap .kpi-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; background:rgba(0,212,255,0.06); color:var(--p); font-family:Orbitron,monospace; }
+.dash-wrap .kpi-info { flex:1; }
+.dash-wrap .kpi-label { font-size:12px; color:var(--td); margin-bottom:3px; }
+.dash-wrap .kpi-value { font-family:Orbitron,monospace; font-size:24px; font-weight:700; }
+.dash-wrap .kpi-trend { font-size:11px; margin-top:3px; }
+
+/* Top Row */
+.dash-wrap .top-row { display:grid; grid-template-columns:320px 1fr 320px; gap:16px; margin-bottom:18px; }
+.dash-wrap .match-event { font-size:17px; font-weight:700; color:var(--p); margin-bottom:6px; font-family:Orbitron,monospace; text-align:center; }
+.dash-wrap .match-stage { font-size:12px; color:var(--ts); margin-bottom:14px; text-align:center; }
+.dash-wrap .match-vs { display:flex; align-items:center; justify-content:center; gap:18px; margin-bottom:14px; }
+.dash-wrap .match-team-name { font-size:22px; font-weight:700; }
+.dash-wrap .match-team-rank { font-size:11px; color:var(--td); margin-top:2px; }
+.dash-wrap .match-vs-text { font-family:Orbitron,monospace; font-size:18px; color:var(--p); font-weight:700; }
+.dash-wrap .h2h-dot { width:6px; height:6px; border-radius:50%; }
+.dash-wrap .h2h-dot.win { background:var(--suc); }
+.dash-wrap .h2h-dot.loss { background:var(--dan); }
+
+/* Scrim opponent */
+.dash-wrap .scrim-vs-label { font-family:Orbitron,monospace; font-size:14px; color:var(--p); margin-bottom:6px; text-align:center; }
+.dash-wrap .scrim-name { font-size:24px; font-weight:700; color:var(--tp); text-align:center; margin-bottom:8px; }
+.dash-wrap .scrim-maps { font-size:13px; color:var(--ts); text-align:center; margin-bottom:12px; }
+.dash-wrap .scrim-info-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.dash-wrap .scrim-info-item { text-align:center; }
+.dash-wrap .scrim-info-label { font-size:10px; color:var(--td); margin-bottom:2px; }
+.dash-wrap .scrim-info-val { font-size:13px; color:var(--tp); font-weight:500; }
+
+/* Map grid */
+.dash-wrap .map-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:12px; }
+.dash-wrap .map-card { background:rgba(0,212,255,0.03); border:1px solid var(--bd); border-radius:8px; padding:12px 8px; text-align:center; transition:all 0.3s; cursor:pointer; }
+.dash-wrap .map-card:hover { border-color:var(--p); background:rgba(0,212,255,0.06); transform:translateY(-2px); }
+.dash-wrap .map-card-img { width:64px; height:40px; object-fit:cover; border-radius:4px; margin-bottom:8px; border:1px solid var(--bd); }
+.dash-wrap .map-card-name { font-size:13px; font-weight:600; color:var(--tp); margin-bottom:4px; }
+.dash-wrap .map-card-count { font-size:11px; color:var(--td); margin-bottom:6px; }
+.dash-wrap .map-card-bar { height:3px; border-radius:2px; background:rgba(255,255,255,0.06); overflow:hidden; margin-bottom:4px; }
+.dash-wrap .map-card-bar-fill { height:100%; border-radius:2px; transition:width 0.5s; }
+.dash-wrap .map-card-wr { font-family:Orbitron,monospace; font-size:14px; font-weight:700; }
+
+/* Modal */
+.dash-wrap .modal-overlay { position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(4px); }
+.dash-wrap .modal-box { background:var(--bgp); border:1px solid var(--bds); border-radius:12px; width:100%; max-width:640px; max-height:85vh; overflow-y:auto; padding:24px; margin:16px; }
+.dash-wrap .modal-box.fullscreen { max-width:90vw; max-height:90vh; }
+.dash-wrap .modal-close { position:absolute; top:12px; right:12px; width:32px; height:32px; border-radius:6px; background:rgba(255,23,68,0.1); border:1px solid rgba(255,23,68,0.2); color:var(--dan); cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; }
+.dash-wrap .modal-title { font-size:18px; font-weight:700; color:var(--p); font-family:Orbitron,monospace; margin-bottom:4px; }
+.dash-wrap .modal-subtitle { font-size:12px; color:var(--ts); margin-bottom:16px; }
+.dash-wrap .modal-info-row { display:flex; gap:12px; margin-bottom:16px; }
+.dash-wrap .modal-section-title { font-size:14px; font-weight:600; color:var(--tp); margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid var(--bd); }
+.dash-wrap .modal-coach-comment { margin-top:16px; padding:12px; background:rgba(0,212,255,0.04); border:1px solid var(--bd); border-radius:6px; font-size:12px; color:var(--ts); line-height:1.6; }
+`;
+
+// ── KPI Card Component ──
+function KpiCard({ icon, label, value, valueColor, trend }) {
+  return (
+    <div className="kpi-card">
+      <div className="kpi-icon" style={{ color: valueColor || 'var(--p)' }}>{icon}</div>
+      <div className="kpi-info">
+        <div className="kpi-label">{label}</div>
+        <div className="kpi-value" style={{ color: valueColor || 'var(--p)' }}>{value}</div>
+        <div className="kpi-trend">{trend}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Panel wrapper ──
+function Panel({ iconClass, title, badge, children }) {
+  return (
+    <div className="panel">
+      <div className="panel-inner" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="panel-header">
+          <div className={'panel-icon' + (iconClass ? ' ' + iconClass : '')}></div>
+          <div className="panel-title">{title}</div>
+          {badge && <div className="panel-badge">{badge}</div>}
+        </div>
+        <div style={{ flex: 1 }}>{children}</div>
+      </div>
+    </div>
+  );
 }
 
 export default function Overview() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedMatch, setSelectedMatch] = useState(null);
-  const [selectedMap, setSelectedMap] = useState(null);
-  // Admin editing states
-  const [editingPeriph, setEditingPeriph] = useState(false);
-  const [editingInv, setEditingInv] = useState(false);
-  const [editingPlan, setEditingPlan] = useState(false);
-  const [periphForm, setPeriphForm] = useState({});
-  const [invForm, setInvForm] = useState([]);
-  const [planForm, setPlanForm] = useState({ date: '', items: [] });
-  const [saving, setSaving] = useState(false);
-
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const isAdmin = user?.role === 'admin';
-  const isStaff = isAdmin || user?.role === 'coach' || user?.role === 'team_lead' || user?.role === 'analyst';
+  const [modal, setModal] = useState(null); // { type:'match'|'map', data }
+  const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    api.get('/dashboard/overview')
-      .then(res => { if (!cancelled) setData(res.data); })
-      .catch(err => { if (!cancelled) setError(err.response?.data?.error || err.message); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    api.get('/dashboard/overview').then(r => setData(r.data)).catch(e => setError(e.message)).finally(() => setLoading(false));
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
   }, []);
 
-  // ── Peripherals save ──
-  const savePeripherals = async () => {
-    setSaving(true);
-    try {
-      for (const [playerId, fields] of Object.entries(periphForm)) {
-        await api.put(`/peripherals/${playerId}`, fields);
-      }
-      setEditingPeriph(false);
-      window.location.reload();
-    } catch (err) {
-      alert('保存失败: ' + (err.response?.data?.error || err.message));
-    } finally { setSaving(false); }
-  };
-
-  // ── Inventory save ──
-  const saveInventory = async () => {
-    setSaving(true);
-    try {
-      await api.put('/inventory/batch', { items: invForm });
-      setEditingInv(false);
-      window.location.reload();
-    } catch (err) {
-      alert('保存失败: ' + (err.response?.data?.error || err.message));
-    } finally { setSaving(false); }
-  };
-
-  // ── Training plan save ──
-  const saveTrainingPlan = async () => {
-    setSaving(true);
-    try {
-      await api.put('/training-plans/batch', planForm);
-      setEditingPlan(false);
-      window.location.reload();
-    } catch (err) {
-      alert('保存失败: ' + (err.response?.data?.error || err.message));
-    } finally { setSaving(false); }
-  };
-
-  // ── Coach notes quick save ──
-  const saveCoachNote = async (matchId, notes) => {
-    try {
-      await api.put(`/matches/${matchId}`, { notes });
-      alert('已保存');
-    } catch (err) {
-      alert('保存失败: ' + (err.response?.data?.error || err.message));
-    }
-  };
-
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="text-center space-y-4">
-        <Loader2 className="w-10 h-10 animate-spin text-cyan-400 mx-auto" />
-        <p className="text-slate-400 text-sm">加载数据总览...</p>
-      </div>
-    </div>
-  );
-
-  if (error) return (
-    <div className="data-card text-center py-16 max-w-lg mx-auto">
-      <AlertTriangle className="w-12 h-12 text-rose-400 mx-auto mb-3" />
-      <h3 className="text-lg font-bold text-white mb-2">数据加载失败</h3>
-      <p className="text-slate-400 text-sm mb-4">{error}</p>
-      <button onClick={() => window.location.reload()} className="btn-primary cursor-pointer">重新加载</button>
-    </div>
-  );
-
+  if (loading) return <div className="dash-wrap flex items-center justify-center min-h-[300px]"><div className="kpi-value" style={{color:'var(--p)'}}>加载中...</div></div>;
+  if (error) return <div className="dash-wrap"><div className="panel"><div className="panel-inner"><p style={{color:'var(--dan)'}}>数据加载失败: {error}</p></div></div></div>;
   if (!data) return null;
 
-  const { kpi, upcomingMatch, recentMatches, playerStats, hsStats, teamAverages,
-          mapStats, matchDetails, peripherals, inventory, trainingPlan,
-          coachNotes, opponentIntel, h2hFromDb, systemConfig, missingData } = data;
+  const { kpi, upcomingMatch, recentMatches, playerStats, hsStats, teamAverages, mapStats, matchDetails, peripherals, inventory } = data;
+  const mapImg = (name) => {
+    const m = { Inferno:'inferno', Mirage:'mirage', Nuke:'nuke', Ancient:'ancient', Anubis:'anubis', Overpass:'overpass', Dust2:'dust2', Train:'train', Vertigo:'vertigo' };
+    return m[name] ? `/images/maps/${m[name]}.png` : null;
+  };
 
-  const totalMapGames = mapStats.reduce((s, m) => s + m.played, 0);
-  const totalMapWins = mapStats.reduce((s, m) => s + m.wins, 0);
+  // Countdown (if upcoming)
+  const countdown = upcomingMatch ? (() => {
+    const target = new Date(upcomingMatch.match_date + 'T' + (upcomingMatch.match_time || '00:00'));
+    const diff = target - now;
+    if (diff <= 0) return { d:0, h:0, m:0, s:0 };
+    return {
+      d: Math.floor(diff / 86400000),
+      h: Math.floor((diff % 86400000) / 3600000),
+      m: Math.floor((diff % 3600000) / 60000),
+      s: Math.floor((diff % 60000) / 1000),
+    };
+  })() : null;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5 fade-in pb-12">
-      {/* ═══ Header ═══ */}
-      <div className="flex items-center justify-between mb-1">
-        <div>
-          <h2 className="font-display text-2xl font-bold text-white">数据总览</h2>
-          <p className="text-xs text-slate-500 mt-0.5">赛训数据概览 · {new Date().toLocaleDateString('zh-CN')}</p>
-        </div>
-      </div>
+    <div className="dash-wrap" style={{ maxWidth: 1600, margin: '0 auto', padding: '16px 28px' }}>
+      <style>{style}</style>
 
       {/* ═══ KPI Row ═══ */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* VRS 排名 */}
-        <div className="data-card">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[11px] text-slate-500 uppercase tracking-wider">VRS Asia 排名</p>
-              <p className="text-3xl font-bold text-cyan-400 mt-1 font-mono">
-                {kpi.vrsRank ? '#' + kpi.vrsRank : '—'}
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-              <Trophy className="w-5 h-5 text-cyan-400" />
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-600 mt-2">
-            {kpi.vrsRank ? '实时排名' : '需配置'}
-            {isAdmin && (
-              <button onClick={async () => {
-                const rank = prompt('输入 VRS Asia 排名:');
-                if (rank && !isNaN(rank)) {
-                  await api.post('/config/vrs-rank', { rank: parseInt(rank) });
-                  window.location.reload();
-                }
-              }} className="ml-2 text-cyan-400 hover:underline">编辑</button>
-            )}
-          </p>
-        </div>
-
-        {/* 近十场胜率 */}
-        <div className="data-card">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[11px] text-slate-500 uppercase tracking-wider">近十场胜率</p>
-              <p className={`text-3xl font-bold mt-1 ${kpi.recentWinRate >= 50 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {kpi.recentWinRate}%
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-emerald-400" />
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-500 mt-2">{kpi.recentWins}胜 / {kpi.totalRecentMatches - kpi.recentWins}负</p>
-        </div>
-
-        {/* 训练质量 */}
-        <div className="data-card">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[11px] text-slate-500 uppercase tracking-wider">训练质量</p>
-              <p className={`text-3xl font-bold mt-1 ${kpi.trainingQuality >= 70 ? 'text-amber-400' : 'text-rose-400'}`}>
-                {kpi.trainingQuality}%
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-              <Activity className="w-5 h-5 text-amber-400" />
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-500 mt-2">{kpi.totalRounds} 回合 · {kpi.issueRounds} 失误</p>
-        </div>
-
-        {/* 分部已成立天数 */}
-        <div className="data-card">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[11px] text-slate-500 uppercase tracking-wider">分部已成立</p>
-              <p className="text-3xl font-bold text-cyan-400 mt-1 font-mono">
-                {kpi.foundedDate ? daysSince(kpi.foundedDate) + '天' : '—'}
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-violet-400" />
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-600 mt-2">
-            {kpi.foundedDate ? kpi.foundedDate + ' 成立' : '未配置'}
-          </p>
-        </div>
+      <div className="kpi-row">
+        <KpiCard icon="#" label="VRS Asia 排名" value={kpi.vrsRank ? '#' + kpi.vrsRank : '—'} valueColor="var(--p)" trend={kpi.vrsRank ? '实时排名' : '未配置'} />
+        <KpiCard icon="W" label="近十场胜率" value={kpi.recentWinRate + '%'} valueColor={kpi.recentWinRate >= 50 ? 'var(--suc)' : 'var(--dan)'} trend={kpi.recentWins + '胜 / ' + (kpi.totalRecentMatches - kpi.recentWins) + '负'} />
+        <KpiCard icon="Q" label="训练质量" value={kpi.trainingQuality + '%'} valueColor={kpi.trainingQuality >= 70 ? 'var(--warn)' : 'var(--dan)'} trend={<span style={{cursor:'help',borderBottom:'1px dashed var(--td)',fontSize:11}}>计算逻辑</span>} />
+        <KpiCard icon="D" label="分部已成立" value={daysSince(kpi.foundedDate) !== '—' ? daysSince(kpi.foundedDate) + '天' : '—'} valueColor="var(--p)" trend={(kpi.foundedDate || '') + ' 成立'} />
       </div>
 
-      {/* ═══ Upcoming + Player Stats ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* ═══ Top Row: Upcoming | Cam | Scrim ═══ */}
+      <div className="top-row">
         {/* ── 即将赛事 ── */}
-        <div className="data-card">
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar className="w-4 h-4 text-rose-400" />
-            <h3 className="text-sm font-bold text-white">即将赛事</h3>
-            {upcomingMatch?.source_link && (
-              <a href={upcomingMatch.source_link} target="_blank" rel="noreferrer"
-                 className="ml-auto text-[10px] text-cyan-400 hover:underline flex items-center gap-1">
-                <ExternalLink className="w-3 h-3" /> 来源
-              </a>
-            )}
-          </div>
+        <Panel iconClass="danger" title="即将开始赛事" badge={upcomingMatch ? countdown.d + '天后' : '暂无'}>
           {upcomingMatch ? (
-            <div className="text-center py-3 space-y-3">
-              <p className="text-lg font-bold text-cyan-400">{upcomingMatch.event_name || '赛事'}</p>
-              <p className="text-sm text-slate-400">{upcomingMatch.stage || ''}</p>
-              <div className="flex items-center justify-center gap-4">
-                <div className="text-center">
-                  <p className="text-xl font-bold text-cyan-400">UR</p>
-                  <p className="text-[10px] text-slate-500">VRS #{kpi.vrsRank || '—'}</p>
+            <div style={{ textAlign: 'center' }}>
+              <div className="match-event">{upcomingMatch.event_name || '赛事'}</div>
+              <div className="match-stage">{upcomingMatch.stage || ''}</div>
+              <div className="match-vs">
+                <div style={{textAlign:'center'}}>
+                  <div className="match-team-name" style={{color:'var(--p)'}}>UR</div>
+                  <div className="match-team-rank">#{kpi.vrsRank || '—'}</div>
                 </div>
-                <span className="text-lg font-bold text-slate-600 font-mono">VS</span>
-                <div className="text-center">
-                  <p className="text-xl font-bold text-white">{upcomingMatch.opponent}</p>
-                  <p className="text-[10px] text-slate-500">
-                    {opponentIntel?.vrs_rank ? '#' + opponentIntel.vrs_rank : ''}
-                    {upcomingMatch.match_type === 'official' ? ' · 正式赛' : ' · 训练赛'}
-                  </p>
+                <div className="match-vs-text">VS</div>
+                <div style={{textAlign:'center'}}>
+                  <div className="match-team-name" style={{color:'var(--tp)'}}>{upcomingMatch.opponent}</div>
+                  <div className="match-team-rank">{upcomingMatch.match_type === 'official' ? '正式赛' : '训练赛'}</div>
                 </div>
               </div>
-              <p className="text-xs text-slate-500">
-                {upcomingMatch.match_date}{upcomingMatch.match_time ? ' ' + upcomingMatch.match_time : ''}
-                {upcomingMatch.bo_format && <span className="chip text-[10px] ml-2">{upcomingMatch.bo_format}</span>}
-              </p>
-              {/* H2H */}
-              <div className="flex items-center justify-center gap-1 text-[10px] text-slate-500">
-                <span>历史交手:</span>
-                <span className="text-emerald-400">{h2hFromDb?.wins || 0}W</span>
-                <span className="text-slate-600">/</span>
-                <span className="text-rose-400">{h2hFromDb?.losses || 0}L</span>
-                {(h2hFromDb?.draws || 0) > 0 && <><span className="text-slate-600">/</span><span className="text-amber-400">{h2hFromDb.draws}D</span></>}
+              <div style={{fontSize:12,color:'var(--ts)',marginBottom:14}}>
+                {upcomingMatch.match_date} {upcomingMatch.match_time || ''}
               </div>
-              {/* Opponent intel */}
-              {opponentIntel && (
-                <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 text-left space-y-1.5">
-                  {opponentIntel.map_preference && (
-                    <p className="text-[10px] text-slate-400"><strong className="text-slate-300">地图倾向:</strong> {opponentIntel.map_preference}</p>
-                  )}
-                  {opponentIntel.core_players && (
-                    <p className="text-[10px] text-slate-400"><strong className="text-slate-300">核心选手:</strong> {opponentIntel.core_players}</p>
-                  )}
-                  {opponentIntel.notes && (
-                    <p className="text-[10px] text-slate-500">{opponentIntel.notes}</p>
-                  )}
+              {countdown && (
+                <div style={{display:'flex',gap:8,justifyContent:'center',marginBottom:12}}>
+                  {[{v:countdown.d,l:'天'},{v:countdown.h,l:'时'},{v:countdown.m,l:'分'},{v:countdown.s,l:'秒'}].map((c,i) => (
+                    <div key={i} style={{textAlign:'center'}}>
+                      <div style={{fontFamily:'Orbitron',fontSize:26,fontWeight:700,color:'var(--p)',padding:'6px 10px',background:'rgba(0,212,255,0.04)',border:'1px solid var(--bd)',borderRadius:6,minWidth:46}}>
+                        {String(c.v).padStart(2,'0')}
+                      </div>
+                      <div style={{fontSize:9,color:'var(--td)',marginTop:3}}>{c.l}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {(data.h2hFromDb && (data.h2hFromDb.wins + data.h2hFromDb.losses > 0)) && (
+                <div className="h2h-dot" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,fontSize:11,color:'var(--td)',marginTop:8}}>
+                  <span>历史交手: </span>
+                  {[...Array(data.h2hFromDb.wins)].map((_,i) => <span key={'w'+i} className="h2h-dot win"/>)}
+                  {[...Array(data.h2hFromDb.losses)].map((_,i) => <span key={'l'+i} className="h2h-dot loss"/>)}
+                  <span style={{fontFamily:'Orbitron',color:'var(--ts)'}}>{data.h2hFromDb.wins}W : {data.h2hFromDb.losses}L</span>
                 </div>
               )}
             </div>
           ) : (
-            <div className="text-center py-8 border border-dashed border-slate-700/50 rounded-lg">
-              <Calendar className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-              <p className="text-sm text-slate-500">近期暂无正赛规划</p>
-              <p className="text-[10px] text-slate-600 mt-1">在「数据管理」中录入赛程</p>
+            <div style={{textAlign:'center',padding:'40px 0',color:'var(--td)'}}>
+              <div style={{fontSize:48,opacity:0.3,marginBottom:12}}>📅</div>
+              <div>近期暂无正赛规划</div>
             </div>
           )}
+        </Panel>
+
+        {/* ── 中间动态区域 ── */}
+        <div className="panel">
+          <div className="panel-inner">
+            <div className="panel-header">
+              <div className="panel-icon"></div>
+              <div className="panel-title">数据枢纽</div>
+            </div>
+            <div style={{textAlign:'center',padding:'40px 0'}}>
+              <div style={{width:120,height:120,margin:'0 auto 16px',borderRadius:'50%',background:'radial-gradient(circle, rgba(0,212,255,0.15), transparent 70%)',display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid var(--bd)'}}>
+                <span style={{fontFamily:'Orbitron',fontSize:20,fontWeight:900,color:'var(--p)'}}>LINK</span>
+              </div>
+              <div style={{color:'var(--tp)',marginBottom:4}}>数据联动核心</div>
+              <div style={{fontSize:11,color:'var(--td)'}}>DATA HUB · CONNECTED</div>
+            </div>
+          </div>
         </div>
 
-        {/* ── 选手综合数据 + HS% ── */}
-        <div className="data-card">
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-sm font-bold text-white">现役选手综合数据</h3>
-            {hsStats?.length > 0 && <span className="text-[10px] text-slate-500 ml-auto">含近3天 HS%</span>}
-          </div>
-          {playerStats.length > 0 ? (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-white/[0.06]">
-                      <th className="text-left py-2 px-1 text-slate-500 font-medium">选手</th>
-                      <th className="text-right py-2 px-1 text-slate-500 font-medium">Rating</th>
-                      <th className="text-right py-2 px-1 text-slate-500 font-medium">K-D</th>
-                      <th className="text-right py-2 px-1 text-slate-500 font-medium">ADR</th>
-                      <th className="text-right py-2 px-1 text-slate-500 font-medium">HS%</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {playerStats.map(p => {
-                      const hsRow = hsStats?.find(h => h.nickname === p.nickname);
-                      return (
-                        <tr key={p.nickname} className="border-b border-white/[0.03] hover:bg-white/[0.03] transition-colors">
-                          <td className="py-2.5 px-1">
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-500/30 border border-cyan-500/20 flex items-center justify-center text-[11px] font-bold text-cyan-400">
-                                {p.nickname[0]}
-                              </div>
-                              <div>
-                                <span className="font-semibold text-white">{p.nickname}</span>
-                                {p.in_game_role && <span className="text-[10px] text-slate-500 ml-1.5">{p.in_game_role}</span>}
-                              </div>
-                            </div>
-                          </td>
-                          <td className={`py-2.5 px-1 text-right font-mono font-bold ${(p.avg_rating || 0) >= 1.05 ? WIN : (p.avg_rating || 0) >= 0.95 ? 'text-amber-400' : LOSS}`}>
-                            {n(p.avg_rating, 2)}
-                          </td>
-                          <td className="py-2.5 px-1 text-right text-slate-300 font-mono">{p.total_kills}-{p.total_deaths}</td>
-                          <td className="py-2.5 px-1 text-right text-slate-300 font-mono">{n(p.avg_adr, 1)}</td>
-                          <td className={`py-2.5 px-1 text-right font-mono font-bold ${hsRow ? (parseFloat(hsRow.hs_pct) >= 45 ? 'text-emerald-400' : 'text-amber-400') : 'text-slate-600'}`}>
-                            {hsRow ? hsRow.hs_pct + '%' : '—'}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+        {/* ── 今日训练对象 ── */}
+        <Panel iconClass="warn" title="今日训练赛对象" badge={upcomingMatch?.bo_format || (upcomingMatch ? '待定' : '暂无')}>
+          {upcomingMatch ? (
+            <div style={{textAlign:'center'}}>
+              <div className="scrim-vs-label">VS</div>
+              <div className="scrim-name">{upcomingMatch.opponent}</div>
+              {data.opponentIntel?.vrs_rank && (
+                <span className="tag" style={{fontSize:13,padding:'4px 12px',background:'rgba(0,212,255,0.08)',color:'var(--p)'}}>
+                  #{data.opponentIntel.vrs_rank} {data.opponentIntel.region || ''}
+                </span>
+              )}
+              <div className="scrim-maps">{upcomingMatch.bo_format || '地图待定'}</div>
+              <div className="glow-line" style={{margin:'12px 0'}}></div>
+              <div className="scrim-info-grid">
+                <div className="scrim-info-item">
+                  <div className="scrim-info-label">近期交手</div>
+                  <div className="scrim-info-val" style={{color:'var(--warn)'}}>
+                    {data.h2hFromDb ? `${data.h2hFromDb.wins || 0}W / ${data.h2hFromDb.losses || 0}L` : '—'}
+                  </div>
+                </div>
+                <div className="scrim-info-item">
+                  <div className="scrim-info-label">比赛时间</div>
+                  <div className="scrim-info-val">{upcomingMatch.match_time || '待定'}</div>
+                </div>
+                {data.opponentIntel?.map_preference && (
+                  <div className="scrim-info-item">
+                    <div className="scrim-info-label">地图倾向</div>
+                    <div className="scrim-info-val" style={{fontSize:12}}>{data.opponentIntel.map_preference}</div>
+                  </div>
+                )}
+                {data.opponentIntel?.core_players && (
+                  <div className="scrim-info-item">
+                    <div className="scrim-info-label">核心选手</div>
+                    <div className="scrim-info-val" style={{fontSize:12}}>{data.opponentIntel.core_players}</div>
+                  </div>
+                )}
               </div>
-              <div className="mt-3 pt-3 border-t border-white/[0.06] flex gap-4 text-xs text-slate-500">
-                <span>团队 Rating: <strong className="text-cyan-400">{n(teamAverages?.rating, 2)}</strong></span>
-                <span>团队 ADR: <strong className="text-cyan-400">{n(teamAverages?.adr, 1)}</strong></span>
-              </div>
-            </>
+            </div>
           ) : (
-            <div className="text-center py-8 border border-dashed border-slate-700/50 rounded-lg">
-              <Users className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-              <p className="text-sm text-slate-500">暂无选手数据</p>
+            <div style={{textAlign:'center',padding:'40px 0',color:'var(--td)'}}>
+              <div style={{fontSize:48,opacity:0.3,marginBottom:12}}>🎯</div>
+              <div>今日暂无训练赛排程</div>
             </div>
           )}
-        </div>
+        </Panel>
       </div>
 
-      {/* ═══ 近期比赛 + 地图统计 ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="data-card">
-          <div className="flex items-center gap-2 mb-4">
-            <Swords className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-sm font-bold text-white">近期赛事记录</h3>
-          </div>
-          {recentMatches.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-white/[0.06]">
-                    <th className="text-left py-2 px-1 text-slate-500 font-medium">日期</th>
-                    <th className="text-left py-2 px-1 text-slate-500 font-medium">对手</th>
-                    <th className="text-left py-2 px-1 text-slate-500 font-medium">地图</th>
-                    <th className="text-right py-2 px-1 text-slate-500 font-medium">比分</th>
-                    <th className="text-center py-2 px-1 text-slate-500 font-medium">结果</th>
-                  </tr>
-                </thead>
+      {/* ═══ 近五场赛事 + 选手数据 ═══ */}
+      <div className="grid-2" style={{ marginBottom: 16 }}>
+        {/* ── 近五场赛事 ── */}
+        <div className="panel" style={{overflow:'hidden'}}>
+          <div className="panel-inner" style={{flex:1,display:'flex',flexDirection:'column'}}>
+            <div className="panel-header">
+              <div className="panel-icon"></div>
+              <div className="panel-title">近五场赛事记录</div>
+              <div className="panel-badge">点击查看详情</div>
+            </div>
+            <div style={{flex:1}}>
+              <table className="data-table">
+                <thead><tr><th>日期</th><th>对手</th><th>地图</th><th style={{textAlign:'right'}}>比分</th><th style={{textAlign:'center'}}>结果</th></tr></thead>
                 <tbody>
-                  {recentMatches.map(m => (
-                    <tr key={m.id} onClick={() => {
-                      const detail = matchDetails?.find(d => d.id === m.id);
-                      if (detail) setSelectedMatch(detail);
-                    }} className="border-b border-white/[0.03] hover:bg-white/[0.04] transition-colors cursor-pointer">
-                      <td className="py-2.5 px-1 text-slate-400">{m.date}</td>
-                      <td className="py-2.5 px-1 font-semibold text-white">{m.opponent}</td>
-                      <td className="py-2.5 px-1 text-slate-300">{m.map}</td>
-                      <td className="py-2.5 px-1 text-right font-mono font-bold text-slate-200">{m.score}</td>
-                      <td className="py-2.5 px-1 text-center">
-                        <span className={`tag ${m.result === 'win' ? 'tag-win' : m.result === 'loss' ? 'tag-loss' : 'tag-draw'}`}>
+                  {(recentMatches || []).slice(0, 5).map((m, i) => (
+                    <tr key={m.id || i} onClick={() => { const d = (matchDetails || []).find(x => x.id === m.id); if (d) setModal({ type: 'match', data: d }); }} style={{cursor:'pointer'}}>
+                      <td>{m.date?.slice(5)}</td>
+                      <td><strong>{m.opponent}</strong></td>
+                      <td>{m.map}</td>
+                      <td className="score-cell" style={{textAlign:'right'}}>{m.score}</td>
+                      <td style={{textAlign:'center'}}>
+                        <span className={'tag ' + (m.result === 'win' ? 'tag-win' : m.result === 'loss' ? 'tag-loss' : '')}>
                           {m.result === 'win' ? 'W' : m.result === 'loss' ? 'L' : 'D'}
                         </span>
                       </td>
@@ -392,431 +328,195 @@ export default function Overview() {
                 </tbody>
               </table>
             </div>
-          ) : (
-            <div className="text-center py-8 border border-dashed border-slate-700/50 rounded-lg">
-              <Swords className="w-8 h-8 text-slate-600 mx-auto mb-2" /><p className="text-sm text-slate-500">暂无比赛数据</p>
+            <div className="glow-line"></div>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--td)',marginTop:'auto'}}>
+              <span>近10场: W{kpi.recentWins} / L{kpi.totalRecentMatches - kpi.recentWins}</span>
+              <span>胜率: <strong style={{color:'var(--suc)',fontSize:13}}>{kpi.recentWinRate}%</strong></span>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* 地图统计 */}
-        <div className="data-card">
-          <div className="flex items-center gap-2 mb-4">
-            <MapIcon className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-sm font-bold text-white">赛训地图统计</h3>
+        {/* ── 选手数据 ── */}
+        <div className="panel" style={{overflow:'hidden'}}>
+          <div className="panel-inner" style={{flex:1,display:'flex',flexDirection:'column'}}>
+            <div className="panel-header">
+              <div className="panel-icon"></div>
+              <div className="panel-title">近五场选手数据</div>
+              <div className="panel-badge">Rating / K-D / ADR / HS%</div>
+            </div>
+            <div style={{flex:1}}>
+              <table className="data-table">
+                <thead><tr><th style={{width:34}}></th><th>选手</th><th style={{textAlign:'right'}}>Rating</th><th style={{textAlign:'right'}}>K-D</th><th style={{textAlign:'right'}}>ADR</th><th style={{textAlign:'right'}}>HS%</th></tr></thead>
+                <tbody>
+                  {(playerStats || []).map(p => {
+                    const hs = (hsStats || []).find(h => h.nickname === p.nickname);
+                    const r = p.avg_rating || 0;
+                    const ratingColor = r >= 1.1 ? 'var(--suc)' : r >= 0.95 ? 'var(--warn)' : 'var(--dan)';
+                    return (
+                      <tr key={p.nickname} style={{cursor:'pointer'}}>
+                        <td style={{paddingRight:0}}>
+                          <div className="player-avatar" style={{width:30,height:30,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(135deg,#00d4ff,#0066cc)',color:'#fff',fontWeight:700,fontSize:13}}>
+                            {p.nickname[0]}
+                          </div>
+                        </td>
+                        <td>
+                          <strong>{p.nickname}</strong>
+                          <span style={{fontSize:10,color:'var(--td)',marginLeft:4}}>{p.in_game_role}</span>
+                        </td>
+                        <td className="score-cell" style={{textAlign:'right',color:ratingColor}}>{n(r,2)}</td>
+                        <td style={{textAlign:'right',fontFamily:'Orbitron'}}>{p.total_kills}-{p.total_deaths}</td>
+                        <td style={{textAlign:'right',fontFamily:'Orbitron'}}>{n(p.avg_adr,1)}</td>
+                        <td style={{textAlign:'right',fontFamily:'Orbitron'}}>{hs ? hs.hs_pct + '%' : '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="glow-line"></div>
+            <div style={{display:'flex',gap:12,marginTop:'auto'}}>
+              <div className="stat-card" style={{flex:1}}><div className="stat-label">团队 Rating</div><div className="stat-value" style={{color:'var(--suc)'}}>{n(teamAverages?.rating, 2)}</div></div>
+              <div className="stat-card" style={{flex:1}}><div className="stat-label">团队 ADR</div><div className="stat-value" style={{color:'var(--p)'}}>{n(teamAverages?.adr, 1)}</div></div>
+            </div>
           </div>
-          {mapStats.length > 0 ? (
-            <div className="space-y-2.5">
-              {mapStats.map(map => {
-                const wr = map.win_rate || 0;
-                const barColor = wr >= 65 ? 'bg-emerald-500' : wr >= 50 ? 'bg-amber-500' : 'bg-rose-500';
-                const textColor = wr >= 65 ? 'text-emerald-400' : wr >= 50 ? 'text-amber-400' : 'text-rose-400';
-                return (
-                  <div key={map.map_name} onClick={() => setSelectedMap(map)}
-                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/[0.04] transition-colors cursor-pointer group">
-                    <div className="w-10 h-10 rounded-lg bg-slate-800/50 border border-white/[0.06] flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {MAP_IMAGES[map.map_name] ? (
-                        <img src={MAP_IMAGES[map.map_name]} alt={map.map_name}
-                          className="w-full h-full object-contain p-0.5 opacity-80 group-hover:opacity-100"
-                          onError={e => { e.target.style.display = 'none'; }} />
-                      ) : <Target className="w-5 h-5 text-slate-600" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-semibold text-white">{map.map_name}</span>
-                        <span className={`text-xs font-mono font-bold ${textColor}`}>{wr}%</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-                        <div className={`h-full rounded-full ${barColor} transition-all duration-500`} style={{ width: `${Math.min(wr, 100)}%` }} />
-                      </div>
-                      <div className="flex justify-between mt-1">
-                        <span className="text-[10px] text-slate-600">{map.played} 场</span>
-                        <span className="text-[10px] text-slate-600">{map.wins}W / {map.losses}L</span>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-700 group-hover:text-slate-400 transition-colors" />
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8 border border-dashed border-slate-700/50 rounded-lg">
-              <MapIcon className="w-8 h-8 text-slate-600 mx-auto mb-2" /><p className="text-sm text-slate-500">暂无地图数据</p>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* ═══ 选手外设 + 库存备用 ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* ── 选手外设 ── */}
-        <div className="data-card">
-          <div className="flex items-center gap-2 mb-4">
-            <Monitor className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-sm font-bold text-white">选手外设使用汇总</h3>
-            {isAdmin && (
-              <button onClick={() => {
-                if (!editingPeriph) {
-                  const form = {};
-                  (peripherals || []).forEach(p => {
-                    form[p.player_id] = { keyboard: p.keyboard || '', mouse: p.mouse || '', headset: p.headset || '', mousepad: p.mousepad || '', monitor: p.monitor || '' };
-                  });
-                  // Also add players without periph entries
-                  (data.playerStats || []).forEach(ps => {
-                    const periph = (peripherals || []).find(p => p.nickname === ps.nickname);
-                    if (!periph) {
-                      // Find player ID from peripherals
-                    }
-                  });
-                  setPeriphForm(form);
-                }
-                setEditingPeriph(!editingPeriph);
-              }} className="ml-auto text-[10px] text-cyan-400 hover:underline flex items-center gap-1">
-                {editingPeriph ? <><X className="w-3 h-3" />取消</> : <><Edit3 className="w-3 h-3" />编辑</>}
-              </button>
-            )}
+      {/* ═══ 赛训地图统计 ═══ */}
+      <div className="panel" style={{marginBottom:18}}>
+        <div className="panel-inner">
+          <div className="panel-header">
+            <div className="panel-icon"></div>
+            <div className="panel-title">赛训地图统计</div>
+            <div className="panel-badge">近30天 · 点击查看详情</div>
           </div>
-          {!editingPeriph ? (
-            (peripherals || []).length > 0 ? (
-              <div className="grid grid-cols-2 gap-2.5">
-                {peripherals.map(p => (
-                  <div key={p.player_id} className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-500/30 border border-cyan-500/20 flex items-center justify-center text-[10px] font-bold text-cyan-400 flex-shrink-0">
-                      {p.nickname?.[0] || '?'}
-                    </div>
-                    <div className="min-w-0 text-[11px]">
-                      <p className="font-semibold text-white truncate">{p.nickname}</p>
-                      <p className="text-slate-500 truncate text-[10px]">
-                        {[p.keyboard, p.mouse, p.headset].filter(Boolean).join(' · ') || '未设置'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 border border-dashed border-slate-700/50 rounded-lg">
-                <Monitor className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                <p className="text-sm text-slate-500">外设数据未录入</p>
-                {isAdmin && <p className="text-[10px] text-slate-600 mt-1">点击右上角「编辑」录入</p>}
-              </div>
-            )
-          ) : (
-            <div className="space-y-3">
-              {peripherals.map(p => {
-                const pf = periphForm[p.player_id] || {};
-                return (
-                  <div key={p.player_id} className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3">
-                    <p className="text-xs font-bold text-white mb-2">{p.nickname} <span className="text-[10px] text-slate-500">{p.in_game_role}</span></p>
-                    <div className="grid grid-cols-5 gap-2">
-                      {['keyboard', 'mouse', 'headset', 'mousepad', 'monitor'].map(field => (
-                        <div key={field}>
-                          <label className="text-[9px] text-slate-600 block mb-0.5">{field}</label>
-                          <input className="w-full text-[10px] bg-slate-800/50 border border-white/[0.08] rounded px-2 py-1 text-white outline-none focus:border-cyan-500/50"
-                            value={pf[field] || ''} onChange={e => setPeriphForm(prev => ({
-                              ...prev, [p.player_id]: { ...pf, [field]: e.target.value }
-                            }))} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-              <button onClick={savePeripherals} disabled={saving}
-                className="w-full py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-bold hover:bg-cyan-500/20 transition-colors">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : '保存外设'}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* ── 库存备用 ── */}
-        <div className="data-card">
-          <div className="flex items-center gap-2 mb-4">
-            <Package className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-sm font-bold text-white">库存备用外设汇总</h3>
-            {isAdmin && (
-              <button onClick={() => {
-                if (!editingInv) {
-                  setInvForm((inventory || []).map(i => ({ id: i.id, item_type: i.item_type, current_count: i.current_count, max_count: i.max_count })));
-                }
-                setEditingInv(!editingInv);
-              }} className="ml-auto text-[10px] text-cyan-400 hover:underline flex items-center gap-1">
-                {editingInv ? <><X className="w-3 h-3" />取消</> : <><Edit3 className="w-3 h-3" />编辑</>}
-              </button>
-            )}
-          </div>
-          {!editingInv ? (
-            (inventory || []).length > 0 ? (
-              <div className="space-y-3">
-                {inventory.map(item => {
-                  const pct = item.max_count > 0 ? (item.current_count / item.max_count * 100) : 0;
-                  const barColor = pct >= 50 ? 'bg-emerald-500' : pct >= 20 ? 'bg-amber-500' : 'bg-rose-500';
-                  const textColor = pct >= 50 ? 'text-emerald-400' : pct >= 20 ? 'text-amber-400' : 'text-rose-400';
-                  return (
-                    <div key={item.id} className="flex items-center gap-3">
-                      <span className="text-xs text-slate-400 w-14">{item.item_type}</span>
-                      <div className="flex-1 h-2 rounded-full bg-white/[0.06] overflow-hidden">
-                        <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
-                      </div>
-                      <span className={`text-xs font-mono font-bold ${textColor} w-10 text-right`}>{item.current_count}/{item.max_count}</span>
-                    </div>
-                  );
-                })}
-                {/* Warning for low stock */}
-                {inventory.some(i => i.max_count > 0 && i.current_count / i.max_count < 0.25) && (
-                  <p className="text-[11px] text-rose-400 text-center mt-2">
-                    ⚠️ 部分库存不足，需尽快采购
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-6 border border-dashed border-slate-700/50 rounded-lg">
-                <Package className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                <p className="text-sm text-slate-500">库存数据未录入</p>
-                {isAdmin && <p className="text-[10px] text-slate-600 mt-1">点击右上角「编辑」录入</p>}
-              </div>
-            )
-          ) : (
-            <div className="space-y-3">
-              {invForm.map((item, idx) => (
-                <div key={item.id || idx} className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.06] rounded-lg p-2.5">
-                  <input className="w-16 text-[10px] bg-slate-800/50 border border-white/[0.08] rounded px-2 py-1 text-white outline-none"
-                    value={item.item_type} onChange={e => {
-                      const updated = [...invForm]; updated[idx].item_type = e.target.value; setInvForm(updated);
-                    }} />
-                  <span className="text-[10px] text-slate-500">库存</span>
-                  <input className="w-12 text-[10px] bg-slate-800/50 border border-white/[0.08] rounded px-2 py-1 text-white outline-none text-center"
-                    type="number" value={item.current_count}
-                    onChange={e => {
-                      const updated = [...invForm]; updated[idx].current_count = parseInt(e.target.value) || 0; setInvForm(updated);
-                    }} />
-                  <span className="text-[10px] text-slate-500">/</span>
-                  <input className="w-12 text-[10px] bg-slate-800/50 border border-white/[0.08] rounded px-2 py-1 text-white outline-none text-center"
-                    type="number" value={item.max_count}
-                    onChange={e => {
-                      const updated = [...invForm]; updated[idx].max_count = parseInt(e.target.value) || 0; setInvForm(updated);
-                    }} />
+          <div className="map-grid">
+            {(mapStats || []).map(map => {
+              const wr = map.win_rate || 0;
+              const barColor = wr >= 65 ? 'linear-gradient(135deg,var(--suc),#00b248)' : wr >= 50 ? 'linear-gradient(135deg,var(--warn),#ff6d00)' : 'linear-gradient(135deg,var(--dan),#d50000)';
+              const textColor = wr >= 65 ? 'var(--suc)' : wr >= 50 ? 'var(--warn)' : 'var(--dan)';
+              return (
+                <div key={map.map_name} className="map-card" onClick={() => setModal({ type: 'map', data: map })}>
+                  {mapImg(map.map_name) && <img className="map-card-img" src={mapImg(map.map_name)} alt={map.map_name} onError={e => {e.target.style.display='none'}} />}
+                  <div className="map-card-name">{map.map_name}</div>
+                  <div className="map-card-count">{map.played} 场 · {map.wins}W / {map.losses}L</div>
+                  <div className="map-card-bar"><div className="map-card-bar-fill" style={{width:wr+'%',background:barColor}}></div></div>
+                  <div className="map-card-wr" style={{color:textColor}}>{wr}%</div>
                 </div>
-              ))}
-              <button onClick={saveInventory} disabled={saving}
-                className="w-full py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-bold hover:bg-cyan-500/20 transition-colors">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : '保存库存'}
-              </button>
-            </div>
-          )}
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* ═══ 今日训练计划 ═══ */}
-      <div className="data-card">
-        <div className="flex items-center gap-2 mb-4">
-          <Target className="w-4 h-4 text-cyan-400" />
-          <h3 className="text-sm font-bold text-white">今日训练计划</h3>
-          <span className="text-[10px] text-slate-500">{new Date().toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })}</span>
-          {isAdmin && (
-            <button onClick={() => {
-              if (!editingPlan) {
-                setPlanForm({
-                  date: new Date().toISOString().slice(0, 10),
-                  items: (trainingPlan || []).length > 0
-                    ? trainingPlan.map(t => ({ id: t.id, start_time: t.start_time || '', end_time: t.end_time || '', title: t.title, subtitle: t.subtitle || '', tags: t.tags || '' }))
-                    : [{ start_time: '', end_time: '', title: '', subtitle: '', tags: '' }],
-                });
-              }
-              setEditingPlan(!editingPlan);
-            }} className="ml-auto text-[10px] text-cyan-400 hover:underline flex items-center gap-1">
-              {editingPlan ? <><X className="w-3 h-3" />取消</> : <><Edit3 className="w-3 h-3" />编辑</>}
-            </button>
-          )}
-        </div>
-        {!editingPlan ? (
-          (trainingPlan || []).length > 0 ? (
-            <div className="space-y-3">
-              {trainingPlan.map((tp, i) => (
-                <div key={tp.id || i} className="flex items-start gap-4 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-colors">
-                  <div className="text-center flex-shrink-0 min-w-[70px]">
-                    <p className="text-xs font-mono text-cyan-400">{tp.start_time || '—'}</p>
-                    <p className="text-[9px] text-slate-600">至</p>
-                    <p className="text-xs font-mono text-slate-400">{tp.end_time || '—'}</p>
+      {/* ═══ 外设 + 库存 ═══ */}
+      <div className="grid-2">
+        {/* 外设 */}
+        <Panel iconClass="" title="选手外设使用汇总" badge="可编辑">
+          {(peripherals || []).length > 0 ? (
+            <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:10}}>
+              {peripherals.map(p => (
+                <div key={p.player_id} style={{display:'flex',alignItems:'center',gap:8,padding:8,background:'rgba(0,212,255,0.02)',border:'1px solid var(--bd)',borderRadius:6}}>
+                  <div style={{width:28,height:28,borderRadius:'50%',background:'linear-gradient(135deg,#00d4ff,#0066cc)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:12,flexShrink:0}}>
+                    {p.nickname?.[0] || '?'}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white">{tp.title}</p>
-                    {tp.subtitle && <p className="text-xs text-slate-400 mt-0.5">{tp.subtitle}</p>}
-                    {tp.tags && (
-                      <div className="flex gap-1 mt-1.5">
-                        {tp.tags.split(/[,，]/).map((t, j) => (
-                          <span key={j} className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">{t.trim()}</span>
-                        ))}
-                      </div>
-                    )}
+                  <div style={{minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:600,color:'var(--tp)'}}>{p.nickname}</div>
+                    <div style={{fontSize:10,color:'var(--td)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                      {[p.keyboard, p.mouse, p.headset].filter(Boolean).join(' · ') || '未设置'}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 border border-dashed border-slate-700/50 rounded-lg">
-              <Clock className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-              <p className="text-sm text-slate-500">今日暂无训练计划</p>
-              {isAdmin && <p className="text-[10px] text-slate-600 mt-1">点击右上角「编辑」添加</p>}
+            <div style={{textAlign:'center',padding:24,color:'var(--td)',fontSize:12}}>外设数据未录入 · 管理员可在后台编辑</div>
+          )}
+        </Panel>
+
+        {/* 库存 */}
+        <Panel iconClass="" title="库存备用外设汇总" badge="可编辑">
+          {(inventory || []).length > 0 ? (
+            <div>
+              {inventory.map(item => {
+                const pct = item.max_count > 0 ? (item.current_count / item.max_count * 100) : 0;
+                const barColor = pct >= 50 ? 'var(--suc)' : pct >= 20 ? 'var(--warn)' : 'var(--dan)';
+                const textColor = pct >= 50 ? 'var(--suc)' : pct >= 20 ? 'var(--warn)' : 'var(--dan)';
+                return (
+                  <div key={item.id} style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+                    <span style={{fontSize:12,color:'var(--ts)',width:60}}>{item.item_type}</span>
+                    <div style={{flex:1,height:6,borderRadius:3,background:'rgba(255,255,255,0.06)',overflow:'hidden'}}>
+                      <div style={{height:'100%',borderRadius:3,background:barColor,width:pct+'%',transition:'width 0.5s'}}></div>
+                    </div>
+                    <span style={{fontSize:12,fontFamily:'Orbitron',fontWeight:600,color:textColor,minWidth:36,textAlign:'right'}}>{item.current_count}/{item.max_count}</span>
+                  </div>
+                );
+              })}
+              {inventory.some(i => i.max_count > 0 && i.current_count / i.max_count < 0.25) && (
+                <div style={{textAlign:'center',fontSize:11,color:'var(--dan)',marginTop:8}}>⚠️ 部分库存不足，需尽快采购</div>
+              )}
             </div>
-          )
-        ) : (
-          <div className="space-y-4">
-            {planForm.items.map((item, idx) => (
-              <div key={idx} className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] text-slate-500 w-6">#{idx + 1}</span>
-                  <input className="w-16 text-[11px] bg-slate-800/50 border border-white/[0.08] rounded px-2 py-1 text-white outline-none"
-                    placeholder="开始" value={item.start_time} onChange={e => {
-                      const updated = [...planForm.items]; updated[idx].start_time = e.target.value; setPlanForm({ ...planForm, items: updated });
-                    }} />
-                  <span className="text-[10px] text-slate-600">至</span>
-                  <input className="w-16 text-[11px] bg-slate-800/50 border border-white/[0.08] rounded px-2 py-1 text-white outline-none"
-                    placeholder="结束" value={item.end_time} onChange={e => {
-                      const updated = [...planForm.items]; updated[idx].end_time = e.target.value; setPlanForm({ ...planForm, items: updated });
-                    }} />
-                  <button onClick={() => {
-                    setPlanForm({ ...planForm, items: planForm.items.filter((_, i) => i !== idx) });
-                  }} className="ml-auto text-rose-400 hover:text-rose-300"><Trash2 className="w-3.5 h-3.5" /></button>
-                </div>
-                <input className="w-full text-xs bg-slate-800/50 border border-white/[0.08] rounded px-2 py-1.5 text-white outline-none mb-1.5"
-                  placeholder="标题" value={item.title} onChange={e => {
-                    const updated = [...planForm.items]; updated[idx].title = e.target.value; setPlanForm({ ...planForm, items: updated });
-                  }} />
-                <input className="w-full text-[10px] bg-slate-800/50 border border-white/[0.08] rounded px-2 py-1 text-white outline-none mb-1.5"
-                  placeholder="副标题" value={item.subtitle} onChange={e => {
-                    const updated = [...planForm.items]; updated[idx].subtitle = e.target.value; setPlanForm({ ...planForm, items: updated });
-                  }} />
-                <input className="w-full text-[10px] bg-slate-800/50 border border-white/[0.08] rounded px-2 py-1 text-white outline-none"
-                  placeholder="标签 (逗号分隔)" value={item.tags} onChange={e => {
-                    const updated = [...planForm.items]; updated[idx].tags = e.target.value; setPlanForm({ ...planForm, items: updated });
-                  }} />
-              </div>
-            ))}
-            <div className="flex gap-2">
-              <button onClick={() => setPlanForm({
-                ...planForm, items: [...planForm.items, { start_time: '', end_time: '', title: '', subtitle: '', tags: '' }]
-              })} className="flex-1 py-2 rounded-lg border border-dashed border-slate-600 text-slate-500 text-xs hover:border-cyan-500/30 hover:text-cyan-400 transition-colors">
-                <Plus className="w-3.5 h-3.5 inline mr-1" />添加训练项
-              </button>
-              <button onClick={saveTrainingPlan} disabled={saving}
-                className="flex-1 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-bold hover:bg-cyan-500/20 transition-colors">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : '保存计划'}
-              </button>
-            </div>
-          </div>
-        )}
+          ) : (
+            <div style={{textAlign:'center',padding:24,color:'var(--td)',fontSize:12}}>库存数据未录入 · 管理员可在后台编辑</div>
+          )}
+        </Panel>
       </div>
 
       {/* ═══ 教练评语 ═══ */}
-      {coachNotes?.length > 0 && (
-        <div className="data-card">
-          <div className="flex items-center gap-2 mb-4">
-            <Eye className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-sm font-bold text-white">教练评语</h3>
-          </div>
-          <div className="space-y-2">
-            {coachNotes.map(n => (
-              <div key={n.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                <div className="text-[10px] text-slate-500 flex-shrink-0 w-20">{n.date}</div>
-                <div className="flex-1">
-                  <p className="text-xs text-slate-400 line-clamp-2">{n.notes}</p>
-                  <p className="text-[10px] text-slate-600 mt-0.5">{n.opponent} · {n.map}</p>
+      {data.coachNotes?.length > 0 && (
+        <div className="panel" style={{marginTop:16}}>
+          <div className="panel-inner">
+            <div className="panel-header">
+              <div className="panel-icon"></div>
+              <div className="panel-title">教练评语</div>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {data.coachNotes.map(n => (
+                <div key={n.id} style={{padding:10,background:'rgba(0,212,255,0.02)',border:'1px solid var(--bd)',borderRadius:6,fontSize:12}}>
+                  <div style={{color:'var(--td)',marginBottom:4}}>{n.date} · {n.opponent} · {n.map}</div>
+                  <div style={{color:'var(--ts)',lineHeight:1.6}}>{n.notes}</div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ═══ Missing Data ═══ */}
-      {missingData && Object.values(missingData).filter(Boolean).length > 0 && (
-        <div className="data-card border-amber-500/15">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <h4 className="text-sm font-bold text-amber-400 mb-2">部分数据暂不可用</h4>
-              <ul className="space-y-1">
-                {Object.entries(missingData).filter(([_, v]) => v).map(([key, msg]) => (
-                  <li key={key} className="flex items-start gap-2 text-xs text-slate-400">
-                    <Info className="w-3 h-3 text-slate-600 mt-0.5 flex-shrink-0" />
-                    <span>{msg}</span>
-                  </li>
-                ))}
-              </ul>
+              ))}
             </div>
           </div>
         </div>
       )}
 
       {/* ═══ Match Detail Modal ═══ */}
-      {selectedMatch && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          onClick={e => { if (e.target === e.currentTarget) setSelectedMatch(null); }}>
-          <div className="glass-panel rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto m-4 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-bold text-cyan-400 font-display">UR vs {selectedMatch.opponent}</h3>
-                <p className="text-xs text-slate-500 mt-0.5">{selectedMatch.date} · {selectedMatch.map} · {selectedMatch.score}</p>
-              </div>
-              <button onClick={() => setSelectedMatch(null)}
-                className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition-colors flex items-center justify-center">
-                <X className="w-4 h-4" />
-              </button>
+      {modal?.type === 'match' && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
+          <div className="modal-box" style={{position:'relative'}}>
+            <button className="modal-close" onClick={() => setModal(null)} style={{position:'absolute',top:12,right:12}}>✕</button>
+            <div className="modal-title">UR vs {modal.data.opponent}</div>
+            <div className="modal-subtitle">{modal.data.date} · {modal.data.map} · 比分 {modal.data.score}</div>
+            <div className="modal-info-row">
+              <span className="tag tag-rank">地图: {modal.data.map}</span>
+              <span className={'tag ' + (modal.data.result === 'win' ? 'tag-win' : 'tag-loss')}>
+                {modal.data.result === 'win' ? '胜利' : '失败'}
+              </span>
             </div>
-            <div className="flex gap-3 mb-4">
-              <div className="chip">地图: {selectedMatch.map}</div>
-              <div className={`tag ${selectedMatch.result === 'win' ? 'tag-win' : selectedMatch.result === 'loss' ? 'tag-loss' : 'tag-draw'}`}>
-                {selectedMatch.result === 'win' ? '胜利' : selectedMatch.result === 'loss' ? '失败' : '平局'}
-              </div>
-            </div>
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">选手数据</h4>
-            <table className="w-full text-xs">
-              <thead><tr className="border-b border-white/[0.08]">
-                <th className="text-left py-2 px-2 text-slate-500">选手</th>
-                <th className="text-right py-2 px-2 text-slate-500">Rating</th>
-                <th className="text-right py-2 px-2 text-slate-500">K-D</th>
-                <th className="text-right py-2 px-2 text-slate-500">ADR</th>
-                <th className="text-right py-2 px-2 text-slate-500">KAST%</th>
-              </tr></thead>
+            <div className="modal-section-title">选手数据</div>
+            <table className="data-table" style={{marginBottom:12}}>
+              <thead><tr><th style={{width:34}}></th><th>选手</th><th style={{textAlign:'right'}}>Rating</th><th style={{textAlign:'right'}}>K-D</th><th style={{textAlign:'right'}}>ADR</th><th style={{textAlign:'right'}}>HS%</th></tr></thead>
               <tbody>
-                {(selectedMatch.players || []).map(p => {
+                {(modal.data.players || []).map(p => {
                   const r = p.rating || 0;
-                  const barColor = r >= 1.15 ? 'bg-emerald-500' : r >= 0.95 ? 'bg-amber-500' : 'bg-rose-500';
                   return (
-                    <tr key={p.name} className="border-b border-white/[0.03]">
-                      <td className="py-2.5 px-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-500/30 border border-cyan-500/20 flex items-center justify-center text-[10px] font-bold text-cyan-400">{p.name[0]}</div>
-                          <span className="font-semibold text-white">{p.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-2 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <div className="flex-1 max-w-[40px] h-1 rounded-full bg-white/[0.06]">
-                            <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min((r/1.5)*100, 100)}%` }} />
-                          </div>
-                          <span className={`font-mono font-bold ${r >= 1.1 ? WIN : r >= 0.9 ? 'text-amber-400' : LOSS}`}>{n(r, 2)}</span>
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-2 text-right text-slate-300 font-mono">{p.kd}</td>
-                      <td className="py-2.5 px-2 text-right text-slate-300 font-mono">{n(p.adr, 1)}</td>
-                      <td className="py-2.5 px-2 text-right text-slate-400">{pct(p.kast)}</td>
+                    <tr key={p.name}>
+                      <td style={{paddingRight:0}}><div style={{width:28,height:28,borderRadius:'50%',background:'linear-gradient(135deg,#00d4ff,#0066cc)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:12}}>{p.name[0]}</div></td>
+                      <td><strong>{p.name}</strong><span style={{fontSize:10,color:'var(--td)',marginLeft:4}}>{p.role}</span></td>
+                      <td style={{textAlign:'right'}}><div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:6}}><div style={{flex:1,maxWidth:60,height:3,borderRadius:2,background:'rgba(255,255,255,0.06)',overflow:'hidden'}}><div style={{height:'100%',borderRadius:2,background:r>=1.15?'var(--suc)':r>=0.95?'var(--warn)':'var(--dan)',width:Math.min(r/1.5*100,100)+'%'}}></div></div><span style={{fontFamily:'Orbitron',fontWeight:600,color:r>=1.1?'var(--suc)':r>=0.9?'var(--warn)':'var(--dan)'}}>{n(r,2)}</span></div></td>
+                      <td style={{textAlign:'right',fontFamily:'Orbitron'}}>{p.kd}</td>
+                      <td style={{textAlign:'right',fontFamily:'Orbitron'}}>{n(p.adr,1)}</td>
+                      <td style={{textAlign:'right',fontFamily:'Orbitron'}}>{pct(p.hs_pct)}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-            {/* Coach note editor */}
-            {isStaff && (
-              <div className="mt-4 pt-4 border-t border-white/[0.06]">
-                <p className="text-[10px] text-slate-500 mb-1">教练评语</p>
-                <textarea
-                  className="w-full text-xs bg-slate-800/50 border border-white/[0.08] rounded-lg px-3 py-2 text-white outline-none focus:border-cyan-500/50 resize-none"
-                  rows={2}
-                  defaultValue={selectedMatch.notes || ''}
-                  onBlur={e => saveCoachNote(selectedMatch.id, e.target.value)}
-                />
+            {(modal.data.notes || data.coachNotes?.find(c => c.id === modal.data.id)) && (
+              <div className="modal-coach-comment" style={{fontSize:12,color:'var(--ts)'}}>
+                📋 {data.coachNotes?.find(c => c.id === modal.data.id)?.notes || modal.data.notes}
               </div>
             )}
           </div>
@@ -824,46 +524,31 @@ export default function Overview() {
       )}
 
       {/* ═══ Map Detail Modal ═══ */}
-      {selectedMap && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          onClick={e => { if (e.target === e.currentTarget) setSelectedMap(null); }}>
-          <div className="glass-panel rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto m-4 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-bold text-cyan-400 font-display">{selectedMap.map_name}</h3>
-                <p className="text-xs text-slate-500 mt-0.5">{selectedMap.played} 场 · {selectedMap.wins}胜{selectedMap.losses}负</p>
-              </div>
-              <button onClick={() => setSelectedMap(null)}
-                className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition-colors flex items-center justify-center">
-                <X className="w-4 h-4" />
-              </button>
+      {modal?.type === 'map' && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
+          <div className="modal-box" style={{position:'relative',maxWidth:480}}>
+            <button className="modal-close" onClick={() => setModal(null)} style={{position:'absolute',top:12,right:12}}>✕</button>
+            <div className="modal-title">{modal.data.map_name}</div>
+            <div className="modal-subtitle">{modal.data.played} 场 · {modal.data.wins}胜{modal.data.losses}负 · 胜率 {modal.data.win_rate}%</div>
+            <div className="modal-info-row" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+              <div className="stat-card"><div className="stat-label">胜场</div><div className="stat-value" style={{color:'var(--suc)'}}>{modal.data.wins}</div></div>
+              <div className="stat-card"><div className="stat-label">负场</div><div className="stat-value" style={{color:'var(--dan)'}}>{modal.data.losses}</div></div>
+              <div className="stat-card"><div className="stat-label">胜率</div><div className="stat-value" style={{color:modal.data.win_rate>=50?'var(--p)':'var(--dan)'}}>{modal.data.win_rate}%</div></div>
             </div>
-            <div className="grid grid-cols-3 gap-3 mb-5">
-              <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 text-center">
-                <p className="text-lg font-bold text-emerald-400 font-mono">{selectedMap.wins}</p>
-                <p className="text-[10px] text-slate-500">胜场</p>
-              </div>
-              <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 text-center">
-                <p className="text-lg font-bold text-rose-400 font-mono">{selectedMap.losses}</p>
-                <p className="text-[10px] text-slate-500">负场</p>
-              </div>
-              <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 text-center">
-                <p className={`text-lg font-bold font-mono ${selectedMap.win_rate >= 50 ? 'text-cyan-400' : 'text-rose-400'}`}>{selectedMap.win_rate}%</p>
-                <p className="text-[10px] text-slate-500">胜率</p>
-              </div>
-            </div>
-            {selectedMap.recentMatches?.length > 0 && (<>
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">近期战绩</h4>
-              <div className="space-y-2">
-                {selectedMap.recentMatches.map((m, i) => (
-                  <div key={i} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${m.result === 'win' ? 'bg-emerald-500/[0.06] border-l-2 border-emerald-500/40' : 'bg-rose-500/[0.06] border-l-2 border-rose-500/40'}`}>
-                    <span className="text-[10px] text-slate-500 w-16">{m.date}</span>
-                    <span className="flex-1 text-xs font-semibold text-white">{m.opponent}</span>
-                    <span className={`text-xs font-mono font-bold ${m.result === 'win' ? WIN : LOSS}`}>{m.score}</span>
-                  </div>
-                ))}
-              </div>
-            </>)}
+            {modal.data.recentMatches?.length > 0 && (
+              <>
+                <div className="modal-section-title">近期战绩</div>
+                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  {modal.data.recentMatches.map((m, i) => (
+                    <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',borderRadius:6,background:m.result==='win'?'rgba(0,230,118,0.06)':'rgba(255,23,68,0.06)',borderLeft:`2px solid ${m.result==='win'?'var(--suc)':'var(--dan)'}`}}>
+                      <span style={{fontSize:10,color:'var(--td)',width:48}}>{m.date}</span>
+                      <span style={{flex:1,fontSize:12,fontWeight:600,color:'var(--tp)'}}>{m.opponent}</span>
+                      <span style={{fontSize:12,fontFamily:'Orbitron',fontWeight:600,color:m.result==='win'?'var(--suc)':'var(--dan)'}}>{m.score}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
