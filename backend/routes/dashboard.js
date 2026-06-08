@@ -12,7 +12,10 @@ router.get('/overview', auth, async (req, res) => {
     // 1. KPI — 近十场比赛统计
     // --------------------------------------------------------
     const [kpiRows] = await db.query(
-      `SELECT result FROM matches
+      `SELECT CASE WHEN our_score > their_score THEN 'win'
+                   WHEN our_score < their_score THEN 'loss'
+                   ELSE 'draw' END as result
+       FROM matches
        WHERE match_type = 'scrim'
          AND opponent NOT IN ('', 'OPPONENT', '__', '未知')
          AND opponent NOT LIKE '%\_%' ESCAPE '\\'
@@ -58,7 +61,10 @@ router.get('/overview', auth, async (req, res) => {
     // 4. 近五场赛事记录（详细）
     // --------------------------------------------------------
     const [recentMatches] = await db.query(
-      `SELECT id, match_date, opponent, map_name, our_score, their_score, result
+      `SELECT id, match_date, opponent, map_name, our_score, their_score,
+              CASE WHEN our_score > their_score THEN 'win'
+                   WHEN our_score < their_score THEN 'loss'
+                   ELSE 'draw' END as result
        FROM matches
        WHERE match_type = 'scrim'
          AND opponent NOT IN ('', 'OPPONENT', '__', '未知')
@@ -143,9 +149,9 @@ router.get('/overview', auth, async (req, res) => {
       `SELECT
         map_name,
         COUNT(*) as played,
-        SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins,
-        SUM(CASE WHEN result = 'loss' THEN 1 ELSE 0 END) as losses,
-        ROUND(CAST(SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) AS FLOAT) /
+        SUM(CASE WHEN our_score > their_score THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN our_score < their_score THEN 1 ELSE 0 END) as losses,
+        ROUND(CAST(SUM(CASE WHEN our_score > their_score THEN 1 ELSE 0 END) AS FLOAT) /
               NULLIF(COUNT(*), 0) * 100, 1) as win_rate
        FROM matches
        WHERE map_name IS NOT NULL AND map_name != ''
@@ -178,7 +184,10 @@ router.get('/overview', auth, async (req, res) => {
 
     // Add recent match details per map (last 5 per map)
     const [mapRecentMatches] = await db.query(
-      `SELECT id, match_date, opponent, map_name, our_score, their_score, result
+      `SELECT id, match_date, opponent, map_name, our_score, their_score,
+              CASE WHEN our_score > their_score THEN 'win'
+                   WHEN our_score < their_score THEN 'loss'
+                   ELSE 'draw' END as result
        FROM matches
        WHERE map_name IS NOT NULL AND map_name != ''
          AND opponent NOT IN ('', 'OPPONENT', '__', '未知')
@@ -219,7 +228,9 @@ router.get('/overview', auth, async (req, res) => {
         m.map_name,
         m.our_score,
         m.their_score,
-        m.result,
+        CASE WHEN m.our_score > m.their_score THEN 'win'
+             WHEN m.our_score < m.their_score THEN 'loss'
+             ELSE 'draw' END as result,
         m.notes,
         p.nickname,
         p.in_game_role,
@@ -351,9 +362,11 @@ router.get('/overview', auth, async (req, res) => {
     let h2hFromDb = { wins: 0, losses: 0, draws: 0 };
     if (upcomingMatch) {
       const [h2hRows] = await db.query(
-        `SELECT result, COUNT(*) as cnt FROM matches
+        `SELECT CASE WHEN our_score > their_score THEN 'win'
+                      WHEN our_score < their_score THEN 'loss'
+                      ELSE 'draw' END as result,
+                COUNT(*) as cnt FROM matches
          WHERE opponent = ?
-           AND result IS NOT NULL
          GROUP BY result`,
         [upcomingMatch.opponent]
       );
@@ -387,8 +400,8 @@ router.get('/overview', auth, async (req, res) => {
 
     const [weeklyWinLoss] = await db.query(
       `SELECT
-        SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins,
-        SUM(CASE WHEN result = 'loss' THEN 1 ELSE 0 END) as losses
+        SUM(CASE WHEN round_result = 'win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN round_result = 'loss' THEN 1 ELSE 0 END) as losses
        FROM training_rounds
        WHERE created_at >= date('now','localtime','-7 days')
          AND round_result IN ('win','loss')`
