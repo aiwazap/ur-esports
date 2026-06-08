@@ -37,13 +37,13 @@ router.get('/grouped', auth, async (req, res) => {
 
   // 日期筛选
   if (dateFrom) {
-    baseWhere.push('m.match_date >= ?');
+    baseWhere.push('date(m.match_date) >= ?');
     params.push(dateFrom);
   } else if (days) {
     baseWhere.push(`m.match_date >= DATE('now', '-${parseInt(days)} days')`);
   }
   if (dateTo) {
-    baseWhere.push('m.match_date <= ?');
+    baseWhere.push('date(m.match_date) <= ?');
     params.push(dateTo);
   }
 
@@ -91,6 +91,43 @@ router.get('/grouped', auth, async (req, res) => {
     if (current) {
       current.bo = current.bo_format || detectBoFormat(current.maps.length);
       groups.push(current);
+    }
+
+    // ── 选手数据注入 ──
+    const allMatchIds = groups.flatMap(g => g.maps.map(m => m.id));
+    if (allMatchIds.length > 0) {
+      try {
+        const placeholders = allMatchIds.map(() => '?').join(',');
+        const [playerRows] = await db.query(`
+          SELECT ps.match_id, p.nickname, p.in_game_role,
+                 ps.kills, ps.deaths, ROUND(ps.rating, 2) as rating,
+                 ROUND(ps.adr, 1) as adr, ROUND(ps.kast, 1) as kast,
+                 ps.hs
+          FROM player_stats ps
+          JOIN players p ON p.id = ps.player_id
+          WHERE ps.match_id IN (${placeholders})
+          ORDER BY ps.match_id, ps.rating DESC
+        `, allMatchIds);
+
+        const playerByMatch = {};
+        for (const pr of playerRows) {
+          if (!playerByMatch[pr.match_id]) playerByMatch[pr.match_id] = [];
+          playerByMatch[pr.match_id].push({
+            name: pr.nickname,
+            role: pr.in_game_role || '',
+            rating: pr.rating,
+            kd: `${pr.kills}-${pr.deaths}`,
+            adr: pr.adr,
+            kast: pr.kast,
+            hs: pr.hs || 0,
+          });
+        }
+        for (const g of groups) {
+          for (const m of g.maps) {
+            m.players = playerByMatch[m.id] || [];
+          }
+        }
+      } catch { /* player stats optional - don't break main query */ }
     }
 
     // ── 统计摘要 ──

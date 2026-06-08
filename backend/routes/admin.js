@@ -215,4 +215,114 @@ router.get('/logs', adminAuth, async (req, res) => {
   } catch { res.status(500).json({ error: '获取失败' }); }
 });
 
+// HLTV 数据同步
+router.post('/sync-hltv', adminAuth, async (req, res) => {
+  const { execFile } = require('child_process');
+  const path = require('path');
+  const fs = require('fs');
+
+  const scriptPath = path.join(__dirname, '..', 'scripts', 'sync_hltv.py');
+  const venvPython = path.join(__dirname, '..', 'scripts', 'venv', 'bin', 'python3');
+  const python = fs.existsSync(venvPython) ? venvPython : 'python3';
+  const dbPath = path.join(__dirname, '..', 'data', 'ur_esports.db');
+
+  if (!fs.existsSync(scriptPath)) {
+    return res.status(500).json({ error: 'sync_hltv.py 脚本不存在' });
+  }
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      execFile(python, [scriptPath], {
+        env: { ...process.env, DB_PATH: dbPath },
+        timeout: 120000,
+        maxBuffer: 1024 * 1024,
+      }, (err, stdout, stderr) => {
+        if (err) {
+          const lines = (stdout || '').trim().split('\n');
+          const lastLine = lines[lines.length - 1];
+          try {
+            const json = JSON.parse(lastLine);
+            if (json.success !== false) { resolve(json); return; }
+          } catch {}
+          reject(err);
+          return;
+        }
+        const lines = stdout.trim().split('\n');
+        const lastLine = lines[lines.length - 1];
+        try {
+          const json = JSON.parse(lastLine);
+          resolve(json);
+        } catch {
+          resolve({ success: true, raw: stdout.substring(0, 500) });
+        }
+      });
+    });
+
+    await db.query(
+      "INSERT INTO operation_logs (user_id, action, details) VALUES (?, 'sync_hltv', ?)",
+      [req.user?.id || 0, JSON.stringify(result)]
+    );
+
+    res.json(result);
+  } catch (err) {
+    console.error('HLTV sync error:', err);
+    res.status(500).json({
+      success: false,
+      error: 'HLTV同步失败：' + (err.message || '未知错误'),
+      hint: '请确保服务器已安装 scrapling 和 Playwright 依赖（pip install scrapling && playwright install chromium）',
+    });
+  }
+});
+
+// ETL 数据同步（本地 Excel → SQLite）
+router.post('/run-etl', adminAuth, async (req, res) => {
+  const { execFile } = require('child_process');
+  const path = require('path');
+  const fs = require('fs');
+
+  const scriptPath = path.join(__dirname, '..', 'scripts', 'etl_sync_all.py');
+
+  if (!fs.existsSync(scriptPath)) {
+    return res.status(500).json({ error: 'etl_sync_all.py 脚本不存在' });
+  }
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      execFile('python3', [scriptPath], {
+        timeout: 120000,
+        maxBuffer: 1024 * 1024,
+      }, (err, stdout, stderr) => {
+        if (err) {
+          // 尝试从 stdout 解析 JSON 结果
+          const match = (stdout || '').match(/__JSON__START__\s*([\s\S]*?)\s*__JSON__END__/);
+          if (match) {
+            try { resolve(JSON.parse(match[1])); return; } catch {}
+          }
+          reject(new Error(stderr || err.message));
+          return;
+        }
+        const match = (stdout || '').match(/__JSON__START__\s*([\s\S]*?)\s*__JSON__END__/);
+        if (match) {
+          try { resolve(JSON.parse(match[1])); return; } catch {}
+        }
+        resolve({ success: true, output: stdout.substring(0, 1000) });
+      });
+    });
+
+    await db.query(
+      "INSERT INTO operation_logs (user_id, action, details) VALUES (?, 'run_etl', ?)",
+      [req.user?.id || 0, JSON.stringify(result)]
+    );
+
+    res.json(result);
+  } catch (err) {
+    console.error('ETL sync error:', err);
+    res.status(500).json({
+      success: false,
+      error: 'ETL同步失败：' + (err.message || '未知错误'),
+      hint: '请确保 DATA_DIR 已配置在 .env 中，且 Excel 文件存在',
+    });
+  }
+});
+
 module.exports = router;

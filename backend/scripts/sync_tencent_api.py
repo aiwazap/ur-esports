@@ -252,8 +252,13 @@ def sync_training_log(conn, xlsx_data):
             map_raw = str(r[0] or '').strip().lower()
             round_id = str(r[1] or '').strip()
             if not map_raw or not round_id: continue
+            # Data validation: only accept actual round rows (R1-R24+)
+            if not re.match(r'^R\d+$', round_id): continue
+            if map_raw in ('地图', '说明', 'tips', 'note', '备忘'): continue
             
             map_name = MAP_ALIASES.get(map_raw, map_raw.title())
+            # Only accept known maps
+            if map_name not in KNOWN_MAPS: continue
             team_side = SIDE_MAP.get(str(r[2] or '').strip(), str(r[2] or '').strip()) if len(r) > 2 else ''
             if team_side not in ('T', 'CT'):
                 team_side = 'T'  # Default for CHECK constraint

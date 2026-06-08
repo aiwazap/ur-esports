@@ -44,10 +44,18 @@ export default function Overview() {
   const [now, setNow] = useState(new Date());
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState(null);
+  const [mapDays, setMapDays] = useState(30);
 
-  const fetchData = () => {
+  // 外设编辑
+  const [periModal, setPeriModal] = useState(null);
+  const [periForm, setPeriForm] = useState({});
+  // 库存编辑
+  const [invModal, setInvModal] = useState(null);
+  const [invForm, setInvForm] = useState({});
+
+  const fetchData = (md = mapDays) => {
     setLoading(true);
-    api.get('/dashboard/overview')
+    api.get('/dashboard/overview', { params: { mapDays: md } })
       .then(r => setData(r.data))
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
@@ -59,23 +67,72 @@ export default function Overview() {
     return () => clearInterval(t);
   }, []);
 
+  const handleMapDaysChange = (d) => {
+    setMapDays(d);
+    setLoading(true);
+    fetchData(d);
+  };
+
+  // 外设编辑
+  const openPeriEdit = (p) => {
+    setPeriForm({
+      player_id: p.player_id,
+      nickname: p.nickname,
+      keyboard: p.keyboard || '',
+      mouse: p.mouse || '',
+      headset: p.headset || '',
+      mousepad: p.mousepad || '',
+      monitor: p.monitor || '',
+      notes: p.notes || '',
+    });
+    setPeriModal(true);
+  };
+  const savePeri = async () => {
+    try {
+      await api.put(`/peripherals/${periForm.player_id}`, periForm);
+      setPeriModal(null);
+      fetchData(mapDays);
+    } catch { /* silently handle */ }
+  };
+
+  // 库存编辑
+  const openInvEdit = (item) => {
+    setInvForm({
+      id: item.id,
+      item_type: item.item_type || '',
+      item_name: item.item_name || '',
+      current_count: item.current_count ?? 0,
+      max_count: item.max_count ?? 0,
+      notes: item.notes || '',
+    });
+    setInvModal(true);
+  };
+  const saveInv = async () => {
+    try {
+      await api.put(`/inventory/${invForm.id}`, invForm);
+      setInvModal(null);
+      fetchData(mapDays);
+    } catch { /* silently handle */ }
+  };
+
   const handleHltvSync = async () => {
     if (syncing) return;
     setSyncing(true);
-    setSyncMsg({ type: 'info', text: '⏳ 正在从 HLTV 同步比赛数据...（约需 2-5 分钟）' });
+    setSyncMsg({ type: 'info', text: '⏳ 正在从 HLTV 同步数据...（约需 1-3 分钟）' });
     try {
-      const res = await api.post('/hltv-sync');
-      if (res.data.ok) {
-        const d = res.data;
+      const res = await api.post('/admin/sync-hltv');
+      const d = res.data;
+      if (d.success !== false) {
         const parts = [];
         if (d.players_updated) parts.push(`${d.players_updated} 选手资料已更新`);
         if (d.matches_inserted) parts.push(`${d.matches_inserted} 场新比赛`);
         if (d.matches_updated) parts.push(`${d.matches_updated} 场已更新`);
+        if (d.players_found) parts.unshift(`发现 ${d.players_found} 名选手`);
         if (parts.length === 0) parts.push('数据已是最新');
         setSyncMsg({ type: 'success', text: `✅ ${parts.join('，')}` });
-        fetchData(); // 刷新页面数据
+        fetchData(mapDays);
       } else {
-        setSyncMsg({ type: 'error', text: `❌ 同步失败: ${res.data.error || '未知错误'}` });
+        setSyncMsg({ type: 'error', text: `❌ ${d.error || '同步失败'}\n${d.hint || ''}` });
       }
     } catch (e) {
       setSyncMsg({ type: 'error', text: `❌ ${e.response?.data?.error || e.message}` });
@@ -426,7 +483,29 @@ export default function Overview() {
       {/* ═══════ 赛训地图统计 ═══════ */}
       <div className="db-panel" style={{ marginBottom: 18 }}>
         <div className="db-panel-inner">
-          <PanelHeader title="赛训地图统计" badge="近30天 · 点击查看详情" />
+          <div className="db-panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="db-panel-icon" />
+              <div className="db-panel-title">赛训地图统计</div>
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[3, 7, 30].map(d => (
+                <button key={d} onClick={() => handleMapDaysChange(d)}
+                  className="db-map-days-btn"
+                  style={{
+                    background: mapDays === d ? 'var(--dash-primary)' + '12' : 'transparent',
+                    color: mapDays === d ? 'var(--dash-primary)' : 'var(--dash-text-dim)',
+                    border: `1px solid ${mapDays === d ? 'var(--dash-primary)' + '30' : 'var(--dash-border)'}`,
+                    padding: '2px 10px', borderRadius: 4, fontSize: 11, cursor: 'pointer',
+                    fontFamily: "'Rajdhani', 'Orbitron', sans-serif", fontWeight: 600,
+                    transition: 'all 0.2s',
+                  }}>
+                  {d}天
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="db-panel-badge" style={{ marginBottom: 10, marginTop: 2 }}>近{mapDays}天 · 点击地图查看详情</div>
           <div className="db-grid-7">
             {(mapStats || []).slice(0, 7).map(map => {
               const wr = map.win_rate || 0;
@@ -451,11 +530,12 @@ export default function Overview() {
         {/* 选手外设 */}
         <div className="db-panel">
           <div className="db-panel-inner">
-            <PanelHeader title="选手外设使用汇总" badge="可编辑" />
+            <PanelHeader title="选手外设使用汇总" badge="点击编辑" />
             {(peripherals || []).length > 0 ? (
               <div className="db-peri-grid">
                 {peripherals.map(p => (
-                  <div key={p.player_id} className="db-peri-card">
+                  <div key={p.player_id} className="db-peri-card" onClick={() => openPeriEdit(p)}
+                    style={{ cursor: 'pointer' }}>
                     <div className="db-player-avatar" style={{ width: 26, height: 26, fontSize: 11 }}>{p.nickname?.[0] || '?'}</div>
                     <div style={{ minWidth: 0 }}>
                       <div className="db-peri-name">{p.nickname}<span style={{ fontSize: 10, color: 'var(--dash-text-dim)' }}> {p.in_game_role}</span></div>
@@ -473,7 +553,7 @@ export default function Overview() {
         {/* 库存 */}
         <div className="db-panel">
           <div className="db-panel-inner">
-            <PanelHeader title="库存备用外设汇总" badge="可编辑" />
+            <PanelHeader title="库存备用外设汇总" badge="点击编辑" />
             {(inventory || []).length > 0 ? (
               <div>
                 {inventory.map(item => {
@@ -481,7 +561,8 @@ export default function Overview() {
                   const bc = pct >= 50 ? 'var(--dash-success)' : pct >= 20 ? 'var(--dash-warning)' : 'var(--dash-danger)';
                   const tc = pct >= 50 ? 'var(--dash-success)' : pct >= 20 ? 'var(--dash-warning)' : 'var(--dash-danger)';
                   return (
-                    <div key={item.id} className="db-inv-row">
+                    <div key={item.id} className="db-inv-row" onClick={() => openInvEdit(item)}
+                      style={{ cursor: 'pointer' }}>
                       <span className="db-inv-name">{item.item_type}</span>
                       <div className="db-inv-bar-wrap"><div className="db-inv-bar-fill" style={{ width: pct + '%', background: bc }} /></div>
                       <span className="db-inv-count" style={{ color: tc }}>{item.current_count}/{item.max_count}</span>
@@ -600,6 +681,97 @@ export default function Overview() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════ 外设编辑弹框 ═══════ */}
+      {periModal && (
+        <div className="db-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setPeriModal(null); }}>
+          <div className="db-modal-box" style={{ maxWidth: 420 }}>
+            <button className="db-modal-close" onClick={() => setPeriModal(null)}>✕</button>
+            <div className="db-modal-title">{periForm.nickname} · 外设编辑</div>
+            <div className="db-modal-subtitle">修改后保存即可更新</div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+              {['keyboard','mouse','headset','mousepad','monitor'].map(f => (
+                <div key={f}>
+                  <label style={{ display: 'block', fontSize: 11, color: 'var(--dash-text-dim)', marginBottom: 3 }}>
+                    {f === 'keyboard' ? '键盘' : f === 'mouse' ? '鼠标' : f === 'headset' ? '耳机' : f === 'mousepad' ? '鼠标垫' : '显示器'}
+                  </label>
+                  <input type="text" value={periForm[f] || ''}
+                    onChange={e => setPeriForm({...periForm, [f]: e.target.value})}
+                    placeholder="输入型号..."
+                    style={{ width: '100%', padding: '6px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--dash-border)', borderRadius: 6, color: '#fff', fontSize: 13, outline: 'none' }} />
+                </div>
+              ))}
+              <div>
+                <label style={{ display: 'block', fontSize: 11, color: 'var(--dash-text-dim)', marginBottom: 3 }}>备注</label>
+                <input type="text" value={periForm.notes || ''}
+                  onChange={e => setPeriForm({...periForm, notes: e.target.value})}
+                  style={{ width: '100%', padding: '6px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--dash-border)', borderRadius: 6, color: '#8494a8', fontSize: 13, outline: 'none' }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+              <button onClick={() => setPeriModal(null)}
+                style={{ padding: '6px 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#8494a8', fontSize: 13, cursor: 'pointer' }}>取消</button>
+              <button onClick={savePeri}
+                style={{ padding: '6px 16px', background: 'var(--dash-primary)', border: 'none', borderRadius: 8, color: '#0a0a0a', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>保存</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════ 库存编辑弹框 ═══════ */}
+      {invModal && (
+        <div className="db-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setInvModal(null); }}>
+          <div className="db-modal-box" style={{ maxWidth: 380 }}>
+            <button className="db-modal-close" onClick={() => setInvModal(null)}>✕</button>
+            <div className="db-modal-title">库存编辑</div>
+            <div className="db-modal-subtitle">修改后保存即可更新</div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, color: 'var(--dash-text-dim)', marginBottom: 3 }}>物品类型</label>
+                <input type="text" value={invForm.item_type || ''}
+                  onChange={e => setInvForm({...invForm, item_type: e.target.value})}
+                  style={{ width: '100%', padding: '6px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--dash-border)', borderRadius: 6, color: '#fff', fontSize: 13, outline: 'none' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, color: 'var(--dash-text-dim)', marginBottom: 3 }}>物品名称</label>
+                <input type="text" value={invForm.item_name || ''}
+                  onChange={e => setInvForm({...invForm, item_name: e.target.value})}
+                  style={{ width: '100%', padding: '6px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--dash-border)', borderRadius: 6, color: '#fff', fontSize: 13, outline: 'none' }} />
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: 11, color: 'var(--dash-text-dim)', marginBottom: 3 }}>当前数量</label>
+                  <input type="number" min="0" value={invForm.current_count}
+                    onChange={e => setInvForm({...invForm, current_count: Number(e.target.value)})}
+                    style={{ width: '100%', padding: '6px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--dash-border)', borderRadius: 6, color: '#fff', fontSize: 13, outline: 'none' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: 11, color: 'var(--dash-text-dim)', marginBottom: 3 }}>最大库存</label>
+                  <input type="number" min="0" value={invForm.max_count}
+                    onChange={e => setInvForm({...invForm, max_count: Number(e.target.value)})}
+                    style={{ width: '100%', padding: '6px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--dash-border)', borderRadius: 6, color: '#fff', fontSize: 13, outline: 'none' }} />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, color: 'var(--dash-text-dim)', marginBottom: 3 }}>备注</label>
+                <input type="text" value={invForm.notes || ''}
+                  onChange={e => setInvForm({...invForm, notes: e.target.value})}
+                  style={{ width: '100%', padding: '6px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--dash-border)', borderRadius: 6, color: '#8494a8', fontSize: 13, outline: 'none' }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+              <button onClick={() => setInvModal(null)}
+                style={{ padding: '6px 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#8494a8', fontSize: 13, cursor: 'pointer' }}>取消</button>
+              <button onClick={saveInv}
+                style={{ padding: '6px 16px', background: 'var(--dash-primary)', border: 'none', borderRadius: 8, color: '#0a0a0a', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>保存</button>
+            </div>
           </div>
         </div>
       )}

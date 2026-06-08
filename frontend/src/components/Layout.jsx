@@ -6,6 +6,8 @@ import {
   ClipboardList,
   Target,
   Settings,
+  CalendarDays,
+  Eye,
 } from 'lucide-react';
 import ParticleBackground from './ParticleBackground';
 
@@ -14,7 +16,9 @@ const links = [
   { to: '/members', label: '分部成员', icon: Users },
   { to: '/matches', label: '近期比赛', icon: Swords },
   { to: '/training-report', label: '赛训报告', icon: ClipboardList },
+  { to: '/training-plans', label: '训练计划', icon: CalendarDays },
   { to: '/tactics', label: '战术总表', icon: Target },
+  { to: '/opponent-intel', label: '对手情报', icon: Eye },
   { to: '/admin', label: '数据管理', icon: Settings },
 ];
 

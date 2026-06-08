@@ -7,26 +7,50 @@ const { auth } = require('../middleware/auth');
 // GET /api/dashboard/overview — 数据总览聚合端点
 // ============================================================
 router.get('/overview', auth, async (req, res) => {
+  const mapDays = parseInt(req.query.mapDays) || 30;
+  const mapDateFilter = `AND m.match_date >= date('now','localtime','-${mapDays} days')`;
   try {
     // --------------------------------------------------------
-    // 1. KPI — 近十场比赛统计
+    // 1. KPI — 近十场比赛统计（training_sessions + matches 双源）
     // --------------------------------------------------------
+    // 先查 training_sessions（训练赛 session 级别）
+    const [sessionRows] = await db.query(
+      `SELECT match_date FROM training_sessions
+       WHERE match_date IS NOT NULL
+       ORDER BY match_date DESC LIMIT 10`
+    );
+
+    // 再查 matches（比赛数据，每行一张地图）
     const [kpiRows] = await db.query(
       `SELECT CASE WHEN our_score > their_score THEN 'win'
                    WHEN our_score < their_score THEN 'loss'
                    ELSE 'draw' END as result
        FROM matches
-       WHERE match_type = 'scrim'
+       WHERE (match_type IN ('scrim','official') OR match_type IS NULL)
          AND opponent NOT IN ('', 'OPPONENT', '__', '未知')
-         AND opponent NOT LIKE '%\_%' ESCAPE '\\'
+         AND opponent NOT LIKE '%\\_%' ESCAPE '\\'
          AND opponent != '0525_match'
          AND map_name IS NOT NULL AND map_name != ''
          AND our_score > 0
        ORDER BY match_date DESC, id DESC
-       LIMIT 10`
+       LIMIT 30`
     );
-    const totalMatches = kpiRows.length;
-    const wins = kpiRows.filter(r => r.result === 'win').length;
+
+    // 如果 matches 无结果但 training_sessions 有数据，则按 session 天数计为无胜负的比赛
+    const hasSessions = sessionRows.length > 0;
+    const hasMatches = kpiRows.length > 0;
+
+    let wins = 0, totalMatches = 0;
+
+    if (hasMatches) {
+      wins = kpiRows.filter(r => r.result === 'win').length;
+      totalMatches = kpiRows.length;
+    } else if (hasSessions) {
+      // 无比赛分数数据时，按训练 session 天数展示场次，胜率显示为训练中
+      totalMatches = sessionRows.length;
+      wins = 0;
+    }
+
     const recentWinRate = totalMatches > 0 ? ((wins / totalMatches) * 100).toFixed(1) : '0.0';
 
     // --------------------------------------------------------
@@ -156,6 +180,7 @@ router.get('/overview', auth, async (req, res) => {
        FROM matches
        WHERE map_name IS NOT NULL AND map_name != ''
          AND our_score > 0
+         ${mapDateFilter}
        GROUP BY map_name
        ORDER BY played DESC, win_rate DESC`
     );
@@ -191,9 +216,10 @@ router.get('/overview', auth, async (req, res) => {
        FROM matches
        WHERE map_name IS NOT NULL AND map_name != ''
          AND opponent NOT IN ('', 'OPPONENT', '__', '未知')
-         AND opponent NOT LIKE '%\_%' ESCAPE '\\'
+         AND opponent NOT LIKE '%\\_%' ESCAPE '\\'
          AND opponent != '0525_match'
          AND our_score > 0
+         ${mapDateFilter}
        ORDER BY match_date DESC, id DESC`
     );
 

@@ -201,6 +201,12 @@ export default function Admin() {
   const [batchResults, setBatchResults] = useState(null);
   const [importError, setImportError] = useState(null);
 
+  /* ── ETL Sync State ── */
+  const [etlRunning, setEtlRunning] = useState(false);
+  const [etlResult, setEtlResult] = useState(null);
+  const [hltvRunning, setHltvRunning] = useState(false);
+  const [hltvResult, setHltvResult] = useState(null);
+
   /* ── User Management State ── */
   const [users, setUsers] = useState([]);
   const [pendingUsers, setPendingUsers] = useState([]);
@@ -334,6 +340,32 @@ export default function Admin() {
       setImportError(e.response?.data?.error || '批量导入失败');
     }
     setImporting(false);
+  };
+
+  /* ── ETL 同步 ── */
+  const handleEtlSync = async () => {
+    setEtlRunning(true);
+    setEtlResult(null);
+    try {
+      const { data } = await api.post('/admin/run-etl');
+      setEtlResult({ success: true, data });
+    } catch (e) {
+      setEtlResult({ success: false, error: e.response?.data?.error || 'ETL同步失败', hint: e.response?.data?.hint });
+    }
+    setEtlRunning(false);
+  };
+
+  /* ── HLTV 同步 ── */
+  const handleHltvSyncLocal = async () => {
+    setHltvRunning(true);
+    setHltvResult(null);
+    try {
+      const { data } = await api.post('/admin/sync-hltv');
+      setHltvResult({ success: true, data });
+    } catch (e) {
+      setHltvResult({ success: false, error: e.response?.data?.error || 'HLTV同步失败', hint: e.response?.data?.hint });
+    }
+    setHltvRunning(false);
   };
 
   /* ── 用户操作 ── */
@@ -472,6 +504,78 @@ export default function Admin() {
         {importError && (
           <div className="mt-4 p-3 bg-ur-rose/10 border border-ur-rose/30 rounded-lg text-sm text-ur-rose">{importError}</div>
         )}
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════
+          区块 1.5：数据同步工具
+         ════════════════════════════════════════════════════════════ */}
+      <div className="data-card mb-5">
+        <h3 className="font-display text-base font-semibold text-white mb-4 flex items-center gap-2">
+          <span className="w-1 h-4 rounded bg-[#D4AF37]" />
+          数据同步工具
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* ETL 同步 */}
+          <div className="p-4 rounded-lg" style={{ background: 'rgba(212,175,55,0.05)', border: '1px solid rgba(212,175,55,0.15)' }}>
+            <h4 className="font-display text-sm text-[#D4AF37] mb-2">ETL 数据同步</h4>
+            <p className="text-xs text-gray-500 mb-3">从本地 Excel 文件（训练日志/简报/战术/比赛数据）全量导入到数据库</p>
+            <button onClick={handleEtlSync} disabled={etlRunning}
+              className="w-full px-4 py-2 text-sm font-display bg-[#D4AF37] text-black rounded-lg
+                         hover:bg-[#D4AF37]/80 disabled:opacity-50 transition-all">
+              {etlRunning ? '⏳ 同步中...（约30秒）' : '▶ 执行 ETL 同步'}
+            </button>
+            {etlResult && (
+              <div className={`mt-3 p-3 rounded-lg text-xs border ${
+                etlResult.success ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-ur-rose/10 border-ur-rose/30 text-ur-rose'
+              }`}>
+                {etlResult.success ? (
+                  <div>
+                    <p className="font-display mb-1">✅ ETL 同步完成</p>
+                    {etlResult.data && <p className="text-gray-400">{JSON.stringify(etlResult.data)}</p>}
+                  </div>
+                ) : (
+                  <div>
+                    <p className="font-display mb-1">❌ {etlResult.error}</p>
+                    {etlResult.hint && <p className="text-gray-500 mt-1">{etlResult.hint}</p>}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* HLTV 同步 */}
+          <div className="p-4 rounded-lg" style={{ background: 'rgba(104,232,255,0.05)', border: '1px solid rgba(104,232,255,0.15)' }}>
+            <h4 className="font-display text-sm text-[#68e8ff] mb-2">HLTV 比赛同步</h4>
+            <p className="text-xs text-gray-500 mb-3">从 HLTV 爬取 UR 战队正式比赛数据（最多10场）和选手资料</p>
+            <button onClick={handleHltvSyncLocal} disabled={hltvRunning}
+              className="w-full px-4 py-2 text-sm font-display bg-[#68e8ff] text-black rounded-lg
+                         hover:bg-[#68e8ff]/80 disabled:opacity-50 transition-all">
+              {hltvRunning ? '⏳ 同步中...（约2分钟）' : '▶ 执行 HLTV 同步'}
+            </button>
+            {hltvResult && (
+              <div className={`mt-3 p-3 rounded-lg text-xs border ${
+                hltvResult.success ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-ur-rose/10 border-ur-rose/30 text-ur-rose'
+              }`}>
+                {hltvResult.success ? (
+                  <div>
+                    <p className="font-display mb-1">✅ HLTV 同步完成</p>
+                    {hltvResult.data && (
+                      <div className="text-gray-400 space-y-0.5">
+                        <p>发现 {hltvResult.data.players_found || 0} 名选手 · {hltvResult.data.matches_scraped || 0} 场比赛</p>
+                        <p>新增 {hltvResult.data.matches_inserted || 0} · 更新 {hltvResult.data.matches_updated || 0}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <p className="font-display mb-1">❌ {hltvResult.error}</p>
+                    {hltvResult.hint && <p className="text-gray-500 mt-1">{hltvResult.hint}</p>}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* ════════════════════════════════════════════════════════════

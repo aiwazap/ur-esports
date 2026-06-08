@@ -6,7 +6,9 @@ import Overview from './pages/Overview';
 import Members from './pages/Members';
 import Matches from './pages/Matches';
 import TrainingReport from './pages/TrainingReport';
+import TrainingPlans from './pages/TrainingPlans';
 import Tactics from './pages/Tactics';
+import OpponentIntel from './pages/OpponentIntel';
 import Admin from './pages/Admin';
 
 function PrivateRoute({ children }) {
@@ -25,7 +27,9 @@ export default function App() {
         <Route path="members" element={<Members />} />
         <Route path="matches" element={<Matches />} />
         <Route path="training-report" element={<TrainingReport />} />
+        <Route path="training-plans" element={<TrainingPlans />} />
         <Route path="tactics" element={<Tactics />} />
+        <Route path="opponent-intel" element={<OpponentIntel />} />
         <Route path="admin" element={<Admin />} />
       </Route>
     </Routes>

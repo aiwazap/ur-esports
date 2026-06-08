@@ -115,4 +115,77 @@ router.put('/batch', adminAuth, async (req, res) => {
   }
 });
 
+// GET /api/training-plans/sessions — 从简报提取训练赛次列表（用于生成训练计划）
+router.get('/sessions', auth, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT s.id as session_id, s.match_date, s.opponent,
+              COUNT(b.id) as briefing_count,
+              GROUP_CONCAT(DISTINCT b.map_name) as maps
+       FROM training_sessions s
+       LEFT JOIN briefing_items b ON b.session_id = s.id
+       GROUP BY s.id
+       ORDER BY s.match_date DESC
+       LIMIT 60`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('GET /training-plans/sessions error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/training-plans/generate — 从简报 session 自动生成训练计划
+router.post('/generate', adminAuth, async (req, res) => {
+  try {
+    const { session_id } = req.body;
+    const userId = req.user?.id || 0;
+
+    // 获取 session 信息
+    const [sessions] = await db.query(
+      'SELECT * FROM training_sessions WHERE id = ?', [session_id]
+    );
+    if (!sessions.length) return res.status(404).json({ error: 'Session 不存在' });
+
+    const s = sessions[0];
+
+    // 获取该 session 的简报条目，按地图+方分组
+    const [items] = await db.query(
+      `SELECT map_name, team_side, GROUP_CONCAT(instruction, ' | ') as summary
+       FROM briefing_items WHERE session_id = ?
+       GROUP BY map_name, team_side
+       ORDER BY map_name, team_side`,
+      [session_id]
+    );
+
+    // 构建训练计划项
+    const plans = items.map((b, i) => ({
+      plan_date: s.match_date,
+      start_time: '17:30',
+      end_time: '20:00',
+      title: `${b.map_name} ${b.team_side}侧 战术演练`,
+      subtitle: `对阵 ${s.opponent} · ${b.summary?.substring(0, 80) || ''}`,
+      tags: [b.team_side, b.map_name].join(','),
+      sort_order: i,
+    }));
+
+    // 写入 training_plans
+    // 先删旧数据
+    await db.query('DELETE FROM training_plans WHERE plan_date = ?', [s.match_date]);
+
+    for (const p of plans) {
+      await db.query(
+        `INSERT INTO training_plans (plan_date, start_time, end_time, title, subtitle, tags, sort_order, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [p.plan_date, p.start_time, p.end_time, p.title, p.subtitle, p.tags, p.sort_order, userId]
+      );
+    }
+
+    res.json({ success: true, count: plans.length });
+  } catch (err) {
+    console.error('POST /training-plans/generate error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

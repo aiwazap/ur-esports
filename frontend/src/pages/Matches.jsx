@@ -349,12 +349,30 @@ function MatchCard({ group, selected, onClick, onSaved }) {
   );
 }
 
+/* ── n位数格式化 ── */
+const n = (v, d) => (v != null ? Number(v).toFixed(d) : '-');
+
 /* ── 地图详情面板 ── */
 function MatchDetail({ group, onSaved }) {
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState({ t_score: 0, ct_score: 0, pistol_rounds: '' });
   const [saving, setSaving] = useState(false);
   const maps = group.maps || [];
+
+  // 聚合所有地图的选手数据（去重，取最高 rating）
+  const allPlayers = [];
+  const seen = new Set();
+  for (const m of maps) {
+    if (m.players) {
+      for (const p of m.players) {
+        if (!seen.has(p.name)) {
+          seen.add(p.name);
+          allPlayers.push(p);
+        }
+      }
+    }
+  }
+  allPlayers.sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
   const startEdit = (m) => {
     setEditId(m.id);
@@ -378,6 +396,68 @@ function MatchDetail({ group, onSaved }) {
 
   return (
     <div className="border-t border-white/5 px-4 py-3 text-sm animate-fade-up">
+      {/* ═══ 选手数据 ═══ */}
+      {allPlayers.length > 0 && (
+        <>
+          <h4 className="font-display text-xs font-semibold text-gray-500 mb-3 tracking-wide uppercase">选手数据</h4>
+          <div className="overflow-x-auto mb-4">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-gray-600 text-xs border-b border-white/5">
+                  <th className="text-left py-2 font-medium">选手</th>
+                  <th className="text-right py-2 font-medium">Rating</th>
+                  <th className="text-right py-2 font-medium">K-D</th>
+                  <th className="text-right py-2 font-medium">ADR</th>
+                  <th className="text-right py-2 font-medium">KAST%</th>
+                  <th className="text-right py-2 font-medium">HS%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allPlayers.map(p => {
+                  const r = p.rating || 0;
+                  const kastPct = p.kast != null ? Math.round(p.kast) + '%' : '—';
+                  const [k, d] = (p.kd || '0-0').split('-').map(Number);
+                  const hsPct = p.hs > 0 && k > 0 ? Math.round((p.hs / k) * 100) + '%' : '—';
+                  return (
+                    <tr key={p.name} className="border-b border-white/5">
+                      <td className="py-2.5 pl-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-[#D4AF37]/15 flex items-center justify-center text-xs font-display text-[#D4AF37]">
+                            {p.name[0]}
+                          </div>
+                          <div>
+                            <span className="font-display text-white text-xs">{p.name}</span>
+                            {p.role && <span className="text-gray-600 text-[10px] ml-1">{p.role}</span>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <div className="w-10 h-1 rounded-full bg-white/5 overflow-hidden">
+                            <div className="h-full rounded-full transition-all" style={{
+                              width: Math.min(r / 1.5 * 100, 100) + '%',
+                              background: r >= 1.15 ? '#35e59d' : r >= 0.95 ? '#f59e0b' : '#ff597d',
+                            }} />
+                          </div>
+                          <span className="font-mono text-xs font-semibold" style={{
+                            color: r >= 1.1 ? '#35e59d' : r >= 0.9 ? '#f59e0b' : '#ff597d'
+                          }}>{n(r, 2)}</span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 text-right font-mono text-xs text-gray-300">{p.kd}</td>
+                      <td className="py-2.5 text-right font-mono text-xs text-gray-300">{n(p.adr, 1)}</td>
+                      <td className="py-2.5 text-right font-mono text-xs text-gray-400">{kastPct}</td>
+                      <td className="py-2.5 text-right font-mono text-xs text-gray-400">{hsPct}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* ═══ 地图数据 ═══ */}
       <h4 className="font-display text-xs font-semibold text-gray-500 mb-3 tracking-wide uppercase">地图数据</h4>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
