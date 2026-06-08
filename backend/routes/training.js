@@ -1510,6 +1510,150 @@ router.get('/match-records', auth, async (req, res) => {
   }
 });
 
+// GET /opponent-stats — 对手统计（场次/地图/胜率/胜负记录）
+router.get('/opponent-stats', auth, async (req, res) => {
+  try {
+    const { start, end } = req.query;
+    const endDate = end || new Date().toISOString().split('T')[0];
+    const startDate = start || new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0];
+    
+    // 1. 训练赛次统计：按对手聚合回合数、场次数
+    const [sessionStats] = await db.query(`
+      SELECT
+        ts.opponent,
+        COUNT(DISTINCT ts.id) as session_count,
+        COUNT(tr.id) as total_rounds,
+        SUM(CASE WHEN tr.round_result = 'win' THEN 1 ELSE 0 END) as round_wins,
+        SUM(CASE WHEN tr.round_result = 'loss' THEN 1 ELSE 0 END) as round_losses,
+        SUM(CASE WHEN (tr.issue_grenade + tr.issue_position + tr.issue_aim + tr.issue_comms + tr.issue_tactics) > 0 THEN 1 ELSE 0 END) as issue_rounds
+      FROM training_sessions ts
+      INNER JOIN training_rounds tr ON ts.id = tr.session_id
+      WHERE ts.match_date >= '${startDate}' AND ts.match_date <= '${endDate}'
+        AND ts.opponent NOT IN ('OPPONENT', '未知', '___')
+      GROUP BY ts.opponent
+      ORDER BY session_count DESC, total_rounds DESC
+    `);
+
+    // 2. 比赛地图统计：按对手+地图聚合胜负
+    const [matchStats] = await db.query(`
+      SELECT
+        opponent,
+        map_name,
+        COUNT(*) as map_count,
+        SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as map_wins,
+        SUM(CASE WHEN result = 'loss' THEN 1 ELSE 0 END) as map_losses,
+        SUM(CASE WHEN result = 'draw' THEN 1 ELSE 0 END) as map_draws
+      FROM matches
+      WHERE match_date >= '${startDate}' AND match_date <= '${endDate}'
+        AND match_type = 'scrim'
+        AND opponent NOT IN ('match_data', 'OPPONENT', '___')
+        AND match_date IS NOT NULL AND match_date != '' AND length(match_date) >= 8
+        AND map_name IS NOT NULL AND map_name != ''
+      GROUP BY opponent, map_name
+      ORDER BY opponent, map_count DESC
+    `);
+
+    // 3. 聚合：按对手合并训练数据和比赛数据（case-insensitive）
+    const opponentMap = {};
+    for (const s of sessionStats) {
+      const key = (s.opponent || '').toLowerCase();
+      if (!opponentMap[key]) {
+        opponentMap[key] = {
+          opponent: s.opponent,
+          session_count: 0,
+          total_rounds: 0,
+          round_wins: 0,
+          round_losses: 0,
+          issue_rounds: 0,
+          maps: {},
+          total_maps: 0,
+          map_wins: 0,
+          map_losses: 0,
+          map_draws: 0,
+          match_records: []
+        };
+      }
+      opponentMap[key].session_count += (s.session_count || 0);
+      opponentMap[key].total_rounds += (s.total_rounds || 0);
+      opponentMap[key].round_wins += (s.round_wins || 0);
+      opponentMap[key].round_losses += (s.round_losses || 0);
+      opponentMap[key].issue_rounds += (s.issue_rounds || 0);
+    }
+    for (const m of matchStats) {
+      const key = (m.opponent || '').toLowerCase();
+      if (!opponentMap[key]) {
+        opponentMap[key] = {
+          opponent: m.opponent,
+          session_count: 0,
+          total_rounds: 0,
+          round_wins: 0,
+          round_losses: 0,
+          issue_rounds: 0,
+          maps: {},
+          total_maps: 0,
+          map_wins: 0,
+          map_losses: 0,
+          map_draws: 0,
+          match_records: []
+        };
+      }
+      opponentMap[key].maps[m.map_name] = {
+        map_name: m.map_name,
+        count: (opponentMap[key].maps[m.map_name]?.count || 0) + (m.map_count || 0),
+        wins: (opponentMap[key].maps[m.map_name]?.wins || 0) + (m.map_wins || 0),
+        losses: (opponentMap[key].maps[m.map_name]?.losses || 0) + (m.map_losses || 0),
+        draws: (opponentMap[key].maps[m.map_name]?.draws || 0) + (m.map_draws || 0),
+      };
+      opponentMap[key].total_maps += (m.map_count || 0);
+      opponentMap[key].map_wins += (m.map_wins || 0);
+      opponentMap[key].map_losses += (m.map_losses || 0);
+      opponentMap[key].map_draws += (m.map_draws || 0);
+    }
+
+    // 4. 获取详细比赛记录（按日期+对手分组）
+    const [detailRecords] = await db.query(`
+      SELECT match_date, opponent, map_name, result, our_score, their_score
+      FROM matches
+      WHERE match_date >= '${startDate}' AND match_date <= '${endDate}'
+        AND match_type = 'scrim'
+        AND opponent NOT IN ('match_data', 'OPPONENT', '___')
+        AND match_date IS NOT NULL AND match_date != '' AND length(match_date) >= 8
+        AND map_name IS NOT NULL AND map_name != ''
+      ORDER BY match_date DESC, opponent, map_name
+    `);
+
+    for (const r of detailRecords) {
+      const key = (r.opponent || '').toLowerCase();
+      if (!opponentMap[key]) continue;
+      const dateStr = (r.match_date || '').split(' ')[0];
+      let recs = opponentMap[key].match_records;
+      let last = recs.length > 0 ? recs[recs.length - 1] : null;
+      if (!last || last.date !== dateStr) {
+        last = { date: dateStr, maps: [] };
+        opponentMap[key].match_records.push(last);
+      }
+      last.maps.push({
+        map_name: r.map_name,
+        result: r.result,
+        our_score: r.our_score,
+        their_score: r.their_score,
+      });
+    }
+
+    // 转换为数组，按交手次数排序，过滤掉无数据的对手
+    const opponents = Object.values(opponentMap)
+      .filter(o => o.session_count > 0 || o.total_maps > 0)
+      .sort((a, b) => 
+        b.session_count - a.session_count || b.total_maps - a.total_maps
+      );
+
+    res.json({ opponents });
+
+  } catch (e) {
+    res.status(500).json({ error: '获取对手统计失败: ' + e.message });
+  }
+});
+
 // PUT /rounds/:id/players — 编辑回合关联选手ID
 router.put('/rounds/:id/players', adminAuth, async (req, res) => {
   try {

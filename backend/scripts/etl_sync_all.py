@@ -107,9 +107,16 @@ print(f"[ETL] Loaded {len(_rows)} players from database")
 def execute(sql, params=()):
     return conn.execute(sql, params)
 
+# Data integrity blocklists — skip these placeholder/header values
+BLOCKED_OPPONENTS = {'OPPONENT', '未知', '___', 'match_data', 'MATCH_DATA'}
+BLOCKED_MAP_NAMES = {'', 'UR 队员统计', '地图'}
+
 
 def get_or_create_session(match_date, opponent, event_name=None):
-    """Get or create a training session."""
+    """Get or create a training session. Skip placeholder opponents."""
+    if not opponent or opponent.strip() in BLOCKED_OPPONENTS or not match_date or match_date.strip() == '':
+        print(f"[ETL] 跳过无效session: date={match_date}, opponent={opponent}")
+        return None
     row = execute(
         "SELECT id FROM training_sessions WHERE match_date = ? AND opponent = ?",
         (match_date, opponent)
@@ -505,6 +512,17 @@ for sheet_name in wb4.sheetnames:
     # Parse opponent from sheet name: 0525_TyLoo_M1 → TyLoo
     opp_match = re.search(r'^\d{4}_(.+?)_M\d$', sheet_name, re.IGNORECASE)
     opponent = opp_match.group(1).replace('_', ' ') if opp_match else sheet_name
+
+    # Data integrity: skip placeholder/junk opponents and dates
+    if not date_str or date_str.strip() == '':
+        print(f"[ETL] 跳过 {sheet_name}: 无效日期")
+        continue
+    if opponent.strip() in BLOCKED_OPPONENTS:
+        print(f"[ETL] 跳过 {sheet_name}: 无效对手名 \"{opponent}\"")
+        continue
+    if not map_name or map_name.strip() in BLOCKED_MAP_NAMES:
+        print(f"[ETL] 跳过 {sheet_name}: 无效地图名 \"{map_name}\"")
+        continue
 
     try:
         our_score = int(our_score) if our_score else 0

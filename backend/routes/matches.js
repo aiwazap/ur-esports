@@ -256,6 +256,17 @@ router.post('/import', adminAuth, upload.single('file'), async (req, res) => {
             results.errors.push(`${sheetName}: 缺少日期或对手信息，跳过`);
             continue;
           }
+          // 数据完整性：跳过占位符对手名 / 无效地图名
+          const BLOCKED_OPPONENTS = ['OPPONENT', 'match_data', 'MATCH_DATA', '未知', '___'];
+          const BLOCKED_MAPS = ['', '地图', 'UR 队员统计'];
+          if (BLOCKED_OPPONENTS.includes(opponent)) {
+            results.errors.push(`${sheetName}: 对手名"${opponent}"为占位符，跳过`);
+            continue;
+          }
+          if (!mapName || BLOCKED_MAPS.includes(mapName)) {
+            results.errors.push(`${sheetName}: 地图名"${mapName}"无效，跳过`);
+            continue;
+          }
 
           // 检查是否已存在（UPSERT 逻辑）
           const [existing] = await db.query(

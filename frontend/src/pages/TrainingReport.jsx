@@ -40,6 +40,8 @@ export default function TrainingReport() {
   const [playerDetail, setPlayerDetail] = useState(null);
   const [roundDrill, setRoundDrill] = useState(null);
   const [opponentList, setOpponentList] = useState(null);
+  const [opponentStats, setOpponentStats] = useState([]);
+  const [opponentDetail, setOpponentDetail] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -49,7 +51,13 @@ export default function TrainingReport() {
     } catch(e) { console.error(e); }
     setLoading(false);
   };
-  useEffect(() => { load(); }, [start, end]);
+  const loadOpponentStats = async () => {
+    try {
+      const { data } = await api.get(`/training/opponent-stats?start=${start}&end=${end}`);
+      setOpponentStats(data.opponents || []);
+    } catch(e) { console.error(e); }
+  };
+  useEffect(() => { load(); loadOpponentStats(); }, [start, end]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -352,6 +360,48 @@ export default function TrainingReport() {
           </div>
         )}
 
+        {/* ── Opponent Stats ── */}
+        {opponentStats.length > 0 && (
+          <div className="glass-panel rounded-3xl p-5 mb-5">
+            <h2 className="text-lg font-bold text-white mb-4">对手统计</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              {opponentStats.map(o => {
+                const totalResolved = o.map_wins + o.map_losses;
+                const winRate = totalResolved > 0 ? (o.map_wins / totalResolved * 100).toFixed(1) : 0;
+                const oppColor = o.map_wins > o.map_losses ? 'text-emerald-400' : o.map_wins < o.map_losses ? 'text-ur-rose' : 'text-ur-amber';
+                return (
+                  <div key={o.opponent}
+                       onClick={() => setOpponentDetail(o)}
+                       className="rounded-2xl p-4 text-center cursor-pointer transition-all duration-200
+                                  border border-white/[0.06] bg-white/[0.03]
+                                  hover:border-cyan-400/20 hover:bg-white/[0.06]">
+                    <p className="text-sm text-ur-muted mb-1 truncate">{o.opponent}</p>
+                    <p className={`text-2xl font-extrabold ${oppColor}`}>
+                      {o.session_count||0}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {o.total_maps||0}图
+                      <span className="mx-1.5 text-gray-600">|</span>
+                      W:{o.map_wins||0} L:{o.map_losses||0}
+                    </p>
+                    <div className="flex justify-center gap-1 mt-1.5">
+                      {Object.values(o.maps||{}).slice(0, 3).map((mp, i) => (
+                        <span key={i} className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                              style={{background: (MAP_COLORS[mp.map_name]||'#444')+'22', color: MAP_COLORS[mp.map_name]||'#999'}}>
+                          {mp.map_name.substring(0,3)}
+                        </span>
+                      ))}
+                    </div>
+                    <p className={`text-sm font-bold mt-1.5 ${Number(winRate)>=50?'text-emerald-400':'text-ur-rose'}`}>
+                      {winRate}%
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ── Match Records Table ── */}
         {matchSummary.length > 0 && (
           <div className="glass-panel rounded-3xl overflow-hidden">
@@ -411,6 +461,9 @@ export default function TrainingReport() {
       {/* ── Modals ── */}
       {mapDetail && <GlassModal title={`${mapDetail.map_name} 详情`} onClose={()=>setMapDetail(null)}>
         <MapDetailComponent detail={mapDetail} />
+      </GlassModal>}
+      {opponentDetail && <GlassModal title={`${opponentDetail.opponent} · 交手记录`} onClose={()=>setOpponentDetail(null)}>
+        <OpponentDetailComponent detail={opponentDetail} />
       </GlassModal>}
       {matchDetail && <GlassModal title={`${matchDetail?.session?.opponent||''} · ${matchDetail?.session?.match_date||''}`} onClose={()=>setMatchDetail(null)}>
         <MatchDetailComponent detail={matchDetail} />
@@ -671,6 +724,88 @@ function MapDetailComponent({ detail }) {
           ))}
         </div>
       ) : <p className="text-ur-muted text-sm text-center py-4">暂无比赛记录</p>}
+    </div>
+  );
+}
+
+/* ── Opponent Detail ── */
+function OpponentDetailComponent({ detail }) {
+  const totalResolved = detail.map_wins + detail.map_losses;
+  const winRate = totalResolved > 0 ? (detail.map_wins / totalResolved * 100).toFixed(1) : 0;
+  const mapList = Object.values(detail.maps || {}).sort((a, b) => b.count - a.count);
+  return (
+    <div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <MiniStat label="交手场次" value={detail.session_count||0} />
+        <MiniStat label="地图数" value={detail.total_maps||0} />
+        <MiniStat label="胜" value={detail.map_wins||0} color="text-emerald-400" />
+        <MiniStat label="负" value={detail.map_losses||0} color="text-ur-rose" />
+        <MiniStat label="平" value={detail.map_draws||0} color="text-gray-400" />
+        <MiniStat label="胜率" value={`${winRate}%`} color={Number(winRate)>=50?'text-emerald-400':'text-ur-rose'} />
+        <MiniStat label="总回合" value={detail.total_rounds||0} />
+        <MiniStat label="问题回合" value={detail.issue_rounds||0} color="text-ur-amber" />
+      </div>
+
+      {/* 地图分布 */}
+      {mapList.length > 0 && (
+        <div className="mb-5">
+          <h4 className="text-sm font-bold text-white mb-3">地图分布</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {mapList.map(mp => {
+              const total = mp.wins + mp.losses + mp.draws;
+              return (
+                <div key={mp.map_name} className="rounded-xl p-3 bg-white/[0.04] border border-white/[0.06]">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold" style={{color: MAP_COLORS[mp.map_name]||'#999'}}>{mp.map_name}</span>
+                    <span className="text-xs text-gray-500">{total}场</span>
+                  </div>
+                  <div className="flex gap-2 text-xs">
+                    <span className="text-emerald-400">W:{mp.wins}</span>
+                    <span className="text-ur-rose">L:{mp.losses}</span>
+                    {mp.draws > 0 && <span className="text-gray-500">D:{mp.draws}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 交手历史 */}
+      {detail.match_records && detail.match_records.length > 0 && (
+        <div>
+          <h4 className="text-sm font-bold text-white mb-3">交手历史</h4>
+          <div className="max-h-[45vh] overflow-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[#7f91a7] bg-white/[0.035] sticky top-0">
+                  <th className="text-left py-2.5 px-3 font-medium">日期</th>
+                  <th className="text-left py-2.5 px-3 font-medium">地图</th>
+                  <th className="text-right py-2.5 px-3 font-medium">比分</th>
+                  <th className="text-center py-2.5 px-3 font-medium">结果</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detail.match_records.map((rec, i) => (
+                  rec.maps.map((m, j) => (
+                    <tr key={`${i}-${j}`} className="border-b border-white/[0.04] hover:bg-white/[0.03]">
+                      <td className="py-2 px-3 text-[#a0b4c8]">{j === 0 ? rec.date : ''}</td>
+                      <td className="py-2 px-3 text-[#c4d1df]" style={{color: MAP_COLORS[m.map_name]||'#999'}}>{m.map_name}</td>
+                      <td className="py-2 px-3 text-right text-[#c4d1df] font-mono">{m.our_score}-{m.their_score}</td>
+                      <td className="py-2 px-3 text-center">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
+                          ${m.result==='win'?'bg-emerald-500/20 text-emerald-400':m.result==='loss'?'bg-rose-500/20 text-ur-rose':'bg-gray-500/20 text-gray-400'}`}>
+                          {m.result==='win'?'胜':m.result==='loss'?'负':'平'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import api from '../api';
 
 const TEAM_TYPES = {
@@ -24,76 +24,23 @@ export default function PlayerEditModal({ player, onClose, onSaved }) {
   });
   const [saving, setSaving] = useState(false);
 
-  // ── 头像裁剪 ──
-  const [cropFile, setCropFile] = useState(null);
-  const [cropSrc, setCropSrc] = useState(null);
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [dragging, setDragging] = useState(false);
-  const dr = useRef({ sx: 0, sy: 0, px: 0, py: 0 });
+  // ── 头像：直接原图上传，不裁剪 ──
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setCropFile(file);
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
+    setAvatarFile(file);
     const reader = new FileReader();
-    reader.onload = (ev) => setCropSrc(ev.target.result);
+    reader.onload = (ev) => setAvatarPreview(ev.target.result);
     reader.readAsDataURL(file);
   };
 
-  // 全局拖拽
-  useEffect(() => {
-    if (!dragging) return;
-    const mv = (e) => {
-      e.preventDefault();
-      const pt = e.touches ? e.touches[0] : e;
-      setPan({
-        x: dr.current.px + (pt.clientX - dr.current.sx) / zoom,
-        y: dr.current.py + (pt.clientY - dr.current.sy) / zoom,
-      });
-    };
-    const up = () => setDragging(false);
-    window.addEventListener('mousemove', mv);
-    window.addEventListener('mouseup', up);
-    window.addEventListener('touchmove', mv, { passive: true });
-    window.addEventListener('touchend', up);
-    return () => {
-      window.removeEventListener('mousemove', mv);
-      window.removeEventListener('mouseup', up);
-      window.removeEventListener('touchmove', mv);
-      window.removeEventListener('touchend', up);
-    };
-  }, [dragging, zoom]);
-
-  const onDragStart = (e) => {
-    e.preventDefault();
-    const pt = e.touches ? e.touches[0] : e;
-    dr.current = { sx: pt.clientX, sy: pt.clientY, px: pan.x, py: pan.y };
-    setDragging(true);
-  };
-
-  // Canvas 裁剪 → Blob
-  const cropAndGetBlob = () => {
-    return new Promise((resolve, reject) => {
-      if (!cropSrc) return resolve(null);
-      const img = new Image();
-      img.onload = () => {
-        const out = 400;
-        const cvs = document.createElement('canvas');
-        cvs.width = out;
-        cvs.height = out;
-        const ctx = cvs.getContext('2d');
-        const s = Math.min(img.width, img.height) / zoom / 2;
-        const cx = img.width / 2 + pan.x;
-        const cy = img.height / 2 + pan.y;
-        ctx.drawImage(img, cx - s, cy - s, s * 2, s * 2, 0, 0, out, out);
-        cvs.toBlob((b) => (b ? resolve(b) : reject(new Error('裁剪失败'))), 'image/jpeg', 0.9);
-      };
-      img.onerror = reject;
-      img.src = cropSrc;
-    });
+  const handleRemoveAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setForm({ ...form, avatar_url: '' });
   };
 
   const update = (k, v) => setForm({ ...form, [k]: v });
@@ -102,10 +49,9 @@ export default function PlayerEditModal({ player, onClose, onSaved }) {
     setSaving(true);
     try {
       const payload = { ...form };
-      if (cropFile) {
-        const blob = await cropAndGetBlob();
+      if (avatarFile) {
         const fd = new FormData();
-        fd.append('file', blob, 'avatar.jpg');
+        fd.append('file', avatarFile, avatarFile.name);
         const { data } = await api.post(`/players/${player.id}/avatar`, fd);
         payload.avatar_url = data.url;
       }
@@ -128,7 +74,7 @@ export default function PlayerEditModal({ player, onClose, onSaved }) {
     }
   };
 
-  const VP = 120; // 裁剪视口尺寸
+  const currentAvatar = avatarPreview || form.avatar_url;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
@@ -136,74 +82,31 @@ export default function PlayerEditModal({ player, onClose, onSaved }) {
            onClick={e => e.stopPropagation()}>
         <h3 className="font-display text-xl font-bold text-white mb-4">编辑选手</h3>
 
-        {/* ── 头像裁剪 ── */}
-        {cropSrc ? (
-          <div className="mb-4 bg-ur-card/40 rounded-xl p-4 border border-ur-border/40">
-            <p className="text-xs text-gray-500 mb-3">拖拽图片 + 调整缩放来设置头像裁剪区域</p>
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-              {/* 圆形预览 */}
-              <div
-                className="relative rounded-full overflow-hidden border-2 border-ur-indigo/50 shrink-0 bg-ur-card cursor-move"
-                style={{ width: VP, height: VP }}
-                onMouseDown={onDragStart}
-                onTouchStart={onDragStart}
-              >
-                <img
-                  src={cropSrc}
-                  className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-                  style={{
-                    transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`,
-                    transformOrigin: 'center',
-                  }}
-                  draggable={false}
-                />
-                {/* 中心十字参考线 */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-25">
-                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="white" strokeWidth="0.5">
-                    <line x1="16" y1="0" x2="16" y2="32"/><line x1="0" y1="16" x2="32" y2="16"/>
-                  </svg>
-                </div>
-              </div>
-              {/* 控制区 */}
-              <div className="flex flex-col gap-2 flex-1 min-w-0 w-full">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-400">缩放: {Math.round(zoom * 100)}%</span>
-                  <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
-                    className="text-xs text-gray-500 hover:text-white transition-colors">重置位置</button>
-                </div>
-                <input type="range" min="0.5" max="2.5" step="0.01" value={zoom}
-                  onChange={e => setZoom(parseFloat(e.target.value))}
-                  className="w-full accent-ur-indigo" />
-                <div className="flex gap-2 mt-1.5">
-                  <label className="text-xs py-1.5 px-4 rounded-lg bg-ur-indigo/20 text-ur-cyan hover:bg-ur-indigo/30 transition-colors cursor-pointer">
-                    重新选择
-                    <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-                  </label>
-                  <button onClick={() => { setCropFile(null); setCropSrc(null); }}
-                    className="text-xs py-1.5 px-4 rounded-lg bg-ur-border/30 text-gray-400 hover:text-white transition-colors">移除头像</button>
-                </div>
-                <span className="text-[10px] text-gray-600 mt-0.5">拖拽圆形预览区来调整裁剪位置</span>
-              </div>
-            </div>
+        {/* ── 头像 ── */}
+        <div className="flex items-center gap-4 mb-4 p-3 bg-ur-card/30 rounded-xl">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-ur-indigo/30 to-ur-purple/30
+                          flex items-center justify-center text-2xl font-display font-bold text-ur-cyan
+                          overflow-hidden shrink-0">
+            {currentAvatar
+              ? <img src={currentAvatar} alt="" className="w-full h-full object-cover" />
+              : (form.nickname?.[0]?.toUpperCase() || '?')}
           </div>
-        ) : (
-          <div className="flex items-center gap-4 mb-4 p-3 bg-ur-card/30 rounded-xl">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-ur-indigo/30 to-ur-purple/30
-                            flex items-center justify-center text-2xl font-display font-bold text-ur-cyan
-                            overflow-hidden shrink-0">
-              {form.avatar_url
-                ? <img src={form.avatar_url} alt="" className="w-full h-full object-cover" />
-                : (form.nickname?.[0]?.toUpperCase() || '?')}
-            </div>
-            <div className="flex flex-col gap-1 min-w-0">
-              <span className="text-sm text-white font-display truncate">{form.nickname}</span>
+          <div className="flex flex-col gap-1 min-w-0">
+            <span className="text-sm text-white font-display truncate">{form.nickname}</span>
+            <div className="flex gap-2">
               <label className="text-xs py-1.5 px-4 rounded-lg bg-ur-indigo/20 text-ur-cyan hover:bg-ur-indigo/30 transition-colors cursor-pointer inline-block text-center">
-                更换头像
+                {form.avatar_url || avatarPreview ? '更换头像' : '上传头像'}
                 <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
               </label>
+              {currentAvatar && (
+                <button onClick={handleRemoveAvatar}
+                  className="text-xs py-1.5 px-3 rounded-lg bg-ur-border/30 text-gray-400 hover:text-white transition-colors">
+                  移除
+                </button>
+              )}
             </div>
           </div>
-        )}
+        </div>
 
         {/* Fields */}
         <div className="grid grid-cols-2 gap-3">
