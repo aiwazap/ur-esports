@@ -29,6 +29,7 @@ app.use('/api/peripherals', require('./routes/peripherals'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/training-plans', require('./routes/training-plans'));
 app.use('/api/opponent-intel', require('./routes/opponent-intel'));
+// app.use('/api/hltv-sync', require('./routes/hltv-sync'));  // TODO: VRS auto-sync feature
 
 // ============ Internal: tencent_sync trigger (localhost only) ============
 const XLSX = require('xlsx');
@@ -64,8 +65,12 @@ function extractDateFromBriefingCsv(filename) {
 }
 
 app.post('/api/internal/sync-tencent', async (req, res) => {
+  // Allow requests from Nginx proxy (trust X-Forwarded-For from localhost)
   const clientIP = req.ip || req.socket.remoteAddress;
-  if (clientIP !== '127.0.0.1' && clientIP !== '::1' && clientIP !== '::ffff:127.0.0.1') {
+  const forwarded = (req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  const isLocal = clientIP === '127.0.0.1' || clientIP === '::1' || clientIP === '::ffff:127.0.0.1'
+               || forwarded === '127.0.0.1' || forwarded === '::1';
+  if (!isLocal) {
     return res.status(403).json({ error: '仅限内部调用' });
   }
 
