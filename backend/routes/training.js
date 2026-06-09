@@ -995,6 +995,7 @@ router.get('/dashboard', auth, async (req, res) => {
       LEFT JOIN training_rounds tr ON ts.id = tr.session_id
       WHERE ${dateFilter}
         AND ts.opponent NOT IN ('OPPONENT', '未知', '___')
+        AND ts.opponent NOT LIKE '%放假%' AND ts.opponent NOT LIKE '%开会%' AND ts.opponent NOT LIKE '%休息%'
     `);
     // ── Match-level win rate (from matches table, map-level results) ──
     // 数据完整性过滤：排除垃圾行（空日期/占位对手）
@@ -1107,6 +1108,7 @@ router.get('/dashboard', auth, async (req, res) => {
       LEFT JOIN training_rounds tr ON ts.id = tr.session_id
       WHERE ${dateFilter}
         AND ts.opponent NOT IN ('OPPONENT', '未知', '___')
+        AND ts.opponent NOT LIKE '%放假%' AND ts.opponent NOT LIKE '%开会%' AND ts.opponent NOT LIKE '%休息%'
       GROUP BY ts.id
       ORDER BY ts.match_date DESC
     `);
@@ -1529,6 +1531,7 @@ router.get('/opponent-stats', auth, async (req, res) => {
       INNER JOIN training_rounds tr ON ts.id = tr.session_id
       WHERE ts.match_date >= '${startDate}' AND ts.match_date <= '${endDate}'
         AND ts.opponent NOT IN ('OPPONENT', '未知', '___')
+        AND ts.opponent NOT LIKE '%放假%' AND ts.opponent NOT LIKE '%开会%' AND ts.opponent NOT LIKE '%休息%'
       GROUP BY ts.opponent
       ORDER BY session_count DESC, total_rounds DESC
     `);

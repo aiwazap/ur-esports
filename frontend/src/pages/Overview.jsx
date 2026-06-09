@@ -147,9 +147,8 @@ export default function Overview() {
 
   const { kpi, upcomingMatch, recentMatches, playerStats, hsStats, teamAverages,
           mapStats, matchDetails, peripherals, inventory, opponentIntel, h2hFromDb,
-          trainingPlan, coachNotes } = data;
+          trainingPlan } = data;
 
-  // Countdown
   const countdown = upcomingMatch ? (() => {
     const target = new Date(upcomingMatch.match_date + 'T' + (upcomingMatch.match_time || '00:00:00'));
     const diff = target - now;
@@ -368,35 +367,6 @@ export default function Overview() {
         </div>
       </div>
 
-      {/* ═══════ 今日训练计划 ═══════ */}
-      {(trainingPlan || []).length > 0 && (
-        <div className="db-panel" style={{ marginBottom: 18 }}>
-          <div className="db-panel-inner">
-            <PanelHeader title="今日训练计划" badge={new Date().toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {trainingPlan.map((tp, i) => (
-                <div key={tp.id || i} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '10px 0' }}>
-                  <div style={{ minWidth: 80, textAlign: 'center', fontSize: 12, fontFamily: 'Orbitron', color: 'var(--dash-primary)', background: 'rgba(0,212,255,0.04)', border: '1px solid var(--dash-border)', borderRadius: 6, padding: '6px 8px' }}>
-                    <div>{tp.start_time || '—'}</div>
-                    <div style={{ fontSize: 9, color: 'var(--dash-text-dim)' }}>至</div>
-                    <div style={{ color: 'var(--dash-text-secondary)' }}>{tp.end_time || '—'}</div>
-                  </div>
-                  <div style={{ flex: 1, background: 'rgba(0,212,255,0.03)', border: '1px solid var(--dash-border)', borderRadius: 8, padding: 10 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--dash-text-primary)' }}>{tp.title}</div>
-                    {tp.subtitle && <div style={{ fontSize: 11, color: 'var(--dash-text-dim)', marginTop: 3 }}>{tp.subtitle}</div>}
-                    {tp.tags && <div style={{ marginTop: 6, display: 'flex', gap: 4 }}>
-                      {tp.tags.split(/[,，]/).map((t, j) => (
-                        <span key={j} style={{ fontSize: 10, padding: '1px 8px', borderRadius: 4, background: 'rgba(0,212,255,0.08)', color: 'var(--dash-primary)', border: '1px solid var(--dash-border)' }}>{t.trim()}</span>
-                      ))}
-                    </div>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ═══════ 近五场赛事 + 选手数据 ═══════ */}
       <div className="db-grid-2">
         {/* ── 近五场赛事 ── */}
@@ -408,10 +378,7 @@ export default function Overview() {
                 <thead><tr><th>日期</th><th>对手</th><th>地图</th><th style={{ textAlign: 'right' }}>比分</th><th style={{ textAlign: 'center' }}>结果</th></tr></thead>
                 <tbody>
                   {(recentMatches || []).slice(0, 5).map(m => (
-                    <tr key={m.id} style={{ cursor: 'pointer' }} onClick={() => {
-                      const d = (matchDetails || []).find(x => x.id === m.id);
-                      if (d) setModal({ type: 'match', data: d });
-                    }}>
+                    <tr key={m.id} style={{ cursor: 'pointer' }} onClick={() => setModal({ type: 'match', data: m })}>
                       <td>{m.date?.slice(5)}</td>
                       <td><strong>{m.opponent}</strong></td>
                       <td>{m.map}</td>
@@ -511,9 +478,10 @@ export default function Overview() {
               const wr = map.win_rate || 0;
               const barBg = wr >= 65 ? 'var(--dash-gradient-green)' : wr >= 50 ? 'var(--dash-gradient-orange)' : 'var(--dash-gradient-red)';
               const txtC = wr >= 65 ? 'var(--dash-success)' : wr >= 50 ? 'var(--dash-warning)' : 'var(--dash-danger)';
+              const imgSrc = mapImg(map.map_name);
               return (
                 <div key={map.map_name} className="db-map-card" onClick={() => setModal({ type: 'map', data: map })}>
-                  {mapImg(map.map_name) && <img className="db-map-card-img" src={mapImg(map.map_name)} alt={map.map_name} onError={e => { e.target.style.display = 'none'; }} />}
+                  {imgSrc && <img className="db-map-card-img" src={imgSrc} alt={map.map_name} style={{ width: 48, height: 48, objectFit: 'contain', marginBottom: 8 }} onError={e => { e.target.style.display = 'none'; }} />}
                   <div className="db-map-card-name">{map.map_name}</div>
                   <div className="db-map-card-count">{map.played} 场 · {map.wins}W / {map.losses}L</div>
                   <div className="db-map-card-bar"><div className="db-map-card-bar-fill" style={{ width: wr + '%', background: barBg }} /></div>
@@ -580,72 +548,48 @@ export default function Overview() {
         </div>
       </div>
 
-      {/* ═══════ 教练评语 ═══════ */}
-      {coachNotes?.length > 0 && (
-        <div className="db-panel" style={{ marginTop: 16 }}>
-          <div className="db-panel-inner">
-            <PanelHeader title="教练评语" />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {coachNotes.map(n => (
-                <div key={n.id} style={{ padding: 10, background: 'rgba(0,212,255,0.02)', border: '1px solid var(--dash-border)', borderRadius: 6, fontSize: 12 }}>
-                  <div style={{ color: 'var(--dash-text-dim)', marginBottom: 4 }}>{n.date} · {n.opponent} · {n.map}</div>
-                  <div style={{ color: 'var(--dash-text-secondary)', lineHeight: 1.6 }}>{n.notes}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══════ Match Detail Modal ═══════ */}
+      {/* ═══════ 比赛记录详情弹框（含上下半场+地图+训练日志） ═══════ */}
       {modal?.type === 'match' && (
         <div className="db-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
           <div className="db-modal-box">
             <button className="db-modal-close" onClick={() => setModal(null)}>✕</button>
             <div className="db-modal-title">UR vs {modal.data.opponent}</div>
             <div className="db-modal-subtitle">{modal.data.date} · {modal.data.map} · 比分 {modal.data.score}</div>
-            <div className="db-modal-info-row">
-              <span className="db-tag db-tag-rank">地图: {modal.data.map}</span>
-              <span className={'db-tag ' + (modal.data.result === 'win' ? 'db-tag-win' : 'db-tag-loss')}>
-                {modal.data.result === 'win' ? '胜利' : '失败'}
-              </span>
-            </div>
-            <div className="db-modal-section-title">选手数据</div>
-            <table className="db-data-table" style={{ marginBottom: 12 }}>
-              <thead><tr>
-                <th style={{ width: 38 }}></th><th>选手</th>
-                <th style={{ textAlign: 'right' }}>Rating</th>
-                <th style={{ textAlign: 'right' }}>K-D</th>
-                <th style={{ textAlign: 'right' }}>ADR</th>
-                <th style={{ textAlign: 'right' }}>HS%</th>
-              </tr></thead>
-              <tbody>
-                {(modal.data.players || []).map(p => {
-                  const r = p.rating || 0;
-                  return (
-                    <tr key={p.name}>
-                      <td style={{ paddingRight: 0 }}><div className="db-player-avatar" style={{ width: 28, height: 28, fontSize: 12 }}>{p.name[0]}</div></td>
-                      <td><strong>{p.name}</strong><span style={{ fontSize: 10, color: 'var(--dash-text-dim)', marginLeft: 4 }}>{p.role}</span></td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                          <div style={{ flex: 1, maxWidth: 50, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', borderRadius: 2, background: r >= 1.15 ? 'var(--dash-success)' : r >= 0.95 ? 'var(--dash-warning)' : 'var(--dash-danger)', width: Math.min(r / 1.5 * 100, 100) + '%' }} />
-                          </div>
-                          <span style={{ fontFamily: 'Orbitron', fontWeight: 600, color: r >= 1.1 ? 'var(--dash-success)' : r >= 0.9 ? 'var(--dash-warning)' : 'var(--dash-danger)' }}>{n(r, 2)}</span>
-                        </div>
-                      </td>
-                      <td style={{ textAlign: 'right', fontFamily: 'Orbitron' }}>{p.kd}</td>
-                      <td style={{ textAlign: 'right', fontFamily: 'Orbitron' }}>{n(p.adr, 1)}</td>
-                      <td style={{ textAlign: 'right', fontFamily: 'Orbitron' }}>{p.hs ? (p.hs > 0 ? ((p.hs / (p.kd ? parseInt(p.kd.split('-')[0]) : 1)) * 100).toFixed(0) + '%' : '—') : '—'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {(modal.data.notes || coachNotes?.find(c => c.id === modal.data.id)) && (
-              <div className="db-modal-coach-comment">
-                📋 {coachNotes?.find(c => c.id === modal.data.id)?.notes || modal.data.notes}
+            <div className="db-modal-info-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
+              <div className="db-stat-card">
+                <div className="db-stat-label">总比分</div>
+                <div className="db-stat-value" style={{ color: modal.data.result === 'win' ? 'var(--dash-success)' : 'var(--dash-danger)' }}>{modal.data.score}</div>
               </div>
+              <div className="db-stat-card">
+                <div className="db-stat-label">上半场 (T)</div>
+                <div className="db-stat-value" style={{ color: 'var(--dash-primary)' }}>{modal.data.t_score || 0}</div>
+              </div>
+              <div className="db-stat-card">
+                <div className="db-stat-label">下半场 (CT)</div>
+                <div className="db-stat-value" style={{ color: 'var(--dash-primary)' }}>{modal.data.ct_score || 0}</div>
+              </div>
+            </div>
+            <div className="db-modal-section-title">比赛信息</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+              <div style={{ background: 'rgba(0,212,255,0.03)', border: '1px solid var(--dash-border)', borderRadius: 6, padding: 10 }}>
+                <span style={{ color: 'var(--dash-text-dim)', fontSize: 11 }}>对手</span>
+                <div style={{ color: 'var(--dash-text-primary)', fontSize: 13, fontWeight: 600 }}>{modal.data.opponent}</div>
+              </div>
+              <div style={{ background: 'rgba(0,212,255,0.03)', border: '1px solid var(--dash-border)', borderRadius: 6, padding: 10 }}>
+                <span style={{ color: 'var(--dash-text-dim)', fontSize: 11 }}>地图</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {mapImg(modal.data.map) && <img src={mapImg(modal.data.map)} alt={modal.data.map} style={{ width: 24, height: 24, objectFit: 'contain' }} />}
+                  <span style={{ color: 'var(--dash-text-primary)', fontSize: 13, fontWeight: 600 }}>{modal.data.map}</span>
+                </div>
+              </div>
+            </div>
+            {modal.data.notes && (
+              <>
+                <div className="db-modal-section-title">训练日志</div>
+                <div style={{ padding: 12, background: 'rgba(0,212,255,0.04)', border: '1px solid var(--dash-border)', borderRadius: 8, color: 'var(--dash-text-secondary)', fontSize: 12, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                  {modal.data.notes}
+                </div>
+              </>
             )}
           </div>
         </div>
