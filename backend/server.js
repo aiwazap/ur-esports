@@ -29,6 +29,7 @@ app.use('/api/peripherals', require('./routes/peripherals'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/training-plans', require('./routes/training-plans'));
 app.use('/api/opponent-intel', require('./routes/opponent-intel'));
+app.use('/api/trial', require('./routes/trial'));
 // app.use('/api/hltv-sync', require('./routes/hltv-sync'));  // TODO: VRS auto-sync feature
 
 // ============ Internal: tencent_sync trigger (localhost only) ============
