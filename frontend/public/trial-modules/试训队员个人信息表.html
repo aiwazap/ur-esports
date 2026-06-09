@@ -191,8 +191,19 @@
 
 <button class="print-btn no-print" onclick="window.print()">🖨 打印</button>
 
+<div id="toolbar" class="no-print" style="position:fixed;top:0;left:0;right:0;z-index:999;background:#1a1a1a;border-bottom:2px solid #B8960F;padding:8px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 2px 12px rgba(0,0,0,0.3);">
+  <span style="color:#B8960F;font-weight:700;font-size:13px;">📋 个人信息</span>
+  <select id="playerId" style="padding:4px 8px;border:1px solid #444;border-radius:4px;background:#222;color:#fff;font-size:12px;min-width:150px;">
+    <option value="">-- 选择/新增队员 --</option>
+  </select>
+  <button onclick="newPlayer()" style="padding:5px 12px;background:#27AE60;color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;">+ 新增</button>
+  <button onclick="savePlayer()" style="padding:5px 16px;background:#B8960F;color:#000;border:none;border-radius:4px;font-weight:700;font-size:12px;cursor:pointer;">💾 保存</button>
+  <button onclick="deletePlayer()" style="padding:5px 12px;background:transparent;color:#ff6b6b;border:1px solid #ff6b6b;border-radius:4px;font-size:12px;cursor:pointer;">🗑 删除</button>
+  <span id="saveStatus" style="font-size:11px;color:#888;"></span>
+</div>
+
 <!-- ====================== PAGE 1 ====================== -->
-<div class="page">
+<div class="page" style="margin-top:48px;">
 
   <div class="header">
     <div class="club">UR 电子竞技俱乐部</div>
@@ -742,6 +753,112 @@ document.querySelectorAll('.skill-ticks').forEach(row => {
     e.preventDefault();
   });
 });
+
+// ===== 工具栏功能 =====
+const API_BASE = '/api/trial';
+const FIELDS = ['name','ign','nationality','age','steam_id','faceit','phone','wechat',
+                'translator','translator_phone','flight_info','room_no','workstation'];
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadPlayersList();
+});
+
+async function loadPlayersList() {
+  try {
+    const res = await fetch(API_BASE + '/players');
+    const data = await res.json();
+    const sel = document.getElementById('playerId');
+    sel.innerHTML = '<option value="">-- 选择队员 --</option>';
+    data.forEach(p => {
+      sel.innerHTML += '<option value="' + p.id + '">' + p.name + ' (' + (p.ign || '—') + ')</option>';
+    });
+  } catch(e) {}
+}
+
+document.getElementById('playerId').addEventListener('change', async function() {
+  const pid = this.value;
+  if (!pid) return;
+  try {
+    const res = await fetch(API_BASE + '/players/' + pid);
+    const data = await res.json();
+    // Fill the contenteditable fields
+    const fills = document.querySelectorAll('.fill');
+    const keys = ['name','','nationality','','steam_id','','phone','','translator','','flight_info','room_no','workstation'];
+    const vals = [data.name||'', '', data.nationality||'', '', data.steam_id||'', '', data.phone||'', '', data.translator||'', '', data.flight_info||'', data.room_no||'', data.workstation||''];
+    // Simple approach: set contenteditable spans by data
+    let idx = 0;
+    fills.forEach(f => {
+      const contentEditable = f.getAttribute('contenteditable') === 'true';
+      if (contentEditable) {
+        // Try to match field by position
+        if (idx < vals.length && vals[idx]) {
+          f.textContent = vals[idx];
+        }
+        idx++;
+      }
+    });
+    setStatus('已加载 ' + data.name);
+  } catch(e) { setStatus('加载失败', '#ff6b6b'); }
+});
+
+function collectPlayerData() {
+  const fills = document.querySelectorAll('.fill[contenteditable="true"]');
+  const vals = Array.from(fills).map(f => f.textContent.trim());
+  return {
+    name: vals[0] || '', ign: vals[1] || '', nationality: vals[2] || '',
+    age: vals[3] || '', steam_id: vals[4] || '', faceit: vals[5] || '',
+    phone: vals[6] || '', wechat: vals[7] || '',
+    translator: vals[8] || '', translator_phone: vals[9] || '',
+    flight_info: vals[10] || '', room_no: vals[11] || '', workstation: vals[12] || '',
+    notes: vals[13] || '',
+  };
+}
+
+async function savePlayer() {
+  const pid = document.getElementById('playerId').value;
+  const data = collectPlayerData();
+  if (!data.name) { setStatus('请填写姓名', '#ff6b6b'); return; }
+  setStatus('保存中...', '#B8960F');
+  try {
+    if (pid) {
+      await fetch(API_BASE + '/players/' + pid, {
+        method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
+      });
+    } else {
+      await fetch(API_BASE + '/players', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
+      });
+    }
+    setStatus('✅ 保存成功', '#27AE60');
+    loadPlayersList();
+  } catch(e) { setStatus('❌ 保存失败', '#ff6b6b'); }
+}
+
+function newPlayer() {
+  document.getElementById('playerId').value = '';
+  document.querySelectorAll('.fill[contenteditable="true"]').forEach(f => f.textContent = '');
+  setStatus('已清空，填写新队员信息');
+}
+
+async function deletePlayer() {
+  const pid = document.getElementById('playerId').value;
+  if (!pid) return;
+  if (!confirm('确定删除该队员？此操作不可恢复！')) return;
+  try {
+    await fetch(API_BASE + '/players/' + pid, { method: 'DELETE' });
+    setStatus('已删除', '#27AE60');
+    document.getElementById('playerId').value = '';
+    document.querySelectorAll('.fill[contenteditable="true"]').forEach(f => f.textContent = '');
+    loadPlayersList();
+  } catch(e) { setStatus('删除失败', '#ff6b6b'); }
+}
+
+function setStatus(msg, color) {
+  const el = document.getElementById('saveStatus');
+  el.textContent = msg;
+  el.style.color = color || '#888';
+  setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4000);
+}
 </script>
 
 </body>
