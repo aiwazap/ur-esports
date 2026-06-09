@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UR 电子竞技俱乐部 - CS2分部 试训考核评分表</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --card: #141414;
+    --gold: #D4AF37;
+    --gold-dim: #8B7332;
+    --gold-light: #F0D060;
+    --text: #e0e0e0;
+    --text-dim: #888;
+    --text-bright: #fff;
+    --border: #222;
+    --border-gold: rgba(212,175,55,0.25);
+    --danger: #C0392B;
+    --ok: #27AE60;
+    --warn: #D4A017;
+    --blue: #3498DB;
+    --input-bg: #1a1a1a;
+    --btn-bg: #1a1a1a;
+    --btn-hover: #252525;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(212,175,55,0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(212,175,55,0.02) 0%, transparent 50%);
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    padding: 32px 0 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .header .club { font-size: 12px; letter-spacing: 4px; color: var(--gold); margin-bottom: 4px; }
+  .header h1 { font-size: 22px; color: var(--text-bright); letter-spacing: 2px; }
+  .header .sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; flex-wrap: wrap; }
+  .tab {
+    padding: 10px 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .tab:hover { border-color: var(--border-gold); color: var(--gold); }
+  .tab.active { background: var(--gold); color: #000; border-color: var(--gold); font-weight: 700; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* CARDS */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    font-size: 16px; color: var(--gold); margin-bottom: 16px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card h3 { font-size: 14px; color: var(--text-bright); margin: 16px 0 10px; }
+
+  /* FORM */
+  .form-row {
+    display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px;
+  }
+  .form-group { flex: 1; min-width: 160px; }
+  .form-group label {
+    display: block; font-size: 11px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;
+  }
+  .form-group input, .form-group select {
+    width: 100%; padding: 8px 12px;
+    background: var(--input-bg); border: 1px solid var(--border);
+    color: var(--text); border-radius: 6px; font-size: 13px;
+    font-family: inherit; outline: none;
+  }
+  .form-group input:focus, .form-group select:focus {
+    border-color: var(--gold-dim);
+  }
+
+  /* SCORE DIMENSION CARDS */
+  .dim-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .dim-card {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .dim-card .dim-header {
+    display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;
+  }
+  .dim-card .dim-name { font-weight: 700; color: var(--text-bright); font-size: 14px; }
+  .dim-card .dim-weight { font-size: 11px; color: var(--gold-dim); }
+  .dim-card .dim-desc { font-size: 11px; color: var(--text-dim); margin-bottom: 10px; line-height: 1.5; }
+  .dim-card .dim-note { margin-top: 8px; }
+  .dim-card .dim-note input {
+    width: 100%; padding: 6px 10px;
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--text-dim); border-radius: 4px; font-size: 11px;
+    font-family: inherit; outline: none;
+  }
+  .dim-card .dim-note input:focus { border-color: var(--gold-dim); }
+
+  .star-row {
+    display: flex; gap: 6px;
+  }
+  .star-btn {
+    flex: 1; padding: 8px 4px; text-align: center;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: transparent; color: var(--text-dim);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: all 0.15s;
+  }
+  .star-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+  .star-btn.sel-1 { background: #7f1d1d; border-color: #991b1b; color: #fca5a5; }
+  .star-btn.sel-2 { background: #78350f; border-color: #92400e; color: #fcd34d; }
+  .star-btn.sel-3 { background: #713f12; border-color: #854d0e; color: #fde047; }
+  .star-btn.sel-4 { background: #14532d; border-color: #166534; color: #86efac; }
+  .star-btn.sel-5 { background: #1e3a5f; border-color: #1e40af; color: #93c5fd; }
+
+  /* BUTTONS */
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  .btn {
+    padding: 10px 24px; border-radius: 6px; font-size: 13px;
+    font-weight: 600; cursor: pointer; font-family: inherit;
+    border: none; transition: all 0.2s;
+  }
+  .btn-primary { background: var(--gold); color: #000; }
+  .btn-primary:hover { background: var(--gold-light); }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--gold-dim); color: var(--gold); }
+  .btn-danger { background: transparent; border: 1px solid rgba(192,57,43,0.3); color: var(--danger); }
+  .btn-danger:hover { background: rgba(192,57,43,0.1); }
+  .btn-sm { padding: 6px 14px; font-size: 11px; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 12px 0; }
+  thead th {
+    background: rgba(212,175,55,0.06); color: var(--gold-light);
+    font-weight: 600; text-align: left; padding: 8px 10px;
+    border-bottom: 1px solid var(--border-gold); font-size: 11px;
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  tbody td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .num { text-align: right; font-family: 'SF Mono','Consolas',monospace; }
+  .highlight { color: var(--gold-light); font-weight: 700; }
+
+  /* STATS */
+  .stat-row {
+    display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0;
+  }
+  .stat-card {
+    flex: 1; min-width: 140px;
+    background: var(--input-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px; text-align: center;
+  }
+  .stat-card .stat-val { font-size: 28px; font-weight: 700; color: var(--gold-light); }
+  .stat-card .stat-lbl { font-size: 11px; color: var(--text-dim); margin-top: 4px; letter-spacing: 1px; }
+
+  .empty-state {
+    text-align: center; padding: 40px; color: var(--text-dim);
+    border: 1px dashed var(--border); border-radius: 8px;
+  }
+
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 3px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .badge-w1 { background: rgba(52,152,219,0.15); color: #60a5fa; }
+  .badge-w2 { background: rgba(212,160,23,0.15); color: #fbbf24; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--gold); color: #000; padding: 10px 24px;
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    z-index: 999; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+
+  @media print {
+    body { background: #fff; color: #000; }
+    .card { background: #fff; border: 1px solid #ddd; }
+    .tab, .btn-row, .toast { display: none !important; }
+  }
+  @media (max-width: 768px) {
+    .container { padding: 12px; }
+    .dim-cards { grid-template-columns: 1fr; }
+    .form-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div class="club">UR ESPORTS · CS2 DIVISION</div>
+    <h1>试训队员每日考核评分表</h1>
+    <div class="sub">评估人：领队 Smokky / 教练组 &nbsp;|&nbsp; 数据本地存储 &nbsp;|&nbsp; 周期自动统计</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchPanel('scoring')">📝 今日评分</button>
+    <button class="tab" onclick="switchPanel('history')">📋 评分记录</button>
+    <button class="tab" onclick="switchPanel('stats')">📊 周期统计</button>
+  </div>
+
+  <!-- ======================== SCORING PANEL ======================== -->
+  <div id="panel-scoring" class="panel active">
+
+    <div class="card">
+      <h2>📝 提交今日评分</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>评估日期</label>
+          <input type="date" id="scoreDate">
+        </div>
+        <div class="form-group">
+          <label>评估人</label>
+          <select id="evaluator">
+            <option value="主教练">主教练</option>
+            <option value="战术教练">战术教练</option>
+            <option value="Smokky 领队">Smokky 领队</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>试训周期</label>
+          <select id="trialWeek">
+            <option value="1">Week 1（观察期）</option>
+            <option value="2">Week 2（实战期）</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>评估阶段</label>
+          <select id="phase">
+            <option value="队内对抗">队内对抗</option>
+            <option value="训练赛">训练赛</option>
+            <option value="日常训练">日常训练</option>
+            <option value="复盘">复盘</option>
+            <option value="综合">综合</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 训练赛数据（Week 2 显示） -->
+      <div id="matchDataSection" style="display:none;">
+        <h3>训练赛数据</h3>
+        <div class="form-row">
+          <div class="form-group"><label>对手</label><input type="text" id="matchOpponent" placeholder="对手队名"></div>
+          <div class="form-group"><label>地图</label><input type="text" id="matchMap" placeholder="如 Mirage"></div>
+          <div class="form-group"><label>Rating</label><input type="number" id="matchRating" placeholder="0.00" step="0.01" min="0" max="3"></div>
+          <div class="form-group"><label>ADR</label><input type="number" id="matchADR" placeholder="0.0" step="0.1" min="0"></div>
+          <div class="form-group"><label>KAST%</label><input type="number" id="matchKAST" placeholder="0.0" step="0.1" min="0" max="100"></div>
+        </div>
+      </div>
+
+      <h3>五维度评分（点击选择 1-5 分）</h3>
+      <div class="dim-cards">
+        <!-- Dim 1: 游戏理解 -->
+        <div class="dim-card">
+          <div class="dim-header">
+            <span class="dim-name">1. 游戏理解</span>
+            <span class="dim-weight">权重 30%</span>
+          </div>
+          <div class="dim-desc">战术意图理解、局势判断、道具使用的合理性</div>
+          <div class="star-row" id="stars-1">
+            <button class="star-btn" onclick="setScore('d1',1,this)">1<br><small>很差</small></button>
+            <button class="star-btn" onclick="setScore('d1',2,this)">2<br><small>不足</small></button>
+            <button class="star-btn" onclick="setScore('d1',3,this)">3<br><small>合格</small></button>
+            <button class="star-btn" onclick="setScore('d1',4,this)">4<br><small>良好</small></button>
+            <button class="star-btn" onclick="setScore('d1',5,this)">5<br><small>卓越</small></button>
+          </div>
+          <div class="dim-note"><input type="text" id="note-d1" placeholder="评分依据（必填）..."></div>
+        </div>
+
+        <!-- Dim 2: 自我纠错 -->
+        <div class="dim-card">
+          <div class="dim-header">
+            <span class="dim-name">2. 自我纠错</span>
+            <span class="dim-weight">权重 20%</span>
+          </div>
+          <div class="dim-desc">之前指出的问题是否改正？同样错误是否再犯？</div>
+          <div class="star-row" id="stars-2">
+            <button class="star-btn" onclick="setScore('d2',1,this)">1<br><small>很差</small></button>
+            <button class="star-btn" onclick="setScore('d2',2,this)">2<br><small>不足</small></button>
+            <button class="star-btn" onclick="setScore('d2',3,this)">3<br><small>合格</small></button>
+            <button class="star-btn" onclick="setScore('d2',4,this)">4<br><small>良好</small></button>
+            <button class="star-btn" onclick="setScore('d2',5,this)">5<br><small>卓越</small></button>
+          </div>
+          <div class="dim-note"><input type="text" id="note-d2" placeholder="评分依据（必填）..."></div>
+        </div>
+
+        <!-- Dim 3: 个人能力 -->
+        <div class="dim-card">
+          <div class="dim-header">
+            <span class="dim-name">3. 个人能力</span>
+            <span class="dim-weight">权重 25%</span>
+          </div>
+          <div class="dim-desc">枪法、残局处理、意识、道具精准度</div>
+          <div class="star-row" id="stars-3">
+            <button class="star-btn" onclick="setScore('d3',1,this)">1<br><small>很差</small></button>
+            <button class="star-btn" onclick="setScore('d3',2,this)">2<br><small>不足</small></button>
+            <button class="star-btn" onclick="setScore('d3',3,this)">3<br><small>合格</small></button>
+            <button class="star-btn" onclick="setScore('d3',4,this)">4<br><small>良好</small></button>
+            <button class="star-btn" onclick="setScore('d3',5,this)">5<br><small>卓越</small></button>
+          </div>
+          <div class="dim-note"><input type="text" id="note-d3" placeholder="评分依据（必填）..."></div>
+        </div>
+
+        <!-- Dim 4: 团队沟通 -->
+        <div class="dim-card">
+          <div class="dim-header">
+            <span class="dim-name">4. 团队沟通</span>
+            <span class="dim-weight">权重 15%</span>
+          </div>
+          <div class="dim-desc">信息传递及时性、清晰度、与队友配合意愿</div>
+          <div class="star-row" id="stars-4">
+            <button class="star-btn" onclick="setScore('d4',1,this)">1<br><small>很差</small></button>
+            <button class="star-btn" onclick="setScore('d4',2,this)">2<br><small>不足</small></button>
+            <button class="star-btn" onclick="setScore('d4',3,this)">3<br><small>合格</small></button>
+            <button class="star-btn" onclick="setScore('d4',4,this)">4<br><small>良好</small></button>
+            <button class="star-btn" onclick="setScore('d4',5,this)">5<br><small>卓越</small></button>
+          </div>
+          <div class="dim-note"><input type="text" id="note-d4" placeholder="评分依据（必填）..."></div>
+        </div>
+
+        <!-- Dim 5: 职业态度 -->
+        <div class="dim-card">
+          <div class="dim-header">
+            <span class="dim-name">5. 职业态度</span>
+            <span class="dim-weight">权重 10%</span>
+          </div>
+          <div class="dim-desc">出勤、训练专注度、复盘参与、接受批评</div>
+          <div class="star-row" id="stars-5">
+            <button class="star-btn" onclick="setScore('d5',1,this)">1<br><small>很差</small></button>
+            <button class="star-btn" onclick="setScore('d5',2,this)">2<br><small>不足</small></button>
+            <button class="star-btn" onclick="setScore('d5',3,this)">3<br><small>合格</small></button>
+            <button class="star-btn" onclick="setScore('d5',4,this)">4<br><small>良好</small></button>
+            <button class="star-btn" onclick="setScore('d5',5,this)">5<br><small>卓越</small></button>
+          </div>
+          <div class="dim-note"><input type="text" id="note-d5" placeholder="评分依据（必填）..."></div>
+        </div>
+      </div>
+
+      <!-- 综合评语 -->
+      <div class="form-group" style="margin-top:8px;">
+        <label>综合评语</label>
+        <input type="text" id="comment" placeholder="今日综合表现评价..." style="width:100%;">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveScore()">💾 保存评分</button>
+        <button class="btn btn-outline" onclick="clearForm()">↺ 清空表单</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== HISTORY PANEL ======================== -->
+  <div id="panel-history" class="panel">
+    <div class="card">
+      <h2>📋 评分记录</h2>
+      <div class="btn-row" style="margin-bottom:16px;">
+        <button class="btn btn-outline btn-sm" onclick="exportCSV()">📥 导出 CSV</button>
+        <button class="btn btn-danger btn-sm" onclick="clearAll()">🗑 清空全部记录</button>
+        <span style="font-size:12px;color:var(--text-dim);align-self:center;margin-left:auto;" id="recordCount">共 0 条记录</span>
+      </div>
+      <div id="historyTable"></div>
+    </div>
+  </div>
+
+  <!-- ======================== STATS PANEL ======================== -->
+  <div id="panel-stats" class="panel">
+    <div class="card">
+      <h2>📊 周期统计</h2>
+      <div id="statsContent"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DATA MODEL =====
+const STORAGE_KEY = 'ur_trial_scores';
+const WEIGHTS = { d1: 0.30, d2: 0.20, d3: 0.25, d4: 0.15, d5: 0.10 };
+const DIM_NAMES = {
+  d1: '游戏理解', d2: '自我纠错', d3: '个人能力', d4: '团队沟通', d5: '职业态度'
+};
+let currentScores = {};
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('scoreDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('trialWeek').addEventListener('change', toggleMatchData);
+});
+
+function toggleMatchData() {
+  const week = document.getElementById('trialWeek').value;
+  document.getElementById('matchDataSection').style.display = week === '2' ? 'block' : 'none';
+}
+
+// ===== SCORING =====
+function setScore(dim, value, btn) {
+  currentScores[dim] = value;
+  const row = btn.parentElement;
+  row.querySelectorAll('.star-btn').forEach(b => {
+    b.className = 'star-btn';
+  });
+  btn.classList.add('sel-' + value);
+}
+
+function clearForm() {
+  currentScores = {};
+  document.querySelectorAll('.star-btn').forEach(b => b.className = 'star-btn');
+  ['d1','d2','d3','d4','d5'].forEach(d => {
+    document.getElementById('note-' + d).value = '';
+  });
+  document.getElementById('comment').value = '';
+  document.getElementById('matchOpponent').value = '';
+  document.getElementById('matchMap').value = '';
+  document.getElementById('matchRating').value = '';
+  document.getElementById('matchADR').value = '';
+  document.getElementById('matchKAST').value = '';
+}
+
+function validateForm() {
+  for (let d of ['d1','d2','d3','d4','d5']) {
+    if (!currentScores[d]) { toast('请为「' + DIM_NAMES[d] + '」打分 (1-5)'); return false; }
+    if (!document.getElementById('note-' + d).value.trim()) { toast('请填写「' + DIM_NAMES[d] + '」的评分依据'); return false; }
+  }
+  return true;
+}
+
+function saveScore() {
+  if (!validateForm()) return;
+
+  const entry = {
+    id: Date.now(),
+    date: document.getElementById('scoreDate').value,
+    evaluator: document.getElementById('evaluator').value,
+    week: parseInt(document.getElementById('trialWeek').value),
+    phase: document.getElementById('phase').value,
+    scores: { ...currentScores },
+    weighted: calcWeighted(currentScores),
+    notes: {},
+    comment: document.getElementById('comment').value,
+    match: {}
+  };
+
+  for (let d of ['d1','d2','d3','d4','d5']) {
+    entry.notes[d] = document.getElementById('note-' + d).value;
+  }
+
+  if (entry.week === 2) {
+    entry.match = {
+      opponent: document.getElementById('matchOpponent').value,
+      map: document.getElementById('matchMap').value,
+      rating: parseFloat(document.getElementById('matchRating').value) || null,
+      adr: parseFloat(document.getElementById('matchADR').value) || null,
+      kast: parseFloat(document.getElementById('matchKAST').value) || null
+    };
+  }
+
+  let records = getRecords();
+  records.push(entry);
+  records.sort((a, b) => new Date(b.date) - new Date(a.date));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+
+  clearForm();
+  toast('✅ 评分已保存！加权得分：' + entry.weighted.toFixed(2));
+  refreshHistory();
+  refreshStats();
+}
+
+function calcWeighted(scores) {
+  let total = 0;
+  for (let d of ['d1','d2','d3','d4','d5']) {
+    total += (scores[d] || 0) * WEIGHTS[d];
+  }
+  return Math.round(total * 100) / 100;
+}
+
+// ===== STORAGE =====
+function getRecords() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch(e) { return []; }
+}
+
+// ===== HISTORY TABLE =====
+function refreshHistory() {
+  const records = getRecords();
+  document.getElementById('recordCount').textContent = '共 ' + records.length + ' 条记录';
+
+  const container = document.getElementById('historyTable');
+  if (records.length === 0) {
+    container.innerHTML = '<div class="empty-state">暂无评分记录<br><small>在「今日评分」页面提交第一条评分</small></div>';
+    return;
+  }
+
+  let html = '<table><thead><tr><th>日期</th><th>评估人</th><th>W</th><th>阶段</th>';
+  for (let d of ['d1','d2','d3','d4','d5']) {
+    html += '<th style="text-align:center;font-size:10px;">' + DIM_NAMES[d].slice(0,2) + '</th>';
+  }
+  html += '<th class="num">加权分</th><th style="text-align:center">操作</th></tr></thead><tbody>';
+
+  records.forEach(r => {
+    html += '<tr>';
+    html += '<td>' + r.date + '</td>';
+    html += '<td>' + r.evaluator + '</td>';
+    html += '<td><span class="badge ' + (r.week === 1 ? 'badge-w1' : 'badge-w2') + '">W' + r.week + '</span></td>';
+    html += '<td>' + r.phase + '</td>';
+    for (let d of ['d1','d2','d3','d4','d5']) {
+      html += '<td class="num">' + (r.scores[d] || '-') + '</td>';
+    }
+    html += '<td class="num highlight">' + r.weighted.toFixed(2) + '</td>';
+    html += '<td style="text-align:center"><button class="btn btn-danger btn-sm" onclick="deleteRecord(' + r.id + ')">✕</button></td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function deleteRecord(id) {
+  if (!confirm('确定删除该条评分记录？')) return;
+  let records = getRecords();
+  records = records.filter(r => r.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  refreshHistory();
+  refreshStats();
+  toast('已删除');
+}
+
+function clearAll() {
+  if (!confirm('⚠️ 确定清空全部评分记录？此操作不可恢复！')) return;
+  if (!confirm('再次确认：真的要删除所有数据吗？')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  refreshHistory();
+  refreshStats();
+  toast('全部记录已清除');
+}
+
+// ===== STATS =====
+function refreshStats() {
+  const records = getRecords();
+  const container = document.getElementById('statsContent');
+
+  if (records.length === 0) {
+    container.innerHTML = '<div class="empty-state">暂无数据<br><small>请先提交评分记录</small></div>';
+    return;
+  }
+
+  // Group by week
+  const w1 = records.filter(r => r.week === 1);
+  const w2 = records.filter(r => r.week === 2);
+
+  let html = '<div class="stat-row">';
+  html += statCard('总记录数', records.length, '条');
+  html += statCard('Week 1 记录', w1.length, '条（观察期）');
+  html += statCard('Week 2 记录', w2.length, '条（实战期）');
+  html += '</div>';
+
+  // Week stats
+  if (w1.length > 0) html += weekStatsBlock(1, w1);
+  if (w2.length > 0) html += weekStatsBlock(2, w2);
+
+  // Overall
+  html += '<h3>📈 全周期综合</h3>';
+  html += '<table><thead><tr><th>维度</th><th>权重</th><th class="num">Week 1 均分</th><th class="num">Week 2 均分</th><th class="num">全周期均分</th></tr></thead><tbody>';
+  for (let d of ['d1','d2','d3','d4','d5']) {
+    const allAvg = avgDim(records, d);
+    html += '<tr>';
+    html += '<td><strong>' + DIM_NAMES[d] + '</strong></td>';
+    html += '<td>' + Math.round(WEIGHTS[d] * 100) + '%</td>';
+    html += '<td class="num">' + (w1.length ? avgDim(w1, d).toFixed(2) : '—') + '</td>';
+    html += '<td class="num">' + (w2.length ? avgDim(w2, d).toFixed(2) : '—') + '</td>';
+    html += '<td class="num highlight">' + allAvg.toFixed(2) + '</td>';
+    html += '</tr>';
+  }
+  html += '<tr style="border-top:2px solid var(--border-gold);">';
+  html += '<td><strong>加权综合分</strong></td><td>100%</td>';
+  html += '<td class="num">' + (w1.length ? avgWeighted(w1).toFixed(2) : '—') + '</td>';
+  html += '<td class="num">' + (w2.length ? avgWeighted(w2).toFixed(2) : '—') + '</td>';
+  html += '<td class="num highlight" style="font-size:16px;">' + avgWeighted(records).toFixed(2) + '</td>';
+  html += '</tr></tbody></table>';
+
+  container.innerHTML = html;
+}
+
+function weekStatsBlock(weekNum, records) {
+  let html = '<h3>' + (weekNum === 1 ? '📅 Week 1 — 观察期' : '📅 Week 2 — 实战期') + '</h3>';
+  html += '<div class="stat-row">';
+  html += statCard('加权均分', avgWeighted(records).toFixed(2), '分');
+  html += statCard('评估人次', records.length, '次');
+  html += statCard('最高单次', Math.max(...records.map(r => r.weighted)).toFixed(2), '分');
+  html += statCard('最低单次', Math.min(...records.map(r => r.weighted)).toFixed(2), '分');
+  html += '</div>';
+
+  // Per evaluator
+  const evals = [...new Set(records.map(r => r.evaluator))];
+  if (evals.length > 1) {
+    html += '<table><thead><tr><th>评估人</th><th class="num">评分次数</th><th class="num">平均分</th></tr></thead><tbody>';
+    evals.forEach(e => {
+      const er = records.filter(r => r.evaluator === e);
+      html += '<tr><td>' + e + '</td><td class="num">' + er.length + '</td><td class="num highlight">' + avgWeighted(er).toFixed(2) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  return html;
+}
+
+function statCard(label, value, unit) {
+  return '<div class="stat-card"><div class="stat-val">' + value + '</div><div class="stat-lbl">' + label + ' (' + unit + ')</div></div>';
+}
+
+function avgDim(records, dim) {
+  return records.reduce((sum, r) => sum + (r.scores[dim] || 0), 0) / records.length;
+}
+
+function avgWeighted(records) {
+  return records.reduce((sum, r) => sum + r.weighted, 0) / records.length;
+}
+
+// ===== EXPORT =====
+function exportCSV() {
+  const records = getRecords();
+  if (records.length === 0) { toast('无数据可导出'); return; }
+  let csv = '日期,评估人,周期,阶段,游戏理解,自我纠错,个人能力,团队沟通,职业态度,加权分,综合评语\n';
+  records.forEach(r => {
+    csv += [
+      r.date, r.evaluator, 'W' + r.week, r.phase,
+      r.scores.d1 || '', r.scores.d2 || '', r.scores.d3 || '', r.scores.d4 || '', r.scores.d5 || '',
+      r.weighted, '"' + (r.comment || '').replace(/"/g, '""') + '"'
+    ].join(',') + '\n';
+  });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'UR试训评分_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  toast('📥 CSV 已导出');
+}
+
+// ===== PANEL SWITCH =====
+function switchPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'history') refreshHistory();
+  if (name === 'stats') refreshStats();
+}
+
+// ===== TOAST =====
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// Init views
+refreshHistory();
+refreshStats();
+</script>
+
+</body>
+</html>

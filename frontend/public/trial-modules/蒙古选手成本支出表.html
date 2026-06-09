@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UR 电子竞技俱乐部 - 蒙古选手成本支出表</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+
+  :root {
+    --bg: #fff;
+    --text: #1a1a1a;
+    --text-dim: #666;
+    --gold: #B8960F;
+    --gold-bg: rgba(184,150,15,0.06);
+    --border: #d0d0d0;
+    --border-thick: #1a1a1a;
+    --row-alt: #fafafa;
+    --danger: #C0392B;
+    --danger-bg: #fdf2f2;
+    --ok: #27AE60;
+    --highlight-bg: #fffdf5;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'PingFang SC','Microsoft YaHei','SimSun',sans-serif;
+    color: var(--text);
+    background: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .page {
+    width: 210mm;
+    background: #fff;
+    padding: 16mm 18mm;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.1);
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* ===== HEADER ===== */
+  .header {
+    text-align: center;
+    border-bottom: 2px solid var(--border-thick);
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+  }
+  .header .club {
+    font-size: 13px; letter-spacing: 6px;
+    color: var(--gold); font-weight: 700; margin-bottom: 4px;
+  }
+  .header h1 {
+    font-size: 20px; font-weight: 700; letter-spacing: 2px;
+  }
+  .header .meta {
+    display: flex; justify-content: space-between;
+    margin-top: 10px; font-size: 11px; color: var(--text-dim);
+  }
+
+  /* ===== SECTION ===== */
+  .section { margin-bottom: 20px; }
+  .section h2 {
+    font-size: 14px; font-weight: 700;
+    border-left: 4px solid var(--border-thick);
+    padding-left: 10px; margin-bottom: 10px;
+    background: linear-gradient(90deg, rgba(0,0,0,0.03), transparent);
+  }
+
+  /* ===== TABLE ===== */
+  table {
+    width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0;
+  }
+  thead th {
+    background: #f5f5f5;
+    color: var(--text);
+    font-weight: 700; text-align: left;
+    padding: 8px 10px;
+    border-bottom: 2px solid var(--border-thick);
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+  }
+  tbody td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tbody tr:nth-child(even) { background: var(--row-alt); }
+  tbody tr.subtotal { border-top: 1px solid var(--border-thick); }
+  tbody tr.subtotal td {
+    font-weight: 700; border-bottom: 2px solid var(--border-thick); padding-top: 10px;
+  }
+  tbody tr.grand-total td {
+    font-weight: 700; font-size: 14px; border-top: 2px solid var(--border-thick);
+    background: var(--gold-bg); padding: 10px;
+  }
+
+  .num {
+    text-align: right;
+    font-family: 'SF Mono','Consolas','Courier New',monospace;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .lvl {
+    width: 30px; font-weight: 700; font-size: 11px;
+  }
+
+  /* ===== SUMMARY CARDS ===== */
+  .summary-row {
+    display: flex; gap: 12px; margin: 16px 0;
+  }
+  .summary-card {
+    flex: 1; border: 2px solid var(--border-thick);
+    border-radius: 6px; padding: 14px 16px; text-align: center;
+  }
+  .summary-card .card-label {
+    font-size: 11px; color: var(--text-dim); letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .summary-card .card-value {
+    font-size: 24px; font-weight: 700; color: var(--text);
+  }
+  .summary-card .card-value.danger { color: var(--danger); }
+  .summary-card .card-sub {
+    font-size: 10px; color: var(--text-dim); margin-top: 4px;
+  }
+
+  /* ===== NOTES ===== */
+  .note {
+    font-size: 11px; color: var(--text-dim); margin: 8px 0;
+    padding: 6px 10px; border-left: 3px solid var(--gold);
+    background: #fafaf5; line-height: 1.6;
+  }
+  .note strong { color: var(--text); }
+
+  /* ===== STRIKETHROUGH ===== */
+  s { color: #999; }
+
+  /* ===== PRINT ===== */
+  @media print {
+    body { background: #fff; padding: 0; }
+    .page { box-shadow: none; margin: 0; width: auto; }
+    .no-print { display: none !important; }
+  }
+
+  @media screen {
+    .print-btn {
+      position: fixed; bottom: 24px; right: 24px;
+      background: #1a1a1a; color: #fff; border: none;
+      padding: 12px 24px; border-radius: 8px;
+      font-size: 14px; cursor: pointer; font-family: inherit;
+      font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 100;
+    }
+    .print-btn:hover { background: #333; }
+  }
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">🖨 打印</button>
+
+<!-- ====================== PAGE 1 ====================== -->
+<div class="page">
+
+  <div class="header">
+    <div class="club">UR 电子竞技俱乐部</div>
+    <h1>蒙古选手 · 成本支出预估表</h1>
+    <div class="meta">
+      <span>编制日期：2026-06-09</span>
+      <span>合同形式：劳务合同（无社保/公积金）</span>
+      <span>文件密级：内部 · 机密</span>
+    </div>
+  </div>
+
+  <!-- 总览 -->
+  <div class="summary-row">
+    <div class="summary-card">
+      <div class="card-label">试训期（2周）</div>
+      <div class="card-value">¥15,020 ~ 17,520</div>
+      <div class="card-sub">翻译 + 食宿 + 训练</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-label">签证办理（一次）</div>
+      <div class="card-value">¥13,500 ~ 19,600</div>
+      <div class="card-sub">往返 + 中介 + 公证 + 体检</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-label">年度运营</div>
+      <div class="card-value">¥156,080</div>
+      <div class="card-sub">工资 + 个税 + 差旅</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-label">首年总成本</div>
+      <div class="card-value danger">¥175,680</div>
+      <div class="card-sub">年度运营 + 一次性签证</div>
+    </div>
+  </div>
+
+  <!-- 假设条件 -->
+  <div class="note">
+    <strong>计算假设：</strong>
+    ① 劳务合同，年薪 60 万名义申报（50,000 × 12），实发 42,000/年（3,500 × 12）；
+    ② 劳务合同不产生社保（五险）和住房公积金成本，仅承担个人所得税；
+    ③ 每年 1 次乌兰巴托往返（办理无犯罪证明等），交通费由俱乐部承担；
+    ④ 签证流程（除本人往返蒙古外）由中介代办，服务费 ¥6,000；
+    ⑤ 蒙古语翻译 ¥160/小时，周一至周六每日 6 小时，试训期 2 周共 12 天。
+  </div>
+
+  <!-- 一、试训期费用 -->
+  <div class="section">
+    <h2>一、试训期费用（2 周，签证有效期内）</h2>
+    <table>
+      <thead>
+        <tr><th style="width:6%">#</th><th>费用项</th><th style="width:48%">说明</th><th style="width:16%" class="num">单价</th><th style="width:16%" class="num">数量</th><th style="width:14%" class="num">金额（¥）</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td><td>蒙古语翻译</td>
+          <td>全程陪同翻译，160 元/小时 × 6 小时/天，周一至周六</td>
+          <td class="num">960/天</td><td class="num">12 天</td><td class="num">11,520</td>
+        </tr>
+        <tr>
+          <td>2</td><td>选手食宿</td><td>14 天，基地宿舍 + 餐饮（含外卖/食堂）</td><td class="num">250~350/天</td><td class="num">14 天</td><td class="num">3,500 ~ 5,000</td>
+        </tr>
+        <tr>
+          <td>3</td><td>训练相关</td><td>Faceit 会员、5E 平台、训练服/外设损耗</td><td class="num">—</td><td class="num">—</td><td class="num">500 ~ 1,000</td>
+        </tr>
+        <tr class="subtotal">
+          <td></td><td><strong>试训期小计</strong></td><td>试训不通过，费用到此为止。选手按期离境。</td><td></td><td></td><td class="num"><strong>15,020 ~ 17,520</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 二、签证办理一次性费用 -->
+  <div class="section">
+    <h2>二、签证办理一次性费用（决定留用后产生）</h2>
+    <table>
+      <thead>
+        <tr><th style="width:6%">#</th><th>费用项</th><th style="width:48%">说明</th><th style="width:30%">承担方</th><th style="width:16%" class="num">金额（¥）</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td><td>广州 ↔ 乌兰巴托往返机票</td>
+          <td>经济舱，选手本人往返办理无犯罪证明 + 海牙认证</td>
+          <td>俱乐部</td><td class="num">3,000 ~ 5,000</td>
+        </tr>
+        <tr>
+          <td>2</td><td>蒙古境内食宿</td>
+          <td>办理文件期间 3~5 天</td>
+          <td>俱乐部</td><td class="num">1,000 ~ 2,000</td>
+        </tr>
+        <tr>
+          <td>3</td><td>签证中介代办费</td>
+          <td>工作许可通知、居留许可等全部流程代办</td>
+          <td>俱乐部</td><td class="num"><strong>6,000</strong></td>
+        </tr>
+        <tr>
+          <td>4</td><td>无犯罪记录证明</td>
+          <td>蒙古国警察部门出具</td>
+          <td>俱乐部（代缴）</td><td class="num">200 ~ 500</td>
+        </tr>
+        <tr>
+          <td>5</td><td>海牙认证 (Apostille)</td>
+          <td>无犯罪证明 + 学历证书</td>
+          <td>俱乐部（代缴）</td><td class="num">500 ~ 1,000</td>
+        </tr>
+        <tr>
+          <td>6</td><td>学历翻译 + 公证</td>
+          <td>蒙古语 → 中文，公证处认证</td>
+          <td>俱乐部（代缴）</td><td class="num">1,500 ~ 2,500</td>
+        </tr>
+        <tr>
+          <td>7</td><td>指定体检</td>
+          <td>外国人工作签证必需（广州指定机构）</td>
+          <td>俱乐部</td><td class="num">500 ~ 800</td>
+        </tr>
+        <tr>
+          <td>8</td><td>工作许可 / 居留许可政府规费</td>
+          <td>人社局 + 出入境管理局（中介代办）</td>
+          <td>俱乐部（代缴）</td><td class="num">~1,800</td>
+        </tr>
+        <tr class="subtotal">
+          <td></td><td><strong>一次性费用小计</strong></td><td></td><td></td><td class="num"><strong>13,500 ~ 19,600</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <strong>说明：</strong>第 4~8 项由中介代办，可能部分包含在 ¥6,000 代办费中。此处按独立列支做上限估算。
+    </div>
+  </div>
+
+</div>
+
+<!-- ====================== PAGE 2 ====================== -->
+<div class="page">
+
+  <div class="header" style="border-bottom:none;padding-bottom:0;margin-bottom:16px;">
+    <div class="club">UR 电子竞技俱乐部</div>
+    <h1>蒙古选手 · 年度运营成本</h1>
+  </div>
+
+  <!-- 三、年度运营成本 -->
+  <div class="section">
+    <h2>三、年度运营成本（留用后，每年）</h2>
+    <table>
+      <thead>
+        <tr><th>费用类别</th><th>计算依据</th><th class="num">月度（¥）</th><th class="num">年度（¥）</th></tr>
+      </thead>
+      <tbody>
+        <tr style="background:var(--gold-bg);">
+          <td><strong>劳务合同名义收入</strong></td>
+          <td>50,000 × 12（用于工作签证申报）</td>
+          <td class="num">50,000</td>
+          <td class="num">600,000</td>
+        </tr>
+        <tr>
+          <td><strong>实际发放工资</strong></td>
+          <td>3,500 × 12</td>
+          <td class="num">3,500</td>
+          <td class="num">42,000</td>
+        </tr>
+        <tr>
+          <td><strong>个人所得税 (IIT)</strong></td>
+          <td>年应税所得：600,000 − 60,000(减除) = 540,000<br>540,000 × 30% − 52,920(速算扣除) = 109,080</td>
+          <td class="num">9,090</td>
+          <td class="num" style="color:var(--danger);">109,080</td>
+        </tr>
+        <tr style="color:#999;">
+          <td><s>养老保险（雇主）</s></td>
+          <td colspan="3">劳务合同 — 不适用</td>
+        </tr>
+        <tr style="color:#999;">
+          <td><s>医疗保险（雇主）</s></td>
+          <td colspan="3">劳务合同 — 不适用</td>
+        </tr>
+        <tr style="color:#999;">
+          <td><s>失业保险（雇主）</s></td>
+          <td colspan="3">劳务合同 — 不适用</td>
+        </tr>
+        <tr style="color:#999;">
+          <td><s>工伤保险（雇主）</s></td>
+          <td colspan="3">劳务合同 — 不适用</td>
+        </tr>
+        <tr style="color:#999;">
+          <td><s>生育保险（雇主）</s></td>
+          <td colspan="3">劳务合同 — 不适用</td>
+        </tr>
+        <tr style="color:#999;">
+          <td><s>住房公积金（雇主）</s></td>
+          <td colspan="3">劳务合同 — 不适用</td>
+        </tr>
+        <tr style="border-top:2px solid var(--border-thick);">
+          <td><strong>年度税费合计</strong></td>
+          <td>仅个人所得税</td>
+          <td class="num"><strong>9,090</strong></td>
+          <td class="num"><strong>109,080</strong></td>
+        </tr>
+        <tr>
+          <td><strong>年度往返差旅</strong></td>
+          <td>乌兰巴托办理签证续签文件，1 次/年。俱乐部承担。</td>
+          <td class="num">—</td>
+          <td class="num">~5,000</td>
+        </tr>
+        <tr class="grand-total">
+          <td><strong>年度运营总成本</strong></td>
+          <td>实发工资 + 个税 + 往返差旅</td>
+          <td class="num">—</td>
+          <td class="num">156,080</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 四、首年汇总 -->
+  <div class="section">
+    <h2>四、首年总成本汇总</h2>
+    <table>
+      <thead>
+        <tr><th style="width:6%">阶段</th><th>项目</th><th style="width:22%" class="num">金额（¥）</th><th style="width:30%">备注</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align:center;">A</td>
+          <td>试训期（2 周）</td>
+          <td class="num">15,020 ~ 17,520</td>
+          <td>无论留用与否均产生</td>
+        </tr>
+        <tr>
+          <td style="text-align:center;">B</td>
+          <td>签证办理（一次性）</td>
+          <td class="num">13,500 ~ 19,600</td>
+          <td>决定留用后产生</td>
+        </tr>
+        <tr>
+          <td style="text-align:center;">C</td>
+          <td>年度运营</td>
+          <td class="num">156,080</td>
+          <td>每年固定支出</td>
+        </tr>
+        <tr class="grand-total">
+          <td style="text-align:center;">=</td>
+          <td><strong>首年总支出（A+B+C）</strong></td>
+          <td class="num"><strong>184,600 ~ 193,200</strong></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><em>其中：首年税费占比</em></td>
+          <td class="num" style="color:var(--danger);"><em>109,080（约 57%~59%）</em></td>
+          <td>实际工资 42,000 仅为税费的 39%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 五、劳务 vs 劳动对比 -->
+  <div class="section">
+    <h2>五、劳务合同 vs 劳动合同 成本对比</h2>
+    <table>
+      <thead>
+        <tr><th>对比项</th><th class="num">劳动合同（含五险一金）</th><th class="num">劳务合同（仅个税）</th><th class="num" style="color:var(--ok);">节省</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>实际工资</td><td class="num">42,000</td><td class="num">42,000</td><td class="num">—</td></tr>
+        <tr><td>个人所得税</td><td class="num">109,080</td><td class="num">109,080</td><td class="num">—</td></tr>
+        <tr><td>五险（雇主部分）</td><td class="num" style="color:var(--danger);">144,000</td><td class="num">0</td><td class="num" style="color:var(--ok);">−144,000</td></tr>
+        <tr><td>住房公积金（雇主）</td><td class="num" style="color:var(--danger);">72,000</td><td class="num">0</td><td class="num" style="color:var(--ok);">−72,000</td></tr>
+        <tr><td>年度往返差旅</td><td class="num">5,000</td><td class="num">5,000</td><td class="num">—</td></tr>
+        <tr class="subtotal">
+          <td><strong>年度合计</strong></td>
+          <td class="num" style="color:var(--danger);"><strong>372,080</strong></td>
+          <td class="num"><strong>156,080</strong></td>
+          <td class="num" style="color:var(--ok);"><strong>−216,000</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <strong>结论：</strong>劳务合同每年节省 ¥216,000（降幅 58%）。这是成本可控的关键前提。
+    </div>
+  </div>
+
+  <!-- 六、翻译费用备注 -->
+  <div class="section">
+    <h2>六、翻译费用专项说明</h2>
+    <table>
+      <thead>
+        <tr><th>项目</th><th>计算</th><th class="num">金额（¥）</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>试训期翻译（2 周）</td>
+          <td>160 元/小时 × 6 小时/天 × 12 天（周一至周六）</td>
+          <td class="num">11,520</td>
+        </tr>
+        <tr>
+          <td>如延长至 1 个月</td>
+          <td>160 × 6 × 26 天</td>
+          <td class="num">24,960</td>
+        </tr>
+        <tr>
+          <td>如延长至 3 个月</td>
+          <td>160 × 6 × 26 × 3</td>
+          <td class="num">74,880</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <strong>注意：</strong>上表中「年度运营成本」未包含试训期之后的翻译费用。如果留用后仍需长期翻译陪同，需额外追加预算。建议留用后逐步减少翻译依赖（第 1 个月全职 → 第 2-3 个月半职 → 第 4 个月起仅关键场景）。
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

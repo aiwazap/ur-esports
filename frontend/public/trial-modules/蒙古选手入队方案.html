@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UR 电竞 · 蒙古选手入队方案</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-card: #111111;
+    --bg-card-hover: #181818;
+    --gold: #D4AF37;
+    --gold-dim: #8B7332;
+    --gold-light: #F0D060;
+    --text: #e0e0e0;
+    --text-dim: #888888;
+    --text-bright: #ffffff;
+    --border: #1a1a1a;
+    --border-gold: rgba(212,175,55,0.3);
+    --danger: #C0392B;
+    --danger-bg: rgba(192,57,43,0.15);
+    --warn: #D4A017;
+    --warn-bg: rgba(212,160,23,0.12);
+    --ok: #27AE60;
+    --ok-bg: rgba(39,174,96,0.12);
+    --info: #2980B9;
+    --info-bg: rgba(41,128,185,0.12);
+    --glass: rgba(255,255,255,0.03);
+    --glass-border: rgba(255,255,255,0.06);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    line-height: 1.7;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(212,175,55,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(212,175,55,0.03) 0%, transparent 60%);
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    text-align: center;
+    padding: 48px 24px 32px;
+    position: relative;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .header .logo {
+    font-size: 14px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: 2px;
+  }
+  .header h1 span { color: var(--gold); }
+  .header .meta {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  /* ===== TABS ===== */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    padding: 0 24px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 10px 24px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    font-family: inherit;
+    letter-spacing: 1px;
+  }
+  .tab-btn:hover {
+    border-color: var(--border-gold);
+    color: var(--gold);
+  }
+  .tab-btn.active {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #000;
+    font-weight: 600;
+  }
+
+  /* ===== CONTAINER ===== */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px 64px;
+  }
+
+  /* ===== SECTIONS ===== */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ===== CARDS ===== */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+    opacity: 0.3;
+  }
+  .card h2 {
+    font-size: 20px;
+    color: var(--gold);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card h3 {
+    font-size: 16px;
+    color: var(--text-bright);
+    margin: 24px 0 12px;
+  }
+  .card h3:first-of-type { margin-top: 8px; }
+  .card p {
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+
+  /* ===== TABLES ===== */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 16px 0;
+  }
+  thead th {
+    background: rgba(212,175,55,0.08);
+    color: var(--gold-light);
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-gold);
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  tbody tr:hover { background: var(--bg-card-hover); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; font-family: 'SF Mono','Consolas',monospace; }
+  .highlight { color: var(--gold-light); font-weight: 600; }
+  .danger { color: var(--danger); }
+  .ok { color: var(--ok); }
+  .warn { color: var(--warn); }
+
+  /* ===== BADGES ===== */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .badge-p0 { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(192,57,43,0.3); }
+  .badge-p1 { background: var(--warn-bg); color: var(--warn); border: 1px solid rgba(212,160,23,0.3); }
+  .badge-ok { background: var(--ok-bg); color: var(--ok); border: 1px solid rgba(39,174,96,0.3); }
+  .badge-info { background: var(--info-bg); color: var(--info); border: 1px solid rgba(41,128,185,0.3); }
+
+  /* ===== SCORING ===== */
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .score-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .score-item .dim-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+  }
+  .score-item .dim-weight {
+    font-size: 12px;
+    color: var(--gold-dim);
+    margin-bottom: 12px;
+  }
+  .score-item .dim-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    line-height: 1.6;
+  }
+  .score-radios {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .score-radio {
+    flex: 1;
+    min-width: 40px;
+    text-align: center;
+  }
+  .score-radio input { display: none; }
+  .score-radio label {
+    display: block;
+    padding: 6px 4px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-dim);
+    transition: all 0.2s;
+  }
+  .score-radio input:checked + label {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #000;
+    font-weight: 700;
+  }
+
+  /* ===== COST SUMMARY ===== */
+  .cost-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .cost-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+  }
+  .cost-card .cost-label {
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .cost-card .cost-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gold-light);
+  }
+  .cost-card .cost-value.danger { color: var(--danger); }
+  .cost-card .cost-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* ===== TIMELINE ===== */
+  .timeline {
+    position: relative;
+    padding-left: 24px;
+    margin: 16px 0;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, var(--gold), var(--gold-dim), transparent);
+  }
+  .tl-item {
+    position: relative;
+    margin-bottom: 20px;
+    padding-left: 24px;
+  }
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--gold);
+    border: 2px solid var(--bg-card);
+  }
+  .tl-item .tl-day {
+    font-size: 12px;
+    color: var(--gold-dim);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .tl-item .tl-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-bright);
+  }
+  .tl-item .tl-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* ===== DECISION TABLE ===== */
+  .decision-table td:first-child { font-weight: 600; min-width: 100px; }
+
+  /* ===== PRINT ===== */
+  @media print {
+    body { background: #fff; color: #000; }
+    .card { background: #fff; border: 1px solid #ddd; break-inside: avoid; }
+    .card::before { display: none; }
+    .tabs { display: none; }
+    .section { display: block !important; margin-bottom: 32px; }
+    .section::before {
+      content: attr(data-section-title);
+      display: block;
+      font-size: 22px;
+      font-weight: 700;
+      color: #000;
+      margin-bottom: 16px;
+      border-bottom: 2px solid #000;
+      padding-bottom: 8px;
+    }
+    table { font-size: 11px; }
+    thead th { background: #f0f0f0; color: #000; }
+    .cost-value, .highlight { color: #000; }
+    .badge { border: 1px solid #999; }
+  }
+
+  /* ===== MOBILE ===== */
+  @media (max-width: 768px) {
+    .header h1 { font-size: 22px; }
+    .card { padding: 20px; }
+    .cost-summary { grid-template-columns: 1fr 1fr; }
+    .score-grid { grid-template-columns: 1fr; }
+    table { font-size: 11px; }
+    thead th, tbody td { padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">UR ESPORTS · CS2 DIVISION</div>
+  <h1>蒙古选手<span>入队方案</span></h1>
+  <div class="meta">内部文件 · 机密 · 2026年6月9日</div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('sec1', this)">壹 · 赛训安排与考核</button>
+  <button class="tab-btn" onclick="switchTab('sec2', this)">贰 · 成本支出表</button>
+  <button class="tab-btn" onclick="switchTab('sec3', this)">叁 · 评估打分表</button>
+</div>
+
+<div class="container">
+
+<!-- ================================================================ -->
+<!-- SECTION 1: 赛训安排、考核与留用标准 -->
+<!-- ================================================================ -->
+<div id="sec1" class="section active" data-section-title="壹 · 赛训内部安排、考核与留用标准">
+
+  <!-- 1.1 基本信息 -->
+  <div class="card">
+    <h2>📋 选手基本信息</h2>
+    <table>
+      <tr><td style="width:120px;color:var(--text-dim)">国籍</td><td>蒙古国 (Mongolia)</td></tr>
+      <tr><td style="color:var(--text-dim)">当前所在地</td><td>中国广东省广州市</td></tr>
+      <tr><td style="color:var(--text-dim)">签证类型</td><td>X1 学习签证（30天有效）</td></tr>
+      <tr><td style="color:var(--text-dim)">学历</td><td>初中</td></tr>
+      <tr><td style="color:var(--text-dim)">语言</td><td>蒙古语（母语）、中文（学习中）</td></tr>
+      <tr><td style="color:var(--text-dim)">翻译陪同</td><td>蒙古老师全程翻译</td></tr>
+      <tr><td style="color:var(--text-dim)">试训周期</td><td><span class="highlight">2 周</span>（在 30 天签证有效期内）</td></tr>
+      <tr><td style="color:var(--text-dim)">入队目的</td><td>竞业压力引入 — 激发现有队员竞争意识，非首发替换</td></tr>
+    </table>
+  </div>
+
+  <!-- 1.2 试训两周安排 -->
+  <div class="card">
+    <h2>📅 试训周期安排</h2>
+
+    <h3>第一周：观察期（不参加训练赛）</h3>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-day">DAY 1 — 入队日</div>
+        <div class="tl-title">欢迎仪式 + 双向自我介绍</div>
+        <div class="tl-desc">领队介绍训练安排；现有队员逐一自我介绍；蒙古选手自我介绍；领队重申试训规则</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-day">DAY 1 → DAY 6</div>
+        <div class="tl-title">日常训练全程参与</div>
+        <div class="tl-desc">随队完成每日个人训练（Faceit 天梯 / Aim 训练 / 道具练习），参加队内对抗赛</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-day">每日核心任务</div>
+        <div class="tl-title">训练赛观察记录</div>
+        <div class="tl-desc">以旁观视角记录训练赛中每位选手的失误、团队配合问题，写出自己的理解和改进建议（翻译辅助）</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-day">DAY 6</div>
+        <div class="tl-title">Week 1 评估小结</div>
+        <div class="tl-desc">领队 + 教练审查他的观察记录质量，评估游戏理解深度；队内对抗赛表现评分</div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:28px;">第二周：实战期（上场打训练赛）</h3>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-day">DAY 7 → DAY 12</div>
+        <div class="tl-title">正式参加训练赛</div>
+        <div class="tl-desc">轮换上场，替换同位置选手；打满训练赛赛程</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-day">核心观察维度 A</div>
+        <div class="tl-title">战术理解与执行</div>
+        <div class="tl-desc">是否理解既定战术意图？执行是否到位？是否出现 Week 1 自己指出的同类错误？</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-day">核心观察维度 B</div>
+        <div class="tl-title">个人能力表现</div>
+        <div class="tl-desc">Rating / ADR / KAST / 首杀率 / 残局胜率 — 全部量化记录</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-day">核心观察维度 C</div>
+        <div class="tl-title">团队沟通与抗压</div>
+        <div class="tl-desc">信息传递是否清晰？被批评后的反应？连续失利后的心态？</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-day">DAY 12 → DAY 14</div>
+        <div class="tl-title">综合评定 + 决策</div>
+        <div class="tl-desc">教练组 + 领队汇总评分 → 决定留用 / 不留用</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.3 考核维度 -->
+  <div class="card">
+    <h2>📊 考核维度与权重</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>维度</th>
+          <th>权重</th>
+          <th>Week 1 评估方式</th>
+          <th>Week 2 评估方式</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>游戏理解</strong><br><span style="font-size:11px;color:var(--text-dim)">战术分析能力</span></td>
+          <td class="highlight" style="text-align:center">30%</td>
+          <td>审查其训练赛观察记录 — 指出的问题是否准确、分析是否有深度</td>
+          <td>看他执行战术时是否理解战术意图（不只是机械执行）</td>
+        </tr>
+        <tr>
+          <td><strong>自我纠错</strong><br><span style="font-size:11px;color:var(--text-dim)">学以致用能力</span></td>
+          <td class="highlight" style="text-align:center">20%</td>
+          <td>—（本周不适用）</td>
+          <td>Week 1 自己记录的问题，自己上场后是否犯同样的错</td>
+        </tr>
+        <tr>
+          <td><strong>个人能力</strong><br><span style="font-size:11px;color:var(--text-dim)">枪法/意识/残局</span></td>
+          <td class="highlight" style="text-align:center">25%</td>
+          <td>队内对抗赛数据（Rating/ADR/KAST）</td>
+          <td>训练赛全量数据统计，对比现有队员同位置数据</td>
+        </tr>
+        <tr>
+          <td><strong>团队沟通</strong><br><span style="font-size:11px;color:var(--text-dim)">信息传递与配合</span></td>
+          <td class="highlight" style="text-align:center">15%</td>
+          <td>队内对抗中的交流意愿和清晰度</td>
+          <td>训练赛信息传递是否及时准确；能否跟上团队节奏</td>
+        </tr>
+        <tr>
+          <td><strong>职业态度</strong><br><span style="font-size:11px;color:var(--text-dim)">纪律性/抗压/合作</span></td>
+          <td class="highlight" style="text-align:center">10%</td>
+          <td>出勤、训练态度、复盘参与度</td>
+          <td>被批评后的反应；连续失利后的心态；与队员相处情况</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top:12px;"><span class="badge badge-info">说明</span> 每项 1-5 分制，加权计算综合分。综合分 ≥ 3.5 进入留用讨论；＜ 3.0 直接淘汰。</p>
+  </div>
+
+  <!-- 1.4 留用判定标准 -->
+  <div class="card">
+    <h2>⚖️ 留用判定标准</h2>
+
+    <h3>必要条件（全部满足才进入留用讨论）</h3>
+    <table>
+      <thead><tr><th>#</th><th>条件</th><th>判定方式</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="highlight">1</td>
+          <td>综合评分 ≥ 3.5（满分 5）</td>
+          <td>教练组 + 领队独立打分后取平均</td>
+        </tr>
+        <tr>
+          <td class="highlight">2</td>
+          <td>游戏理解维度 ≥ 3.0</td>
+          <td>Week 1 观察记录质量 + Week 2 战术执行</td>
+        </tr>
+        <tr>
+          <td class="highlight">3</td>
+          <td>个人能力维度 ≥ 3.0</td>
+          <td>两周量化数据对比现役同位置选手</td>
+        </tr>
+        <tr>
+          <td class="highlight">4</td>
+          <td>无严重纪律问题</td>
+          <td>缺席训练、态度恶劣、与队员冲突等一票否决</td>
+        </tr>
+        <tr>
+          <td class="highlight">5</td>
+          <td>签证路径可行</td>
+          <td>出入境管理局确认可办理工作签证（详见成本表附件）</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>一票否决项</h3>
+    <table class="decision-table">
+      <tr>
+        <td><span class="badge badge-p0">否决</span></td>
+        <td>与现有队员发生不可调和的冲突</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p0">否决</span></td>
+        <td>训练赛数据显著低于现役同位置选手（Rating 差距 > 0.15）</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p0">否决</span></td>
+        <td>Week 1 观察记录敷衍了事（暴露游戏理解严重不足）</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p0">否决</span></td>
+        <td>态度不端正（迟到/早退/训练划水/不参与复盘）</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p0">否决</span></td>
+        <td>签证路径确认不可行</td>
+      </tr>
+    </table>
+
+    <h3>留用决策流程</h3>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-day">STEP 1</div>
+        <div class="tl-title">教练组独立打分（Day 12）</div>
+        <div class="tl-desc">主教练 + 战术教练分别按评估表打分</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-day">STEP 2</div>
+        <div class="tl-title">领队汇总 + 面试（Day 13）</div>
+        <div class="tl-desc">领队与选手一对一沟通，了解其职业规划、薪资预期、签证意愿</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-day">STEP 3</div>
+        <div class="tl-title">管理层决策（Day 14）</div>
+        <div class="tl-desc">华哥 + 经理 + 教练组会议，综合成本与竞技价值做最终决定</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ================================================================ -->
+<!-- SECTION 2: 成本支出表 -->
+<!-- ================================================================ -->
+<div id="sec2" class="section" data-section-title="贰 · 俱乐部成本支出表">
+
+  <!-- 2.1 总览 -->
+  <div class="card">
+    <h2>💰 成本总览</h2>
+    <div class="cost-summary">
+      <div class="cost-card">
+        <div class="cost-label">试训期（2周）</div>
+        <div class="cost-value">¥1.2-1.8万</div>
+        <div class="cost-sub">翻译 + 食宿 + 队内开销</div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-label">签证办理（一次性）</div>
+        <div class="cost-value">¥0.85-1.4万</div>
+        <div class="cost-sub">公证 + 认证 + 机票 + 体检</div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-label">年度个税</div>
+        <div class="cost-value">¥10.9万</div>
+        <div class="cost-sub">按年薪 60 万申报，30% 税率</div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-label">首年总成本</div>
+        <div class="cost-value">¥17.0-17.5万</div>
+        <div class="cost-sub">含一次性费用 + 年差旅</div>
+      </div>
+    </div>
+    <p style="margin-top:16px;"><span class="badge badge-info">合同形式</span> 签订<strong>劳务合同</strong>，无社保、无公积金。仅承担个人所得税（按年薪 60 万申报）和年度往返差旅。</p>
+  </div>
+
+  <!-- 2.2 试训期费用 -->
+  <div class="card">
+    <h2>📅 试训期费用明细（2周）</h2>
+    <table>
+      <thead><tr><th>费用项</th><th>说明</th><th class="num">估算金额（元）</th></tr></thead>
+      <tbody>
+        <tr><td>蒙古翻译陪同</td><td>全程 14 天，按日计费</td><td class="num">8,000 - 12,000</td></tr>
+        <tr><td>选手食宿</td><td>14 天，战队基地或附近住宿</td><td class="num">3,000 - 5,000</td></tr>
+        <tr><td>队内训练开销</td><td>Faceit 会员、训练服、设备损耗</td><td class="num">500 - 1,000</td></tr>
+        <tr style="border-top:2px solid var(--border-gold);"><td><strong>试训期小计</strong></td><td></td><td class="num highlight">11,500 - 18,000</td></tr>
+      </tbody>
+    </table>
+    <p><span class="badge badge-info">说明</span> 试训不通过，费用到此为止，选手按期离境。</p>
+  </div>
+
+  <!-- 2.3 签证办理一次性费用 -->
+  <div class="card">
+    <h2>🛂 签证办理一次性费用（俱乐部承担）</h2>
+    <table>
+      <thead><tr><th>#</th><th>费用项</th><th>说明</th><th class="num">金额（元）</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>广州 ↔ 乌兰巴托往返机票</td><td>经济舱，1 人次，办理无犯罪证明 + 海牙认证</td><td class="num">3,000 - 5,000</td></tr>
+        <tr><td>2</td><td>蒙古境内食宿</td><td>办理文件期间 3-5 天</td><td class="num">1,000 - 2,000</td></tr>
+        <tr><td>3</td><td>无犯罪记录证明</td><td>蒙古国警察部门出具</td><td class="num">200 - 500</td></tr>
+        <tr><td>4</td><td>海牙认证 (Apostille)</td><td>无犯罪证明 + 学历证书认证</td><td class="num">500 - 1,000</td></tr>
+        <tr><td>5</td><td>学历证书翻译 + 公证</td><td>蒙古语 → 中文，公证处认证</td><td class="num">1,500 - 2,500</td></tr>
+        <tr><td>6</td><td>指定体检机构体检</td><td>外国人工作签证必需</td><td class="num">500 - 800</td></tr>
+        <tr><td>7</td><td>外国人工作许可通知</td><td>人社局审批</td><td class="num">~1,000</td></tr>
+        <tr><td>8</td><td>外国人居留许可</td><td>出入境管理局</td><td class="num">800</td></tr>
+        <tr style="border-top:2px solid var(--border-gold);"><td></td><td><strong>一次性费用小计</strong></td><td></td><td class="num highlight">8,500 - 13,800</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 2.4 年度运营成本 -->
+  <div class="card">
+    <h2>📊 年度运营成本明细</h2>
+    <p style="color:var(--ok);margin-bottom:16px;">✅ 合同形式：<strong>劳务合同</strong> — 不产生社保（五险）和住房公积金成本，仅承担个人所得税</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>费用类别</th>
+          <th>计算依据</th>
+          <th class="num">月均（元）</th>
+          <th class="num">年均（元）</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:rgba(212,175,55,0.04);">
+          <td><strong>劳务合同名义收入</strong></td>
+          <td>50,000 × 12（用于工作签申报）</td>
+          <td class="num">50,000</td>
+          <td class="num">600,000</td>
+        </tr>
+        <tr>
+          <td><strong>实际发放工资</strong></td>
+          <td>3,500 × 12</td>
+          <td class="num">3,500</td>
+          <td class="num">42,000</td>
+        </tr>
+        <tr>
+          <td><strong>个人所得税</strong></td>
+          <td>年度汇算：600,000 - 60,000(减除) = 540,000<br>540,000 × 30% - 52,920(速算扣除) = 109,080</td>
+          <td class="num warn">~9,090</td>
+          <td class="num warn">~109,080</td>
+        </tr>
+        <tr style="color:var(--text-dim);">
+          <td><s>养老保险（雇主）</s></td>
+          <td colspan="3" style="color:var(--text-dim);">劳务合同不适用</td>
+        </tr>
+        <tr style="color:var(--text-dim);">
+          <td><s>医疗保险（雇主）</s></td>
+          <td colspan="3" style="color:var(--text-dim);">劳务合同不适用</td>
+        </tr>
+        <tr style="color:var(--text-dim);">
+          <td><s>失业保险（雇主）</s></td>
+          <td colspan="3" style="color:var(--text-dim);">劳务合同不适用</td>
+        </tr>
+        <tr style="color:var(--text-dim);">
+          <td><s>工伤保险（雇主）</s></td>
+          <td colspan="3" style="color:var(--text-dim);">劳务合同不适用</td>
+        </tr>
+        <tr style="color:var(--text-dim);">
+          <td><s>生育保险（雇主）</s></td>
+          <td colspan="3" style="color:var(--text-dim);">劳务合同不适用</td>
+        </tr>
+        <tr style="color:var(--text-dim);">
+          <td><s>住房公积金（雇主）</s></td>
+          <td colspan="3" style="color:var(--text-dim);">劳务合同不适用</td>
+        </tr>
+        <tr style="border-top:2px solid var(--border-gold);">
+          <td><strong>年度税费合计</strong></td>
+          <td>仅个人所得税</td>
+          <td class="num warn">~9,090</td>
+          <td class="num warn">~109,080</td>
+        </tr>
+        <tr>
+          <td><strong>年度往返差旅</strong></td>
+          <td>乌兰巴托办理证明，1 次/年，俱乐部承担</td>
+          <td class="num">—</td>
+          <td class="num">~5,000</td>
+        </tr>
+        <tr style="background:rgba(212,175,55,0.06);border-top:2px solid var(--border-gold);">
+          <td><strong>年度运营总成本</strong></td>
+          <td>实发 + 个税 + 往返差旅</td>
+          <td class="num">—</td>
+          <td class="num highlight">~156,080</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 2.5 年度对比 -->
+  <div class="card">
+    <h2>📈 劳务合同 vs 劳动合同 成本对比</h2>
+    <table>
+      <thead><tr><th>对比项</th><th class="num">劳动合同<br><span style="font-weight:400;font-size:11px;">(含五险一金)</span></th><th class="num">劳务合同<br><span style="font-weight:400;font-size:11px;">(仅个税)</span></th><th class="num">节省</th></tr></thead>
+      <tbody>
+        <tr><td>实际工资</td><td class="num">42,000</td><td class="num">42,000</td><td class="num">—</td></tr>
+        <tr><td>个人所得税</td><td class="num">109,080</td><td class="num">109,080</td><td class="num">—</td></tr>
+        <tr><td>五险（雇主）</td><td class="num warn">144,000</td><td class="num ok">0</td><td class="num ok">-144,000</td></tr>
+        <tr><td>住房公积金（雇主）</td><td class="num warn">72,000</td><td class="num ok">0</td><td class="num ok">-72,000</td></tr>
+        <tr><td>年度差旅</td><td class="num">5,000</td><td class="num">5,000</td><td class="num">—</td></tr>
+        <tr style="border-top:2px solid var(--border-gold);"><td><strong>年度合计</strong></td><td class="num warn">~372,080</td><td class="num highlight">~156,080</td><td class="num ok" style="font-weight:700;">-216,000</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:12px;"><span class="badge badge-ok">结论</span> 劳务合同每年节省 <strong>21.6 万</strong>，总成本从 37.2 万降至 <strong>15.6 万</strong>（降幅 58%）。</p>
+  </div>
+
+  <!-- 2.6 风险提示 -->
+  <div class="card">
+    <h2>⚠️ 法律与财务风险</h2>
+    <table>
+      <thead><tr><th>风险等级</th><th>风险项</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-p0">P0 高</span></td>
+          <td><strong>X1 签证转工作签</strong></td>
+          <td>X1 为学习签证，多数城市不允许境内直接转为工作签，需出境重新申请 Z 签证入境。需提前向广州出入境管理局确认。</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-p0">P0 高</span></td>
+          <td><strong>名义收入与实际不符</strong></td>
+          <td>劳务合同申报年收入 60 万但实发 4.2 万，差额巨大。需评估外专局/税务部门核查风险。建议劳务合同中设定绩效条款作为收入差异的合规解释（如"基础劳务费 3,500 + 绩效奖金"结构）。</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-p1">P1 中</span></td>
+          <td><strong>初中学历</strong></td>
+          <td>外国人来华工作分类标准 B 类通常要求本科及以上学历。初中学历可能无法通过审批，需提前咨询是否可以以「特殊技能人才」通道申报。</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-p1">P1 中</span></td>
+          <td><strong>年龄门槛</strong></td>
+          <td>外国人工作签证要求申请人年满 18 周岁。需确认该选手实际年龄。</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-p1">P1 中</span></td>
+          <td><strong>劳务合同办理工作签</strong></td>
+          <td>部分地区外专局对「劳务合同」办理工作许可持保留态度，倾向于要求劳动合同。需提前向广州人社局确认劳务合同是否可作为工作许可的申请依据。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ================================================================ -->
+<!-- SECTION 3: 试训评估打分表 -->
+<!-- ================================================================ -->
+<div id="sec3" class="section" data-section-title="叁 · 试训评估打分表模板">
+
+  <div class="card">
+    <h2>📝 评分说明</h2>
+    <table>
+      <thead><tr><th>分值</th><th>标准</th></tr></thead>
+      <tbody>
+        <tr><td class="highlight">5</td><td>卓越 — 超出预期，可替代现役首发</td></tr>
+        <tr><td class="highlight">4</td><td>良好 — 达到预期，具备轮换能力</td></tr>
+        <tr><td>3</td><td>合格 — 基本达标，有明显短板但可培养</td></tr>
+        <tr><td>2</td><td>不足 — 低于预期，存在重大问题</td></tr>
+        <tr><td>1</td><td>不合格 — 完全未达标准</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Week 1 打分表 -->
+  <div class="card">
+    <h2>📅 Week 1 评估表（观察期）</h2>
+    <p style="color:var(--text-dim);margin-bottom:16px;">评估人：______________ &nbsp;&nbsp; 日期：______________</p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:5%">#</th>
+          <th style="width:18%">评估维度</th>
+          <th style="width:7%">权重</th>
+          <th>评分标准</th>
+          <th style="width:8%">得分<br>(1-5)</th>
+          <th>评分依据（必填）</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="highlight">1</td>
+          <td><strong>游戏理解</strong><br><span style="font-size:11px;color:var(--text-dim)">战术分析能力</span></td>
+          <td class="highlight" style="text-align:center">30%</td>
+          <td style="font-size:12px;">
+            5 — 观察记录精准，分析有深度，提出的改进建议切实可行<br>
+            4 — 观察记录准确，分析合理<br>
+            3 — 能指出明显问题，但分析浮于表面<br>
+            2 — 记录敷衍，问题识别不准<br>
+            1 — 完全无法理解战术层面
+          </td>
+          <td style="text-align:center">___</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="highlight">2</td>
+          <td><strong>个人能力</strong><br><span style="font-size:11px;color:var(--text-dim)">枪法/意识</span></td>
+          <td style="text-align:center">25%</td>
+          <td style="font-size:12px;">
+            5 — 队内对抗赛 Rating > 1.15，枪法/意识明显优于现有队员<br>
+            4 — Rating 1.05-1.15，具备竞争力<br>
+            3 — Rating 0.95-1.05，与队员持平<br>
+            2 — Rating 0.85-0.95，略低于队员<br>
+            1 — Rating < 0.85，明显不足
+          </td>
+          <td style="text-align:center">___</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="highlight">3</td>
+          <td><strong>团队沟通</strong><br><span style="font-size:11px;color:var(--text-dim)">交流与配合</span></td>
+          <td style="text-align:center">15%</td>
+          <td style="font-size:12px;">
+            5 — 主动沟通，信息准确清晰，配合默契<br>
+            4 — 沟通积极，偶有信息偏差<br>
+            3 — 被动沟通，需要引导<br>
+            2 — 沟通少且不清晰<br>
+            1 — 几乎不沟通或造成混乱
+          </td>
+          <td style="text-align:center">___</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="highlight">4</td>
+          <td><strong>职业态度</strong><br><span style="font-size:11px;color:var(--text-dim)">纪律/态度</span></td>
+          <td style="text-align:center">10%</td>
+          <td style="font-size:12px;">
+            5 — 提前到场，训练专注，复盘积极参与<br>
+            4 — 准时，认真，偶尔走神<br>
+            3 — 基本守时，态度一般<br>
+            2 — 迟到或早退，训练划水<br>
+            1 — 无故缺席或态度恶劣
+          </td>
+          <td style="text-align:center">___</td>
+          <td></td>
+        </tr>
+        <tr style="border-top:2px solid var(--border-gold);">
+          <td></td>
+          <td><strong>Week 1 加权得分</strong></td>
+          <td style="text-align:center">—</td>
+          <td colspan="2" style="text-align:center"><em>= (Q1×0.30 + Q2×0.25 + Q3×0.15 + Q4×0.10) / 0.80</em></td>
+          <td style="text-align:center"><strong>___</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Week 1 主观评价（教练组填写）</h3>
+    <table>
+      <tr><td style="width:140px;color:var(--text-dim)">观察记录质量评价</td><td>_________________________________________________________________</td></tr>
+      <tr><td style="color:var(--text-dim)">最大亮点</td><td>_________________________________________________________________</td></tr>
+      <tr><td style="color:var(--text-dim)">最大短板</td><td>_________________________________________________________________</td></tr>
+      <tr><td style="color:var(--text-dim)">是否建议进入 Week 2</td><td>□ 是 &nbsp;&nbsp;&nbsp; □ 否（原因：____________________）</td></tr>
+    </table>
+  </div>
+
+  <!-- Week 2 打分表 -->
+  <div class="card">
+    <h2>📅 Week 2 评估表（实战期）</h2>
+    <p style="color:var(--text-dim);margin-bottom:16px;">评估人：______________ &nbsp;&nbsp; 日期：______________</p>
+
+    <h3>训练赛量化数据</h3>
+    <table>
+      <thead><tr><th>日期</th><th>地图</th><th>对手</th><th class="num">Rating</th><th class="num">ADR</th><th class="num">KAST%</th><th class="num">首杀</th><th class="num">残局</th></tr></thead>
+      <tbody>
+        <tr><td>___</td><td>___</td><td>___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td></tr>
+        <tr><td>___</td><td>___</td><td>___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td></tr>
+        <tr><td>___</td><td>___</td><td>___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td></tr>
+        <tr><td>___</td><td>___</td><td>___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td></tr>
+        <tr><td>___</td><td>___</td><td>___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td><td class="num">___</td></tr>
+        <tr style="border-top:2px solid var(--border-gold);"><td><strong>平均</strong></td><td></td><td></td><td class="num highlight">___</td><td class="num highlight">___</td><td class="num highlight">___</td><td class="num highlight">___</td><td class="num highlight">___</td></tr>
+      </tbody>
+    </table>
+
+    <h3>综合评估打分</h3>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:5%">#</th>
+          <th style="width:18%">评估维度</th>
+          <th style="width:7%">权重</th>
+          <th>评分标准</th>
+          <th style="width:8%">得分<br>(1-5)</th>
+          <th>评分依据（必填）</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="highlight">1</td>
+          <td><strong>战术理解</strong><br><span style="font-size:11px;color:var(--text-dim)">理解与执行</span></td>
+          <td class="highlight" style="text-align:center">30%</td>
+          <td style="font-size:12px;">
+            5 — 理解战术意图，执行到位，可灵活应变<br>
+            4 — 基本理解战术，执行稳定<br>
+            3 — 机械执行，理解不深<br>
+            2 — 经常执行出错<br>
+            1 — 完全不理解战术体系
+          </td>
+          <td style="text-align:center">___</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="highlight">2</td>
+          <td><strong>自我纠错</strong><br><span style="font-size:11px;color:var(--text-dim)">学以致用</span></td>
+          <td style="text-align:center">20%</td>
+          <td style="font-size:12px;">
+            5 — Week 1 指出的所有问题均未再犯<br>
+            4 — 大部分问题已纠正<br>
+            3 — 部分问题改正，新问题出现<br>
+            2 — 同样问题反复出现<br>
+            1 — 毫无改善，甚至更差
+          </td>
+          <td style="text-align:center">___</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="highlight">3</td>
+          <td><strong>个人能力</strong><br><span style="font-size:11px;color:var(--text-dim)">训练赛表现</span></td>
+          <td style="text-align:center">25%</td>
+          <td style="font-size:12px;">
+            5 — 综合数据显著优于同位置队员<br>
+            4 — 数据达到同位置队员水平<br>
+            3 — 数据略低于队员但差距可接受<br>
+            2 — 数据明显低于队员<br>
+            1 — 数据远低于队伍平均水平
+          </td>
+          <td style="text-align:center">___</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="highlight">4</td>
+          <td><strong>团队沟通</strong><br><span style="font-size:11px;color:var(--text-dim)">实战配合</span></td>
+          <td style="text-align:center">15%</td>
+          <td style="font-size:12px;">
+            5 — 信息传递及时准确，积极沟通，提升团队节奏<br>
+            4 — 沟通正常，偶尔有信息遗漏<br>
+            3 — 基本沟通，但不够主动<br>
+            2 — 沟通混乱，影响团队<br>
+            1 — 几乎无有效沟通
+          </td>
+          <td style="text-align:center">___</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="highlight">5</td>
+          <td><strong>职业态度</strong><br><span style="font-size:11px;color:var(--text-dim)">抗压/合作</span></td>
+          <td style="text-align:center">10%</td>
+          <td style="font-size:12px;">
+            5 — 连续失利后心态稳定，接受批评并改进<br>
+            4 — 态度良好，能接受批评<br>
+            3 — 心态有波动但可控<br>
+            2 — 失利后心态崩，与队员有小摩擦<br>
+            1 — 无法接受批评或与队员冲突
+          </td>
+          <td style="text-align:center">___</td>
+          <td></td>
+        </tr>
+        <tr style="border-top:2px solid var(--border-gold);">
+          <td></td>
+          <td><strong>Week 2 加权得分</strong></td>
+          <td style="text-align:center">—</td>
+          <td colspan="2" style="text-align:center"><em>= Q1×0.30 + Q2×0.20 + Q3×0.25 + Q4×0.15 + Q5×0.10</em></td>
+          <td style="text-align:center"><strong>___</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Week 2 主观评价（教练组填写）</h3>
+    <table>
+      <tr><td style="width:140px;color:var(--text-dim)">对比 Week 1 的进步</td><td>_________________________________________________________________</td></tr>
+      <tr><td style="color:var(--text-dim)">与现有队员对比</td><td>_________________________________________________________________</td></tr>
+      <tr><td style="color:var(--text-dim)">最大风险</td><td>_________________________________________________________________</td></tr>
+    </table>
+  </div>
+
+  <!-- 综合评定 -->
+  <div class="card">
+    <h2>🏁 综合评定与决策</h2>
+    <table>
+      <thead><tr><th>评估人</th><th>Week 1 得分</th><th>Week 2 得分</th><th>综合得分</th><th>留用建议</th></tr></thead>
+      <tbody>
+        <tr><td>主教练</td><td style="text-align:center">___</td><td style="text-align:center">___</td><td style="text-align:center">___</td><td style="text-align:center">□ 留用 □ 不留用</td></tr>
+        <tr><td>战术教练</td><td style="text-align:center">___</td><td style="text-align:center">___</td><td style="text-align:center">___</td><td style="text-align:center">□ 留用 □ 不留用</td></tr>
+        <tr><td>领队</td><td style="text-align:center">___</td><td style="text-align:center">___</td><td style="text-align:center">___</td><td style="text-align:center">□ 留用 □ 不留用</td></tr>
+      </tbody>
+    </table>
+
+    <h3>最终决策</h3>
+    <table>
+      <tr>
+        <td style="width:120px;color:var(--text-dim)">综合加权平均分</td>
+        <td><strong>Week 1 × 40% + Week 2 × 60% = ________</strong></td>
+      </tr>
+      <tr>
+        <td style="color:var(--text-dim)">必要条件检查</td>
+        <td>
+          □ 综合分 ≥ 3.5 &nbsp;&nbsp;
+          □ 游戏理解 ≥ 3.0 &nbsp;&nbsp;
+          □ 个人能力 ≥ 3.0 &nbsp;&nbsp;
+          □ 无严重纪律问题 &nbsp;&nbsp;
+          □ 签证路径可行
+        </td>
+      </tr>
+      <tr>
+        <td style="color:var(--text-dim)">最终决定</td>
+        <td>
+          □ <strong style="color:var(--ok)">建议留用</strong> — 进入签约和签证办理流程<br>
+          □ <strong style="color:var(--danger)">建议不留用</strong> — 承担试训期费用，选手按期离境<br>
+          □ <strong style="color:var(--warn)">延长试训</strong> — 延期 ___ 天，观察 ________（需在签证有效期内）
+        </td>
+      </tr>
+      <tr>
+        <td style="color:var(--text-dim)">管理层签字</td>
+        <td>华哥：______________ &nbsp;&nbsp; 经理：______________ &nbsp;&nbsp; 日期：______________</td>
+      </tr>
+    </table>
+  </div>
+
+</div>
+
+</div>
+
+<script>
+function switchTab(sectionId, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(sectionId).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+
+</body>
+</html>

@@ -4,12 +4,10 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Overview from './pages/Overview';
 import Members from './pages/Members';
-import Matches from './pages/Matches';
 import TrainingReport from './pages/TrainingReport';
-import TrainingPlans from './pages/TrainingPlans';
 import Tactics from './pages/Tactics';
-import OpponentIntel from './pages/OpponentIntel';
 import Admin from './pages/Admin';
+import TrialPlayers from './pages/TrialPlayers';
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -25,11 +23,9 @@ export default function App() {
         <Route index element={<Navigate to="/overview" />} />
         <Route path="overview" element={<Overview />} />
         <Route path="members" element={<Members />} />
-        <Route path="matches" element={<Matches />} />
         <Route path="training-report" element={<TrainingReport />} />
-        <Route path="training-plans" element={<TrainingPlans />} />
         <Route path="tactics" element={<Tactics />} />
-        <Route path="opponent-intel" element={<OpponentIntel />} />
+        <Route path="trial-players" element={<TrialPlayers />} />
         <Route path="admin" element={<Admin />} />
       </Route>
     </Routes>

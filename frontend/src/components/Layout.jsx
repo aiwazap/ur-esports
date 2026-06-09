@@ -2,23 +2,19 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
-  Swords,
   ClipboardList,
   Target,
   Settings,
-  CalendarDays,
-  Eye,
+  UserPlus,
 } from 'lucide-react';
 import ParticleBackground from './ParticleBackground';
 
 const links = [
   { to: '/overview', label: '赛训总览', icon: LayoutDashboard },
   { to: '/members', label: '分部成员', icon: Users },
-  { to: '/matches', label: '近期比赛', icon: Swords },
   { to: '/training-report', label: '赛训报告', icon: ClipboardList },
-  { to: '/training-plans', label: '训练计划', icon: CalendarDays },
   { to: '/tactics', label: '战术总表', icon: Target },
-  { to: '/opponent-intel', label: '对手情报', icon: Eye },
+  { to: '/trial-players', label: '试训人员', icon: UserPlus },
   { to: '/admin', label: '数据管理', icon: Settings },
 ];
 

@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UR 电子竞技俱乐部 - CS2分部 试训队员个人信息表</title>
+<style>
+  @page { size: A4; margin: 12mm; }
+
+  :root {
+    --bg: #fff;
+    --text: #1a1a1a;
+    --text-dim: #666;
+    --gold: #B8960F;
+    --accent: #1a1a1a;
+    --border: #ccc;
+    --border-light: #e0e0e0;
+    --row-alt: #fafafa;
+    --fill-bg: #fdfaf0;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'PingFang SC','Microsoft YaHei','SimSun',sans-serif;
+    color: var(--text);
+    background: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    background: #fff;
+    padding: 14mm 18mm;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.15);
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    border-bottom: 3px double var(--accent);
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+  }
+  .header .club {
+    font-size: 13px; letter-spacing: 6px;
+    color: var(--gold); font-weight: 700; margin-bottom: 4px;
+  }
+  .header h1 {
+    font-size: 20px; font-weight: 700; letter-spacing: 2px;
+  }
+  .header .lang {
+    font-size: 11px; color: var(--text-dim); margin-top: 4px;
+  }
+
+  /* SECTIONS */
+  .section { margin-bottom: 18px; }
+  .section h2 {
+    font-size: 14px; font-weight: 700;
+    border-left: 4px solid var(--accent);
+    padding-left: 10px; margin-bottom: 8px;
+    background: linear-gradient(90deg, rgba(0,0,0,0.03), transparent);
+  }
+
+  /* INFO TABLE */
+  .info-table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+  }
+  .info-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: middle;
+  }
+  .info-table td.label {
+    width: 110px; font-weight: 600; color: var(--text-dim);
+    font-size: 11px; white-space: nowrap;
+  }
+  .info-table td.fill {
+    min-width: 140px;
+  }
+  .info-table .fill-line {
+    display: inline-block;
+    border-bottom: 1px dashed #999;
+    min-width: 120px;
+    width: 100%;
+    min-height: 1.2em;
+  }
+  .info-table td.fill-half {
+    min-width: 100px;
+  }
+  .info-table .fill-line-half {
+    display: inline-block;
+    border-bottom: 1px dashed #999;
+    min-width: 80px;
+    width: calc(100% - 4px);
+    min-height: 1.2em;
+  }
+  .info-table tr.section-divider td {
+    border-bottom: 1px solid var(--accent);
+    padding-top: 4px;
+  }
+
+  /* TEXTAREA */
+  .text-area {
+    width: 100%;
+    border: 1px dashed #bbb;
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--fill-bg);
+    resize: vertical;
+    min-height: 60px;
+    line-height: 1.6;
+    outline: none;
+  }
+  .text-area:focus { border-color: var(--accent); border-style: solid; }
+  .text-area.small { min-height: 40px; }
+  .text-area.large { min-height: 90px; }
+  .text-area.xlarge { min-height: 120px; }
+
+  /* CHECKBOX GROUP */
+  .check-group {
+    display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 12px;
+  }
+  .check-group label {
+    display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+  }
+  .check-group input[type="checkbox"] {
+    width: 14px; height: 14px; accent-color: var(--accent);
+  }
+  .check-group .other-input {
+    border: none; border-bottom: 1px dashed #999;
+    font-size: 12px; font-family: inherit; padding: 2px 4px;
+    width: 100px; outline: none; background: transparent;
+  }
+
+  /* SKILL BARS */
+  .skill-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+    font-size: 12px;
+  }
+  .skill-row .skill-label { width: 100px; font-weight: 600; text-align: right; color: var(--text-dim); }
+  .skill-row .skill-ticks { display: flex; gap: 4px; }
+  .skill-row .tick {
+    width: 28px; height: 22px; border: 1px solid #999;
+    border-radius: 3px; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: #999; cursor: pointer;
+  }
+  .skill-row .tick.filled { background: #1a1a1a; border-color: #1a1a1a; color: #fff; }
+
+  /* SIGN */
+  .sign-area {
+    display: flex; justify-content: space-between;
+    margin-top: 20px; padding-top: 14px;
+    border-top: 1px solid var(--border); font-size: 12px;
+  }
+  .sign-area div { text-align: center; }
+  .sign-area .sign-line {
+    display: inline-block; width: 120px;
+    border-bottom: 1px solid var(--accent); margin-top: 28px;
+  }
+
+  /* PRINT */
+  @media print {
+    body { background: #fff; padding: 0; }
+    .page { box-shadow: none; margin: 0; width: auto; min-height: auto; }
+    .text-area { border: 1px dashed #bbb !important; background: #fff !important; }
+    .no-print { display: none !important; }
+  }
+
+  @media screen {
+    .print-btn {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--accent); color: #fff; border: none;
+      padding: 12px 24px; border-radius: 8px;
+      font-size: 14px; cursor: pointer; font-family: inherit;
+      font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100;
+    }
+    .print-btn:hover { opacity: 0.85; }
+  }
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">🖨 打印</button>
+
+<!-- ====================== PAGE 1 ====================== -->
+<div class="page">
+
+  <div class="header">
+    <div class="club">UR 电子竞技俱乐部</div>
+    <h1>CS2 分部 · 试训队员个人信息表</h1>
+    <div class="lang">Trial Player Personal Information Form &nbsp;|&nbsp; 请使用翻译辅助填写 · Please fill with translator assistance</div>
+  </div>
+
+  <!-- A. 基础信息 -->
+  <div class="section">
+    <h2>A. 基本信息 / Basic Information</h2>
+    <table class="info-table">
+      <tr>
+        <td class="label">中文姓名</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">Name (English)</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">蒙古语姓名</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">游戏 ID / IGN</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">出生日期</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">年龄</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">国籍</td>
+        <td class="fill">蒙古国 Mongolia</td>
+        <td class="label">护照号</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">当前签证类型</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">签证到期日</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">联系电话</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">微信 / WeChat</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">Discord</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">电子邮箱</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">当前住址（广州）</td>
+        <td class="fill" colspan="3"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">蒙古常住地址</td>
+        <td class="fill" colspan="3"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- B. 教育与语言 -->
+  <div class="section">
+    <h2>B. 教育背景与语言能力 / Education &amp; Language</h2>
+    <table class="info-table">
+      <tr>
+        <td class="label">最高学历</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">毕业学校</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+    </table>
+    <table class="info-table" style="margin-top:6px;">
+      <tr>
+        <td class="label" style="width:110px;">语言能力</td>
+        <td colspan="3">
+          <div class="check-group">
+            <label><input type="checkbox"> 蒙古语（母语）</label>
+            <label><input type="checkbox"> 中文 — 听力</label>
+            <label><input type="checkbox"> 中文 — 口语</label>
+            <label><input type="checkbox"> 中文 — 阅读</label>
+            <label><input type="checkbox"> 英文 — 基础</label>
+            <label><input type="checkbox"> 英文 — 流利</label>
+            <label>其他：<input type="text" class="other-input" placeholder="请注明"></label>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- C. 身体与健康 -->
+  <div class="section">
+    <h2>C. 身体与健康 / Physical &amp; Health</h2>
+    <table class="info-table">
+      <tr>
+        <td class="label">身高</td>
+        <td class="fill fill-half"><span class="fill-line-half" contenteditable="true"></span> cm</td>
+        <td class="label">体重</td>
+        <td class="fill fill-half"><span class="fill-line-half" contenteditable="true"></span> kg</td>
+      </tr>
+      <tr>
+        <td class="label">是否有过敏史</td>
+        <td class="fill" colspan="3"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">是否有慢性疾病</td>
+        <td class="fill" colspan="3"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">是否需要长期服药</td>
+        <td class="fill" colspan="3"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">饮食限制</td>
+        <td class="fill" colspan="3">
+          <div class="check-group" style="margin-bottom:4px;">
+            <label><input type="checkbox"> 无限制</label>
+            <label><input type="checkbox"> 清真 (Halal)</label>
+            <label><input type="checkbox"> 忌猪肉</label>
+            <label><input type="checkbox"> 素食</label>
+            <label>其他：<input type="text" class="other-input" placeholder="请注明"></label>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="label">宗教信仰</td>
+        <td class="fill" colspan="3"><span class="fill-line" contenteditable="true"></span> &nbsp;&nbsp;<small style="color:var(--text-dim);">（如涉及祷告时间/斋月等，请注明）</small></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- D. 游戏账号 -->
+  <div class="section">
+    <h2>D. 游戏账号 / Gaming Accounts</h2>
+    <table class="info-table">
+      <tr>
+        <td class="label">Steam 个人资料链接</td>
+        <td class="fill" colspan="3"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">Steam 64 位 ID</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">Steam 好友代码</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">Faceit 用户名</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">Faceit 等级 / ELO</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">Faceit 个人链接</td>
+        <td class="fill" colspan="3"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">5E 平台用户名</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">5E 天梯分</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">ESEA 用户名（如有）</td>
+        <td class="fill" colspan="3"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">CS2 游戏时长</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span> 小时</td>
+        <td class="label">CS:GO 游戏时长</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span> 小时</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- E. 外设偏好 -->
+  <div class="section">
+    <h2>E. 外设偏好 / Gear Preferences</h2>
+    <table class="info-table">
+      <tr>
+        <td class="label">鼠标</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">DPI / 灵敏度</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">键盘</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">键轴类型</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">耳机</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">鼠标垫</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">显示器偏好</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">分辨率 / 比例</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">游戏内灵敏度</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+        <td class="label">开镜灵敏度</td>
+        <td class="fill"><span class="fill-line" contenteditable="true"></span></td>
+      </tr>
+      <tr>
+        <td class="label">持枪视角</td>
+        <td class="fill" colspan="3"><span class="fill-line" contenteditable="true"></span> <small style="color:var(--text-dim);">（左手/右手，viewmodel 参数如需要请注明）</small></td>
+      </tr>
+    </table>
+  </div>
+
+</div>
+
+<!-- ====================== PAGE 2 ====================== -->
+<div class="page">
+
+  <div class="header" style="border-bottom:none;padding-bottom:0;margin-bottom:16px;">
+    <div class="club">UR 电子竞技俱乐部</div>
+    <h1>CS2 分部 · 职业经历与竞技评估</h1>
+  </div>
+
+  <!-- F. 职业/半职业经历 -->
+  <div class="section">
+    <h2>F. 竞技经历 / Competitive Experience</h2>
+
+    <p style="font-size:12px;font-weight:600;margin-bottom:4px;color:var(--text-dim);">请按时间倒序列出你曾效力过的所有队伍：</p>
+    <p style="font-size:9px;color:#999;margin-bottom:8px;">List all teams you have played for (most recent first):</p>
+
+    <table class="info-table" style="margin-bottom:8px;">
+      <thead>
+        <tr style="background:#f5f5f5;">
+          <th style="font-size:10px;padding:5px 6px;text-align:left;">时间段 / Period</th>
+          <th style="font-size:10px;padding:5px 6px;text-align:left;">队伍名称 / Team</th>
+          <th style="font-size:10px;padding:5px 6px;text-align:left;">担任角色 / Role</th>
+          <th style="font-size:10px;padding:5px 6px;text-align:left;">联赛/赛事级别</th>
+          <th style="font-size:10px;padding:5px 6px;text-align:left;">离队原因</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+        </tr>
+        <tr>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+        </tr>
+        <tr>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+        </tr>
+        <tr>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- G. 赛事成绩 -->
+  <div class="section">
+    <h2>G. 赛事成绩 / Tournament Achievements</h2>
+
+    <table class="info-table" style="margin-bottom:8px;">
+      <thead>
+        <tr style="background:#f5f5f5;">
+          <th style="font-size:10px;padding:5px 6px;text-align:left;">日期 / Date</th>
+          <th style="font-size:10px;padding:5px 6px;text-align:left;">赛事名称 / Tournament</th>
+          <th style="font-size:10px;padding:5px 6px;text-align:left;">级别（线上/线下）</th>
+          <th style="font-size:10px;padding:5px 6px;text-align:left;">成绩 / Placement</th>
+          <th style="font-size:10px;padding:5px 6px;text-align:left;">是否有 Demo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+        </tr>
+        <tr>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+        </tr>
+        <tr>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+        </tr>
+        <tr>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+          <td style="padding:4px 6px;"><span class="fill-line" contenteditable="true"></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- H. 位置与能力自评 -->
+  <div class="section">
+    <h2>H. 位置与能力自评 / Role &amp; Skill Self-Assessment</h2>
+
+    <table class="info-table" style="margin-bottom:10px;">
+      <tr>
+        <td class="label">主要位置 / Primary Role</td>
+        <td class="fill" colspan="3">
+          <div class="check-group">
+            <label><input type="checkbox"> 狙击手 AWPer</label>
+            <label><input type="checkbox"> 突破手 Entry Fragger</label>
+            <label><input type="checkbox"> 指挥 IGL</label>
+            <label><input type="checkbox"> 自由人 Lurker</label>
+            <label><input type="checkbox"> 辅助 Support</label>
+            <label><input type="checkbox"> 步枪手 Rifler</label>
+            <label>其他：<input type="text" class="other-input" style="width:80px;"></label>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <p style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:6px;">个人能力自评 — 请如实勾选（1=初学者 / 5=职业级）</p>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap: 4px 20px; margin-bottom:12px;">
+      <div class="skill-row"><span class="skill-label">步枪瞄准</span><span class="skill-ticks" onclick="toggleTicks(event)"><span class="tick">1</span><span class="tick">2</span><span class="tick">3</span><span class="tick">4</span><span class="tick">5</span></span></div>
+      <div class="skill-row"><span class="skill-label">狙击枪</span><span class="skill-ticks" onclick="toggleTicks(event)"><span class="tick">1</span><span class="tick">2</span><span class="tick">3</span><span class="tick">4</span><span class="tick">5</span></span></div>
+      <div class="skill-row"><span class="skill-label">手枪局</span><span class="skill-ticks" onclick="toggleTicks(event)"><span class="tick">1</span><span class="tick">2</span><span class="tick">3</span><span class="tick">4</span><span class="tick">5</span></span></div>
+      <div class="skill-row"><span class="skill-label">道具使用</span><span class="skill-ticks" onclick="toggleTicks(event)"><span class="tick">1</span><span class="tick">2</span><span class="tick">3</span><span class="tick">4</span><span class="tick">5</span></span></div>
+      <div class="skill-row"><span class="skill-label">残局处理</span><span class="skill-ticks" onclick="toggleTicks(event)"><span class="tick">1</span><span class="tick">2</span><span class="tick">3</span><span class="tick">4</span><span class="tick">5</span></span></div>
+      <div class="skill-row"><span class="skill-label">地图理解</span><span class="skill-ticks" onclick="toggleTicks(event)"><span class="tick">1</span><span class="tick">2</span><span class="tick">3</span><span class="tick">4</span><span class="tick">5</span></span></div>
+      <div class="skill-row"><span class="skill-label">沟通能力</span><span class="skill-ticks" onclick="toggleTicks(event)"><span class="tick">1</span><span class="tick">2</span><span class="tick">3</span><span class="tick">4</span><span class="tick">5</span></span></div>
+      <div class="skill-row"><span class="skill-label">抗压能力</span><span class="skill-ticks" onclick="toggleTicks(event)"><span class="tick">1</span><span class="tick">2</span><span class="tick">3</span><span class="tick">4</span><span class="tick">5</span></span></div>
+    </div>
+
+    <p style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:4px;">擅长地图（多选） / Best Maps:</p>
+    <div class="check-group" style="margin-bottom:10px;">
+      <label><input type="checkbox"> Mirage</label>
+      <label><input type="checkbox"> Inferno</label>
+      <label><input type="checkbox"> Dust2</label>
+      <label><input type="checkbox"> Nuke</label>
+      <label><input type="checkbox"> Ancient</label>
+      <label><input type="checkbox"> Anubis</label>
+      <label><input type="checkbox"> Train</label>
+      <label><input type="checkbox"> Overpass</label>
+      <label><input type="checkbox"> Vertigo</label>
+      <label><input type="checkbox"> Cache</label>
+    </div>
+
+    <p style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:4px;">最擅长地图排名（Top 3）：</p>
+    <p style="font-size:12px;">1. <span class="fill-line" contenteditable="true" style="min-width:100px;"></span>&nbsp;&nbsp; 2. <span class="fill-line" contenteditable="true" style="min-width:100px;"></span>&nbsp;&nbsp; 3. <span class="fill-line" contenteditable="true" style="min-width:100px;"></span></p>
+  </div>
+
+  <!-- I. 深度问题 -->
+  <div class="section">
+    <h2>I. 深度问题 / In-Depth Questions</h2>
+    <p style="font-size:10px;color:var(--text-dim);margin-bottom:10px;">以下问题请认真作答，翻译老师会辅助。内容将作为试训评估的重要参考。</p>
+
+    <table class="info-table">
+      <tr>
+        <td class="label" style="width:30px;text-align:center;">1</td>
+        <td style="font-weight:600;font-size:12px;">请介绍你的 CS 职业生涯：何时开始打 CS？何时开始认真对待（半职业/职业）？最大动力是什么？</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><textarea class="text-area large"></textarea></td>
+      </tr>
+    </table>
+
+    <table class="info-table">
+      <tr>
+        <td class="label" style="width:30px;text-align:center;">2</td>
+        <td style="font-weight:600;font-size:12px;">在过去一年中，你在 Faceit 上的最高 ELO 是多少？当前段位？主要打哪个服务器？</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><textarea class="text-area small"></textarea></td>
+      </tr>
+    </table>
+
+    <table class="info-table">
+      <tr>
+        <td class="label" style="width:30px;text-align:center;">3</td>
+        <td style="font-weight:600;font-size:12px;">蒙古目前有 The Huns、CW (Chinggis Warriors)、Nextvoid 等职业/半职业队伍。你是否有尝试加入过其中任何一支？如果有，发生了什么？如果没有，为什么？</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><textarea class="text-area xlarge"></textarea></td>
+      </tr>
+    </table>
+
+    <table class="info-table">
+      <tr>
+        <td class="label" style="width:30px;text-align:center;">4</td>
+        <td style="font-weight:600;font-size:12px;">为什么选择来中国打职业，而不是留在蒙古或去其他地区（如欧洲、东南亚）？</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><textarea class="text-area large"></textarea></td>
+      </tr>
+    </table>
+
+    <table class="info-table">
+      <tr>
+        <td class="label" style="width:30px;text-align:center;">5</td>
+        <td style="font-weight:600;font-size:12px;">你今年 24 岁，在 CS2 职业圈属于偏大年龄。你如何看待自己的竞技生涯规划？你的职业目标是什么？</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><textarea class="text-area large"></textarea></td>
+      </tr>
+    </table>
+
+    <table class="info-table">
+      <tr>
+        <td class="label" style="width:30px;text-align:center;">6</td>
+        <td style="font-weight:600;font-size:12px;">你对亚洲 CS2 竞技环境了解多少？你知道哪些中国队伍？你怎么看 UR 这支队伍？</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><textarea class="text-area large"></textarea></td>
+      </tr>
+    </table>
+
+    <table class="info-table">
+      <tr>
+        <td class="label" style="width:30px;text-align:center;">7</td>
+        <td style="font-weight:600;font-size:12px;">你认为自己最大的优势是什么？最大的短板是什么？</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><textarea class="text-area large"></textarea></td>
+      </tr>
+    </table>
+
+    <table class="info-table">
+      <tr>
+        <td class="label" style="width:30px;text-align:center;">8</td>
+        <td style="font-weight:600;font-size:12px;">你是否有可以分享的比赛 Demo 或精彩集锦链接？（Faceit / 赛事录像 / YouTube 等）</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><textarea class="text-area small"></textarea></td>
+      </tr>
+    </table>
+
+    <table class="info-table">
+      <tr>
+        <td class="label" style="width:30px;text-align:center;">9</td>
+        <td style="font-weight:600;font-size:12px;">紧急联系人信息（姓名、关系、电话）</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><textarea class="text-area small"></textarea></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 声明 -->
+  <div style="margin-top:16px;padding:10px 14px;border:1px solid var(--border);background:#fafafa;font-size:11px;color:var(--text-dim);line-height:1.6;">
+    <strong>声明 / Declaration：</strong>本人确认以上信息真实、完整。如有虚假，俱乐部有权立即终止试训或合同。I confirm that all information provided above is true and complete. Any false information may result in immediate termination of the trial or contract.
+  </div>
+
+  <!-- 签字 -->
+  <div class="sign-area">
+    <div>选手签字 / Player Signature：<br><span class="sign-line"></span></div>
+    <div>日期 / Date：<br><span class="sign-line" style="width:100px;"></span></div>
+    <div>翻译确认 / Translator：<br><span class="sign-line"></span></div>
+    <div>领队确认 / Manager：<br><span class="sign-line"></span></div>
+  </div>
+
+</div>
+
+<script>
+// Skill tick toggle
+function toggleTicks(event) {
+  const row = event.target.closest('.skill-ticks');
+  if (!row) return;
+  const tick = event.target.closest('.tick');
+  if (!tick) return;
+
+  const ticks = row.querySelectorAll('.tick');
+  const idx = Array.from(ticks).indexOf(tick);
+
+  ticks.forEach((t, i) => {
+    if (i <= idx) t.classList.add('filled');
+    else t.classList.remove('filled');
+  });
+
+  // If clicking the same filled tick, unfill all after
+  const allFilled = Array.from(ticks).every(t => t.classList.contains('filled'));
+  const clickedWasFilled = tick.classList.contains('filled');
+  if (allFilled && idx === ticks.length - 1) {
+    ticks.forEach((t, i) => {
+      if (i >= idx) t.classList.remove('filled');
+    });
+  }
+}
+
+// Re-toggle: if clicking an already-filled tick in a fully-filled row, reduce
+document.querySelectorAll('.skill-ticks').forEach(row => {
+  row.addEventListener('click', function(e) {
+    const tick = e.target.closest('.tick');
+    if (!tick) return;
+    const ticks = row.querySelectorAll('.tick');
+    const idx = Array.from(ticks).indexOf(tick);
+
+    // If this tick is filled and it's the last filled one, unfill it
+    if (tick.classList.contains('filled')) {
+      const nextTick = ticks[idx + 1];
+      if (!nextTick || !nextTick.classList.contains('filled')) {
+        tick.classList.remove('filled');
+        e.stopPropagation();
+        e.preventDefault();
+        return;
+      }
+    }
+    // Otherwise fill up to this tick
+    ticks.forEach((t, i) => {
+      if (i <= idx) t.classList.add('filled');
+      else t.classList.remove('filled');
+    });
+    e.stopPropagation();
+    e.preventDefault();
+  });
+});
+</script>
+
+</body>
+</html>
