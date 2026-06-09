@@ -232,7 +232,7 @@
   <div class="header">
     <div class="club">UR ESPORTS · CS2 DIVISION</div>
     <h1>试训队员每日考核评分表</h1>
-    <div class="sub">评估人：领队 Smokky / 教练组 &nbsp;|&nbsp; 数据本地存储 &nbsp;|&nbsp; 周期自动统计</div>
+    <div class="sub">评估人：领队 Smokky / 教练组 &nbsp;|&nbsp; 数据云端保存 &nbsp;|&nbsp; 周期自动统计</div>
   </div>
 
   <div class="tabs">
@@ -247,6 +247,10 @@
     <div class="card">
       <h2>📝 提交今日评分</h2>
       <div class="form-row">
+        <div class="form-group">
+          <label>选择试训队员</label>
+          <select id="playerId"><option value="">-- 加载中 --</option></select>
+        </div>
         <div class="form-group">
           <label>评估日期</label>
           <input type="date" id="scoreDate">
@@ -395,9 +399,21 @@
   <div id="panel-history" class="panel">
     <div class="card">
       <h2>📋 评分记录</h2>
+      <div class="form-row" style="margin-bottom:12px;">
+        <div class="form-group" style="min-width:120px;">
+          <label>起始日期</label>
+          <input type="date" id="filterDateFrom" onchange="loadFromServer()">
+        </div>
+        <div class="form-group" style="min-width:120px;">
+          <label>截止日期</label>
+          <input type="date" id="filterDateTo" onchange="loadFromServer()">
+        </div>
+        <div class="form-group" style="min-width:80px;display:flex;align-items:flex-end;">
+          <button class="btn btn-outline btn-sm" onclick="loadFromServer()">🔍 查询</button>
+        </div>
+      </div>
       <div class="btn-row" style="margin-bottom:16px;">
         <button class="btn btn-outline btn-sm" onclick="exportCSV()">📥 导出 CSV</button>
-        <button class="btn btn-danger btn-sm" onclick="clearAll()">🗑 清空全部记录</button>
         <span style="font-size:12px;color:var(--text-dim);align-self:center;margin-left:auto;" id="recordCount">共 0 条记录</span>
       </div>
       <div id="historyTable"></div>
@@ -408,6 +424,19 @@
   <div id="panel-stats" class="panel">
     <div class="card">
       <h2>📊 周期统计</h2>
+      <div class="form-row" style="margin-bottom:12px;">
+        <div class="form-group" style="min-width:120px;">
+          <label>起始日期</label>
+          <input type="date" id="statsDateFrom">
+        </div>
+        <div class="form-group" style="min-width:120px;">
+          <label>截止日期</label>
+          <input type="date" id="statsDateTo">
+        </div>
+        <div class="form-group" style="min-width:80px;display:flex;align-items:flex-end;">
+          <button class="btn btn-primary btn-sm" onclick="refreshStats()">🔍 查询统计</button>
+        </div>
+      </div>
       <div id="statsContent"></div>
     </div>
   </div>
@@ -419,17 +448,50 @@
 <script>
 // ===== DATA MODEL =====
 const STORAGE_KEY = 'ur_trial_scores';
+const API_BASE = '/api/trial';
 const WEIGHTS = { d1: 0.30, d2: 0.20, d3: 0.25, d4: 0.15, d5: 0.10 };
 const DIM_NAMES = {
   d1: '游戏理解', d2: '自我纠错', d3: '个人能力', d4: '团队沟通', d5: '职业态度'
 };
 let currentScores = {};
+let allPlayers = [];
+let serverRecords = [];
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('scoreDate').value = new Date().toISOString().slice(0, 10);
   document.getElementById('trialWeek').addEventListener('change', toggleMatchData);
+  loadPlayers();
+  loadFromServer();
 });
+
+async function loadPlayers() {
+  try {
+    const res = await fetch(API_BASE + '/players');
+    const data = await res.json();
+    allPlayers = data;
+    const sel = document.getElementById('playerId');
+    sel.innerHTML = '<option value="">-- 选择试训队员 --</option>';
+    data.forEach(p => {
+      sel.innerHTML += '<option value="' + p.id + '">' + p.name + ' (' + (p.ign || '—') + ')</option>';
+    });
+  } catch (e) {}
+}
+
+async function loadFromServer() {
+  const pid = document.getElementById('playerId').value;
+  if (!pid) { serverRecords = []; refreshHistory(); return; }
+  try {
+    const dateFrom = document.getElementById('filterDateFrom').value;
+    const dateTo = document.getElementById('filterDateTo').value;
+    let url = API_BASE + '/scores?player_id=' + pid;
+    if (dateFrom) url += '&date_from=' + dateFrom;
+    if (dateTo) url += '&date_to=' + dateTo;
+    const res = await fetch(url);
+    serverRecords = await res.json();
+    refreshHistory();
+  } catch (e) { serverRecords = []; }
+}
 
 function toggleMatchData() {
   const week = document.getElementById('trialWeek').value;
@@ -471,8 +533,12 @@ function validateForm() {
 function saveScore() {
   if (!validateForm()) return;
 
+  const pid = document.getElementById('playerId').value;
+  if (!pid) { toast('请先选择试训队员', 'error'); return; }
+
   const entry = {
     id: Date.now(),
+    player_id: parseInt(pid),
     date: document.getElementById('scoreDate').value,
     evaluator: document.getElementById('evaluator').value,
     week: parseInt(document.getElementById('trialWeek').value),
@@ -498,14 +564,40 @@ function saveScore() {
     };
   }
 
+  // 保存到localStorage（本地备份）
   let records = getRecords();
   records.push(entry);
   records.sort((a, b) => new Date(b.date) - new Date(a.date));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
 
+  // 保存到服务器
+  const payload = {
+    player_id: entry.player_id,
+    score_date: entry.date,
+    evaluator: entry.evaluator,
+    trial_week: entry.week,
+    phase: entry.phase,
+    opponent: entry.match.opponent || '',
+    map_name: entry.match.map || '',
+    match_rating: entry.match.rating || 0,
+    match_adr: entry.match.adr || 0,
+    match_kast: entry.match.kast || 0,
+    d1: entry.scores.d1, d1_note: entry.notes.d1,
+    d2: entry.scores.d2, d2_note: entry.notes.d2,
+    d3: entry.scores.d3, d3_note: entry.notes.d3,
+    d4: entry.scores.d4, d4_note: entry.notes.d4,
+    d5: entry.scores.d5, d5_note: entry.notes.d5,
+    comment: entry.comment,
+  };
+  fetch(API_BASE + '/scores', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(e => console.warn('Server save failed:', e));
+
   clearForm();
   toast('✅ 评分已保存！加权得分：' + entry.weighted.toFixed(2));
-  refreshHistory();
+  loadFromServer();
   refreshStats();
 }
 
@@ -523,10 +615,10 @@ function getRecords() {
   catch(e) { return []; }
 }
 
-// ===== HISTORY TABLE =====
+// ===== HISTORY TABLE (从服务器加载) =====
 function refreshHistory() {
-  const records = getRecords();
-  document.getElementById('recordCount').textContent = '共 ' + records.length + ' 条记录';
+  const records = serverRecords;
+  document.getElementById('recordCount').textContent = '共 ' + records.length + ' 条记录（服务器）';
 
   const container = document.getElementById('historyTable');
   if (records.length === 0) {
@@ -538,19 +630,18 @@ function refreshHistory() {
   for (let d of ['d1','d2','d3','d4','d5']) {
     html += '<th style="text-align:center;font-size:10px;">' + DIM_NAMES[d].slice(0,2) + '</th>';
   }
-  html += '<th class="num">加权分</th><th style="text-align:center">操作</th></tr></thead><tbody>';
+  html += '<th class="num">加权分</th></tr></thead><tbody>';
 
   records.forEach(r => {
     html += '<tr>';
-    html += '<td>' + r.date + '</td>';
-    html += '<td>' + r.evaluator + '</td>';
-    html += '<td><span class="badge ' + (r.week === 1 ? 'badge-w1' : 'badge-w2') + '">W' + r.week + '</span></td>';
-    html += '<td>' + r.phase + '</td>';
+    html += '<td>' + (r.score_date || r.date) + '</td>';
+    html += '<td>' + (r.evaluator) + '</td>';
+    html += '<td><span class="badge ' + (r.trial_week === 1 ? 'badge-w1' : 'badge-w2') + '">W' + (r.trial_week || r.week) + '</span></td>';
+    html += '<td>' + (r.phase) + '</td>';
     for (let d of ['d1','d2','d3','d4','d5']) {
-      html += '<td class="num">' + (r.scores[d] || '-') + '</td>';
+      html += '<td class="num">' + ((r.scores ? r.scores[d] : r[d]) || '-') + '</td>';
     }
-    html += '<td class="num highlight">' + r.weighted.toFixed(2) + '</td>';
-    html += '<td style="text-align:center"><button class="btn btn-danger btn-sm" onclick="deleteRecord(' + r.id + ')">✕</button></td>';
+    html += '<td class="num highlight">' + (r.weighted_score || r.weighted || 0).toFixed(2) + '</td>';
     html += '</tr>';
   });
 
@@ -560,103 +651,89 @@ function refreshHistory() {
 
 function deleteRecord(id) {
   if (!confirm('确定删除该条评分记录？')) return;
+  fetch(API_BASE + '/scores/' + id, { method: 'DELETE' }).catch(e => {});
   let records = getRecords();
   records = records.filter(r => r.id !== id);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-  refreshHistory();
+  loadFromServer();
   refreshStats();
   toast('已删除');
-}
-
-function clearAll() {
-  if (!confirm('⚠️ 确定清空全部评分记录？此操作不可恢复！')) return;
-  if (!confirm('再次确认：真的要删除所有数据吗？')) return;
-  localStorage.removeItem(STORAGE_KEY);
-  refreshHistory();
-  refreshStats();
-  toast('全部记录已清除');
-}
-
-// ===== STATS =====
-function refreshStats() {
-  const records = getRecords();
-  const container = document.getElementById('statsContent');
-
-  if (records.length === 0) {
-    container.innerHTML = '<div class="empty-state">暂无数据<br><small>请先提交评分记录</small></div>';
-    return;
-  }
-
-  // Group by week
-  const w1 = records.filter(r => r.week === 1);
-  const w2 = records.filter(r => r.week === 2);
-
-  let html = '<div class="stat-row">';
-  html += statCard('总记录数', records.length, '条');
-  html += statCard('Week 1 记录', w1.length, '条（观察期）');
-  html += statCard('Week 2 记录', w2.length, '条（实战期）');
-  html += '</div>';
-
-  // Week stats
-  if (w1.length > 0) html += weekStatsBlock(1, w1);
-  if (w2.length > 0) html += weekStatsBlock(2, w2);
-
-  // Overall
-  html += '<h3>📈 全周期综合</h3>';
-  html += '<table><thead><tr><th>维度</th><th>权重</th><th class="num">Week 1 均分</th><th class="num">Week 2 均分</th><th class="num">全周期均分</th></tr></thead><tbody>';
-  for (let d of ['d1','d2','d3','d4','d5']) {
-    const allAvg = avgDim(records, d);
-    html += '<tr>';
-    html += '<td><strong>' + DIM_NAMES[d] + '</strong></td>';
-    html += '<td>' + Math.round(WEIGHTS[d] * 100) + '%</td>';
-    html += '<td class="num">' + (w1.length ? avgDim(w1, d).toFixed(2) : '—') + '</td>';
-    html += '<td class="num">' + (w2.length ? avgDim(w2, d).toFixed(2) : '—') + '</td>';
-    html += '<td class="num highlight">' + allAvg.toFixed(2) + '</td>';
-    html += '</tr>';
-  }
-  html += '<tr style="border-top:2px solid var(--border-gold);">';
-  html += '<td><strong>加权综合分</strong></td><td>100%</td>';
-  html += '<td class="num">' + (w1.length ? avgWeighted(w1).toFixed(2) : '—') + '</td>';
-  html += '<td class="num">' + (w2.length ? avgWeighted(w2).toFixed(2) : '—') + '</td>';
-  html += '<td class="num highlight" style="font-size:16px;">' + avgWeighted(records).toFixed(2) + '</td>';
-  html += '</tr></tbody></table>';
-
-  container.innerHTML = html;
-}
-
-function weekStatsBlock(weekNum, records) {
-  let html = '<h3>' + (weekNum === 1 ? '📅 Week 1 — 观察期' : '📅 Week 2 — 实战期') + '</h3>';
-  html += '<div class="stat-row">';
-  html += statCard('加权均分', avgWeighted(records).toFixed(2), '分');
-  html += statCard('评估人次', records.length, '次');
-  html += statCard('最高单次', Math.max(...records.map(r => r.weighted)).toFixed(2), '分');
-  html += statCard('最低单次', Math.min(...records.map(r => r.weighted)).toFixed(2), '分');
-  html += '</div>';
-
-  // Per evaluator
-  const evals = [...new Set(records.map(r => r.evaluator))];
-  if (evals.length > 1) {
-    html += '<table><thead><tr><th>评估人</th><th class="num">评分次数</th><th class="num">平均分</th></tr></thead><tbody>';
-    evals.forEach(e => {
-      const er = records.filter(r => r.evaluator === e);
-      html += '<tr><td>' + e + '</td><td class="num">' + er.length + '</td><td class="num highlight">' + avgWeighted(er).toFixed(2) + '</td></tr>';
-    });
-    html += '</tbody></table>';
-  }
-
-  return html;
 }
 
 function statCard(label, value, unit) {
   return '<div class="stat-card"><div class="stat-val">' + value + '</div><div class="stat-lbl">' + label + ' (' + unit + ')</div></div>';
 }
 
-function avgDim(records, dim) {
-  return records.reduce((sum, r) => sum + (r.scores[dim] || 0), 0) / records.length;
-}
+// ===== EXPORT =====
+function exportCSV() {
+  const records = serverRecords.length > 0 ? serverRecords : getRecords();
+  if (records.length === 0) { toast('无数据可导出'); return; }
+  let csv = '日期,评估人,周期,阶段,游戏理解,自我纠错,个人能力,团队沟通,职业态度,加权分,综合评语\n';
+  records.forEach(r => {
+    csv += [
+      r.score_date || r.date, r.evaluator, 'W' + (r.trial_week || r.week), r.phase,
+      r.scores ? r.scores.d1 : r.d1, r.scores ? r.scores.d2 : r.d2,
+      r.scores ? r.scores.d3 : r.d3, r.scores ? r.scores.d4 : r.d4,
+      r.scores ? r.scores.d5 : r.d5,
+      r.weighted_score || r.weighted || 0,
+      '"' + (r.comment || '').replace(/"/g, '""') + '"'
+    ].join(',') + '\n';
+  });
+  const pid = document.getElementById('playerId').value;
+  if (!pid) {
+    document.getElementById('statsContent').innerHTML = '<div class="empty-state">请先选择试训队员</div>';
+    return;
+  }
+  const dateFrom = document.getElementById('statsDateFrom').value;
+  const dateTo = document.getElementById('statsDateTo').value;
+  let url = API_BASE + '/scores/stats?player_id=' + pid;
+  if (dateFrom) url += '&date_from=' + dateFrom;
+  if (dateTo) url += '&date_to=' + dateTo;
 
-function avgWeighted(records) {
-  return records.reduce((sum, r) => sum + r.weighted, 0) / records.length;
+  fetch(url).then(r => r.json()).then(data => {
+    const stats = data.stats;
+    const comments = data.comments;
+    const container = document.getElementById('statsContent');
+
+    if (!stats || stats.total_count === 0) {
+      container.innerHTML = '<div class="empty-state">暂无数据<br><small>请先提交评分记录</small></div>';
+      return;
+    }
+
+    let html = '<div class="stat-row">';
+    html += statCard('总记录数', stats.total_count, '条');
+    html += statCard('加权均分', stats.avg_weighted, '分');
+    html += statCard('最高', stats.max_score, '分');
+    html += statCard('最低', stats.min_score, '分');
+    html += '</div>';
+
+    // 五维度均分
+    html += '<h3>📊 各维度均分</h3>';
+    html += '<table><thead><tr><th>维度</th><th>权重</th><th class="num">平均分</th></tr></thead><tbody>';
+    for (let d of ['d1','d2','d3','d4','d5']) {
+      html += '<tr>';
+      html += '<td><strong>' + DIM_NAMES[d] + '</strong></td>';
+      html += '<td>' + Math.round(WEIGHTS[d] * 100) + '%</td>';
+      html += '<td class="num highlight">' + (stats['avg_' + d] || '—') + '</td>';
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+
+    // 综合评语
+    if (comments && comments.length > 0) {
+      html += '<h3>💬 综合评语</h3>';
+      comments.forEach(c => {
+        html += '<div style="background:var(--input-bg);border:1px solid var(--border);border-radius:6px;padding:10px;margin:6px 0;">';
+        html += '<div style="font-size:11px;color:var(--gold-light);">' + c.score_date + ' | ' + c.evaluator + '</div>';
+        html += '<div style="font-size:12px;color:var(--text);margin-top:4px;">' + (c.comment || '—') + '</div>';
+        html += '</div>';
+      });
+    }
+
+    container.innerHTML = html;
+  }).catch(() => {
+    document.getElementById('statsContent').innerHTML = '<div class="empty-state">加载统计失败</div>';
+  });
 }
 
 // ===== EXPORT =====
@@ -685,7 +762,7 @@ function switchPanel(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
   event.target.classList.add('active');
-  if (name === 'history') refreshHistory();
+  if (name === 'history') loadFromServer();
   if (name === 'stats') refreshStats();
 }
 
@@ -694,12 +771,17 @@ function toast(msg) {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2000);
+  setTimeout(() => el.classList.remove('show'), 2500);
 }
 
-// Init views
-refreshHistory();
-refreshStats();
+// ===== INIT =====
+// 页面加载时自动从服务器加载数据
+setTimeout(() => {
+  if (document.getElementById('panel-scoring').classList.contains('active')) {
+    loadPlayers();
+    loadFromServer();
+  }
+}, 100);
 </script>
 
 </body>
