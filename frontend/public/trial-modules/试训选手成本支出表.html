@@ -162,12 +162,29 @@
 
 <button class="print-btn no-print" onclick="window.print()">🖨 打印</button>
 
+<div id="toolbar" class="no-print" style="position:fixed;top:0;left:0;right:0;z-index:999;background:#1a1a1a;border-bottom:2px solid #B8960F;padding:8px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 2px 12px rgba(0,0,0,0.3);">
+  <span style="color:#B8960F;font-weight:700;font-size:13px;">💰 成本支出</span>
+  <select id="playerId" style="padding:4px 8px;border:1px solid #444;border-radius:4px;background:#222;color:#fff;font-size:12px;min-width:150px;">
+    <option value="">-- 选择队员 --</option>
+  </select>
+  <select id="costType" style="padding:4px 8px;border:1px solid #444;border-radius:4px;background:#222;color:#fff;font-size:12px;">
+    <option>机票</option><option>住宿</option><option>签证</option><option>翻译</option>
+    <option>外设</option><option>餐饮</option><option>交通</option><option>其他</option>
+  </select>
+  <input id="costDesc" placeholder="说明" style="padding:4px 8px;border:1px solid #444;border-radius:4px;background:#222;color:#fff;font-size:12px;width:130px;">
+  <input id="costAmount" type="number" step="0.01" placeholder="金额 ¥" style="padding:4px 8px;border:1px solid #444;border-radius:4px;background:#222;color:#fff;font-size:12px;width:90px;">
+  <button onclick="addCost()" style="padding:5px 16px;background:#B8960F;color:#000;border:none;border-radius:4px;font-weight:700;font-size:12px;cursor:pointer;">+ 添加</button>
+  <button onclick="loadCosts()" style="padding:5px 10px;background:transparent;color:#B8960F;border:1px solid #B8960F;border-radius:4px;font-size:11px;cursor:pointer;">📋 刷新</button>
+  <span id="totalDisplay" style="font-size:13px;color:#B8960F;font-weight:700;"></span>
+  <span id="saveStatus" style="font-size:11px;color:#888;"></span>
+</div>
+
 <!-- ====================== PAGE 1 ====================== -->
-<div class="page">
+<div class="page" style="margin-top:48px;">
 
   <div class="header">
     <div class="club">UR 电子竞技俱乐部</div>
-    <h1>蒙古选手 · 成本支出预估表</h1>
+    <h1>试训选手 · 成本支出预估表</h1>
     <div class="meta">
       <span>编制日期：2026-06-09</span>
       <span>合同形式：劳务合同（无社保/公积金）</span>
@@ -474,6 +491,105 @@
   </div>
 
 </div>
+
+<script>
+const API_BASE = '/api/trial';
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadPlayers();
+});
+
+async function loadPlayers() {
+  try {
+    const res = await fetch(API_BASE + '/players');
+    const data = await res.json();
+    const sel = document.getElementById('playerId');
+    sel.innerHTML = '<option value="">-- 选择队员 --</option>';
+    data.forEach(p => {
+      sel.innerHTML += '<option value="' + p.id + '">' + p.name + ' (' + (p.ign || '—') + ')</option>';
+    });
+  } catch(e) {}
+}
+
+document.getElementById('playerId').addEventListener('change', loadCosts);
+
+async function loadCosts() {
+  const pid = document.getElementById('playerId').value;
+  if (!pid) { document.getElementById('totalDisplay').textContent = ''; return; }
+
+  try {
+    const res = await fetch(API_BASE + '/costs?player_id=' + pid);
+    const data = await res.json();
+    document.getElementById('totalDisplay').textContent = '总计: ¥' + (data.total || 0).toLocaleString();
+
+    // 更新页面中的成本预估 - 把明细渲染到原有页面
+    const titleElement = document.querySelector('.section h2');
+    if (titleElement && data.items) {
+      let detailHtml = '<div id="costList" style="margin-top:20px;">';
+      if (data.items.length === 0) {
+        detailHtml += '<p style="color:#888;font-size:13px;">暂无支出数据</p>';
+      } else {
+        detailHtml += '<table class="info-table"><tr><th>类型</th><th>说明</th><th>金额</th><th>操作</th></tr>';
+        data.items.forEach(item => {
+          detailHtml += '<tr>';
+          detailHtml += '<td>' + item.cost_type + '</td>';
+          detailHtml += '<td>' + (item.description || '—') + '</td>';
+          detailHtml += '<td style="text-align:right;font-weight:700;">¥' + (item.amount || 0).toLocaleString() + '</td>';
+          detailHtml += '<td><button onclick="deleteCost(' + item.id + ')" style="background:none;border:none;color:#C0392B;cursor:pointer;font-size:11px;">删除</button></td>';
+          detailHtml += '</tr>';
+        });
+        detailHtml += '<tr style="border-top:2px solid #000;"><td colspan="2"><strong>合计</strong></td>';
+        detailHtml += '<td style="text-align:right;font-weight:700;">¥' + (data.total || 0).toLocaleString() + '</td><td></td></tr>';
+        detailHtml += '</table>';
+      }
+      detailHtml += '</div>';
+    }
+  } catch(e) {
+    document.getElementById('totalDisplay').textContent = '加载失败';
+  }
+}
+
+async function addCost() {
+  const pid = document.getElementById('playerId').value;
+  if (!pid) { setStatus('请先选择队员', '#ff6b6b'); return; }
+  const amount = parseFloat(document.getElementById('costAmount').value);
+  if (!amount) { setStatus('请输入金额', '#ff6b6b'); return; }
+
+  try {
+    await fetch(API_BASE + '/costs', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        player_id: parseInt(pid),
+        cost_type: document.getElementById('costType').value,
+        description: document.getElementById('costDesc').value || '',
+        amount: amount,
+        notes: ''
+      })
+    });
+    setStatus('✅ 已添加', '#27AE60');
+    document.getElementById('costAmount').value = '';
+    document.getElementById('costDesc').value = '';
+    loadCosts();
+  } catch(e) { setStatus('添加失败', '#ff6b6b'); }
+}
+
+async function deleteCost(id) {
+  if (!confirm('确定删除此成本项？')) return;
+  try {
+    await fetch(API_BASE + '/costs/' + id, { method: 'DELETE' });
+    setStatus('已删除', '#27AE60');
+    loadCosts();
+  } catch(e) { setStatus('删除失败', '#ff6b6b'); }
+}
+
+function setStatus(msg, color) {
+  const el = document.getElementById('saveStatus');
+  el.textContent = msg;
+  el.style.color = color || '#888';
+  setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
+}
+</script>
 
 </body>
 </html>

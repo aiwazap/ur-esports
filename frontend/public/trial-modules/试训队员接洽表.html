@@ -261,7 +261,28 @@
 
 <button class="print-btn no-print" onclick="window.print()">🖨 打印</button>
 
-<div class="page">
+<div id="toolbar" class="no-print" style="position:fixed;top:0;left:0;right:0;z-index:999;background:#1a1a1a;border-bottom:2px solid #B8960F;padding:8px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 2px 12px rgba(0,0,0,0.3);">
+  <span style="color:#B8960F;font-weight:700;font-size:13px;">🤝 接洽记录</span>
+  <select id="playerId" style="padding:4px 8px;border:1px solid #444;border-radius:4px;background:#222;color:#fff;font-size:12px;min-width:150px;">
+    <option value="">-- 选择试训队员 --</option>
+  </select>
+  <span style="color:#666;font-size:11px;">接洽人:</span>
+  <input id="contactPerson" style="padding:4px 8px;border:1px solid #444;border-radius:4px;background:#222;color:#fff;font-size:12px;width:100px;">
+  <input type="date" id="contactDate" style="padding:4px 8px;border:1px solid #444;border-radius:4px;background:#222;color:#fff;font-size:12px;">
+  <button onclick="saveContact()" style="padding:5px 16px;background:#B8960F;color:#000;border:none;border-radius:4px;font-weight:700;font-size:12px;cursor:pointer;">💾 保存</button>
+  <button onclick="showHistory()" style="padding:5px 16px;background:transparent;color:#B8960F;border:1px solid #B8960F;border-radius:4px;font-size:12px;cursor:pointer;">📋 历史</button>
+  <span id="saveStatus" style="font-size:11px;color:#888;"></span>
+</div>
+
+<div id="historyPanel" class="no-print" style="display:none;position:fixed;top:50px;right:10px;width:320px;max-height:80vh;overflow-y:auto;background:#1a1a1a;border:1px solid #B8960F;border-radius:8px;z-index:998;padding:12px;box-shadow:0 4px 20px rgba(0,0,0,0.4);">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid #333;padding-bottom:6px;">
+    <span style="color:#B8960F;font-weight:700;font-size:13px;">📋 历史记录</span>
+    <button onclick="closeHistory()" style="background:none;border:none;color:#888;cursor:pointer;font-size:16px;">✕</button>
+  </div>
+  <div id="historyList" style="font-size:12px;color:#ccc;"></div>
+</div>
+
+<div class="page" style="margin-top:48px;">
 
   <div class="header">
     <div class="club">UR 电子竞技俱乐部</div>
@@ -492,6 +513,116 @@
 </div>
 
 <script>
+const API_BASE = '/api/trial';
+let currentPlayerId = '';
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('contactDate').value = new Date().toISOString().slice(0, 10);
+  loadPlayers();
+});
+
+async function loadPlayers() {
+  try {
+    const res = await fetch(API_BASE + '/players');
+    const data = await res.json();
+    const sel = document.getElementById('playerId');
+    sel.innerHTML = '<option value="">-- 选择试训队员 --</option>';
+    data.forEach(p => {
+      sel.innerHTML += '<option value="' + p.id + '">' + p.name + ' (' + (p.ign || '—') + ')</option>';
+    });
+  } catch(e) {}
+}
+
+function getChecklist() {
+  const boxes = document.querySelectorAll('.check-box');
+  return Array.from(boxes).map(b => b.classList.contains('done'));
+}
+
+function getQuestions() {
+  const inputs = document.querySelectorAll('.q-answer');
+  const qAnswers = [];
+  inputs.forEach(inp => qAnswers.push(inp.value || ''));
+  return qAnswers;
+}
+
+async function saveContact() {
+  const pid = document.getElementById('playerId').value;
+  if (!pid) { setStatus('请先选择试训队员', '#ff6b6b'); return; }
+
+  const answers = getQuestions();
+  const checklist = getChecklist();
+
+  const payload = {
+    player_id: parseInt(pid),
+    contact_person: document.getElementById('contactPerson').value || '',
+    contact_date: document.getElementById('contactDate').value || '',
+    checklist_json: checklist,
+    chinese_listening: parseInt(document.querySelector('.q-answer')?.value) || 0,
+    chinese_speaking: 0,
+    chinese_notes: '',
+    q1: answers[0] || '', q2: answers[1] || '', q3: answers[2] || '', q4: answers[3] || '',
+    q5: answers[4] || '', q6: answers[5] || '', q7: answers[6] || '', q8: answers[7] || '',
+    handler_sign: document.querySelector('.sign-area div:first-child .sign-line')?.textContent || '',
+    manager_confirm: document.querySelector('.sign-area div:last-child .sign-line')?.textContent || '',
+  };
+
+  setStatus('保存中...', '#B8960F');
+  try {
+    await fetch(API_BASE + '/contacts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    setStatus('✅ 保存成功', '#27AE60');
+  } catch(e) {
+    setStatus('❌ 保存失败: ' + e.message, '#ff6b6b');
+  }
+}
+
+async function showHistory() {
+  const pid = document.getElementById('playerId').value;
+  if (!pid) { setStatus('请先选择队员查看历史', '#ff6b6b'); return; }
+
+  const panel = document.getElementById('historyPanel');
+  const list = document.getElementById('historyList');
+  panel.style.display = 'block';
+  list.innerHTML = '加载中...';
+
+  try {
+    const res = await fetch(API_BASE + '/contacts?player_id=' + pid);
+    const data = await res.json();
+
+    if (data.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">暂无接洽记录</div>';
+      return;
+    }
+
+    let html = '';
+    data.forEach(h => {
+      const c = typeof h.checklist_json === 'string' ? JSON.parse(h.checklist_json || '[]') : (h.checklist_json || []);
+      const done = c.filter(Boolean).length;
+      html += '<div style="border-bottom:1px solid #333;padding:8px 0;">';
+      html += '<div style="color:#B8960F;">' + h.contact_date + ' | ' + (h.contact_person || '—') + '</div>';
+      html += '<div style="color:#888;font-size:11px;">完成清单 ' + done + '/10 项</div>';
+      html += '</div>';
+    });
+    list.innerHTML = html;
+  } catch(e) {
+    list.innerHTML = '<div style="color:#ff6b6b;">加载失败</div>';
+  }
+}
+
+function closeHistory() {
+  document.getElementById('historyPanel').style.display = 'none';
+}
+
+function setStatus(msg, color) {
+  const el = document.getElementById('saveStatus');
+  el.textContent = msg;
+  el.style.color = color || '#888';
+  setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
+}
+
 // Checkbox toggle
 document.querySelectorAll('.check-box').forEach(box => {
   box.addEventListener('click', function() {
