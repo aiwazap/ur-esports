@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UR CS2 教练与领队工作细分分类表 v2.0</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
+  :root {
+    --gold: #D4AF37; --gold-light: #F5D76E; --gold-dim: #8B7421;
+    --bg-primary: #0a0a0a; --bg-card: #111111; --bg-card-hover: #1a1a1a; --bg-section: #0e0e0e;
+    --text-primary: #f0f0f0; --text-secondary: #a0a0a0; --text-dim: #666666;
+    --border: #222222; --border-gold: rgba(212,175,55,0.3);
+    --accent-red: #e74c3c; --accent-green: #2ecc71; --accent-blue: #3498db;
+    --accent-orange: #e67e22; --accent-purple: #9b59b6; --accent-cyan: #1abc9c;
+    --accent-pink: #e84393; --accent-teal: #00b894;
+    --glass-bg: rgba(255,255,255,0.03); --glass-border: rgba(255,255,255,0.06);
+    --train-green: rgba(46,204,113,0.12); --train-border: rgba(46,204,113,0.3);
+    --event-red: rgba(231,76,60,0.12); --event-border: rgba(231,76,60,0.3);
+    --meeting-gold: rgba(241,196,15,0.12); --meeting-border: rgba(241,196,15,0.3);
+    --coach-purple: rgba(155,89,182,0.12); --coach-border: rgba(155,89,182,0.3);
+    --mgr-teal: rgba(26,188,156,0.12); --mgr-border: rgba(26,188,156,0.3);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Noto Sans SC', -apple-system, sans-serif; background: var(--bg-primary); color: var(--text-primary); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 1200px; margin: 0 auto; padding: 40px 28px 80px; }
+
+  .header { text-align: center; padding: 50px 20px 36px; position: relative; border-bottom: 1px solid var(--border-gold); margin-bottom: 36px; }
+  .header::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 3px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+  .header-badge { display: inline-block; padding: 4px 16px; border: 1px solid var(--border-gold); border-radius: 20px; font-size: 12px; color: var(--gold); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 18px; }
+  .header h1 { font-size: 34px; font-weight: 900; letter-spacing: 2px; margin-bottom: 8px; }
+  .header h1 span { color: var(--gold); }
+  .header-sub { font-size: 15px; color: var(--text-secondary); font-weight: 300; }
+  .header-meta { display: flex; justify-content: center; gap: 30px; margin-top: 18px; font-size: 13px; color: var(--text-dim); }
+  .header-meta span { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* Legend */
+  .legend-bar { display: flex; justify-content: center; flex-wrap: wrap; gap: 16px; padding: 16px 20px; margin-bottom: 28px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-item .desc { color: var(--text-secondary); }
+
+  /* Stats row */
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+  @media (max-width: 700px) { .stats-row { grid-template-columns: 1fr; } }
+  .stat-card { padding: 20px 22px; border-radius: 12px; text-align: center; }
+  .stat-card.train { background: var(--train-green); border: 1px solid var(--train-border); }
+  .stat-card.event { background: var(--event-red); border: 1px solid var(--event-border); }
+  .stat-card.meeting { background: var(--meeting-gold); border: 1px solid var(--meeting-border); }
+  .stat-card .stat-label { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+  .stat-card.train .stat-label { color: #2ecc71; }
+  .stat-card.event .stat-label { color: #e74c3c; }
+  .stat-card.meeting .stat-label { color: #f1c40f; }
+  .stat-card .stat-nums { display: flex; justify-content: center; gap: 30px; }
+  .stat-card .stat-num { text-align: center; }
+  .stat-card .stat-num .num { font-size: 32px; font-weight: 900; }
+  .stat-card.train .num { color: #2ecc71; }
+  .stat-card.event .num { color: #e74c3c; }
+  .stat-card.meeting .num { color: #f1c40f; }
+  .stat-card .stat-num .role { font-size: 11px; color: var(--text-dim); }
+
+  /* Section */
+  .section { margin-bottom: 32px; border-radius: 14px; overflow: hidden; transition: border-color 0.3s; }
+  .section.train-section { background: var(--bg-card); border: 1px solid var(--train-border); }
+  .section.event-section { background: var(--bg-card); border: 1px solid var(--event-border); }
+  .section.meeting-section { background: var(--bg-card); border: 1px solid var(--meeting-border); }
+  .section:hover { border-color: var(--border-gold); }
+  .section-header { display: flex; align-items: center; gap: 14px; padding: 18px 26px; border-bottom: 1px solid var(--border); background: var(--glass-bg); }
+  .section-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 20px; flex-shrink: 0; }
+  .section-header h2 { font-size: 18px; font-weight: 700; flex: 1; }
+  .section-header .badge { padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 500; letter-spacing: 1px; }
+  .badge-train { background: var(--train-green); color: #2ecc71; border: 1px solid var(--train-border); }
+  .badge-event { background: var(--event-red); color: #e74c3c; border: 1px solid var(--event-border); }
+  .badge-meeting { background: var(--meeting-gold); color: #f1c40f; border: 1px solid var(--meeting-border); }
+  .section-body { padding: 22px 26px; }
+
+  /* Role divider */
+  .role-divider { display: flex; align-items: center; gap: 12px; margin: 24px 0 16px; }
+  .role-divider:first-child { margin-top: 0; }
+  .role-divider .role-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 16px; }
+  .role-divider .role-icon.coach { background: rgba(155,89,182,0.15); border: 1px solid rgba(155,89,182,0.3); }
+  .role-divider .role-icon.manager { background: rgba(26,188,156,0.15); border: 1px solid rgba(26,188,156,0.3); }
+  .role-divider .role-icon.collab { background: rgba(241,196,15,0.15); border: 1px solid rgba(241,196,15,0.3); }
+  .role-divider h3 { font-size: 16px; font-weight: 700; }
+  .role-divider.coach h3 { color: #9b59b6; }
+  .role-divider.manager h3 { color: #1abc9c; }
+  .role-divider.collab h3 { color: #f1c40f; }
+  .role-divider .role-sub { font-size: 12px; color: var(--text-dim); margin-left: auto; }
+
+  /* Task grid */
+  .task-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 700px) { .task-grid { grid-template-columns: 1fr; } }
+  .task-card { padding: 16px 18px; background: var(--bg-section); border: 1px solid var(--border); border-radius: 10px; transition: all 0.2s; position: relative; }
+  .task-card:hover { border-color: var(--border-gold); background: var(--bg-card-hover); }
+  .task-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .task-card h4 .id { font-family: 'Consolas', monospace; font-size: 11px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+  .task-card h4 .id-coach { background: rgba(155,89,182,0.15); color: #9b59b6; }
+  .task-card h4 .id-mgr { background: rgba(26,188,156,0.15); color: #1abc9c; }
+  .task-card h4 .id-collab { background: rgba(241,196,15,0.15); color: #f1c40f; }
+  .task-card .meta { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .task-card .meta .p { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 500; letter-spacing: 1px; }
+  .p0 { background: rgba(231,76,60,0.15); color: #e74c3c; border: 1px solid rgba(231,76,60,0.3); }
+  .p1 { background: rgba(230,126,34,0.15); color: #e67e22; border: 1px solid rgba(230,126,34,0.3); }
+  .p2 { background: rgba(52,152,219,0.15); color: #3498db; border: 1px solid rgba(52,152,219,0.3); }
+  .task-card .meta .freq { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; }
+  .task-card .desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+  .task-card.full { grid-column: 1 / -1; }
+
+  /* KPI tag */
+  .kpi-section { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border); }
+  .kpi-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; margin: 2px 4px 2px 0; }
+  .kpi-tag.target { background: rgba(46,204,113,0.1); color: #2ecc71; border: 1px solid rgba(46,204,113,0.25); }
+  .kpi-tag.warn { background: rgba(231,76,60,0.1); color: #e74c3c; border: 1px solid rgba(231,76,60,0.25); }
+
+  /* Share card */
+  .share-card { padding: 18px 20px; background: var(--bg-section); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 14px; transition: all 0.2s; }
+  .share-card:hover { border-color: var(--border-gold); background: var(--bg-card-hover); }
+  .share-card .share-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .share-card .share-header h4 { font-size: 14px; font-weight: 600; flex: 1; }
+  .share-card .share-header .id { font-family: 'Consolas', monospace; font-size: 11px; padding: 2px 6px; border-radius: 4px; background: rgba(241,196,15,0.15); color: #f1c40f; }
+  .share-card .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 700px) { .share-card .split { grid-template-columns: 1fr; } }
+  .share-card .coach-part, .share-card .mgr-part { padding: 10px 14px; border-radius: 8px; font-size: 13px; }
+  .share-card .coach-part { background: rgba(155,89,182,0.06); border: 1px solid rgba(155,89,182,0.15); }
+  .share-card .mgr-part { background: rgba(26,188,156,0.06); border: 1px solid rgba(26,188,156,0.15); }
+  .share-card .part-label { font-size: 11px; font-weight: 600; letter-spacing: 1px; margin-bottom: 4px; }
+  .share-card .coach-part .part-label { color: #9b59b6; }
+  .share-card .mgr-part .part-label { color: #1abc9c; }
+  .share-card .part-content { color: var(--text-secondary); line-height: 1.6; }
+
+  /* KPI Table */
+  .kpi-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+  .kpi-table th { text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
+  .kpi-table.coach-kpi th { background: rgba(155,89,182,0.08); color: #9b59b6; border-bottom-color: rgba(155,89,182,0.2); }
+  .kpi-table.mgr-kpi th { background: rgba(26,188,156,0.08); color: #1abc9c; border-bottom-color: rgba(26,188,156,0.2); }
+  .kpi-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text-secondary); vertical-align: top; }
+  .kpi-table tr:last-child td { border-bottom: none; }
+  .kpi-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* Meeting timeline */
+  .meeting-timeline { position: relative; padding-left: 32px; margin-top: 16px; }
+  .meeting-timeline::before { content: ''; position: absolute; left: 14px; top: 0; bottom: 0; width: 2px; background: linear-gradient(to bottom, var(--gold), var(--gold-dim), transparent); }
+  .meeting-block { position: relative; margin-bottom: 20px; padding: 16px 20px; background: var(--bg-section); border: 1px solid var(--border); border-radius: 10px; }
+  .meeting-block::before { content: ''; position: absolute; left: -24px; top: 20px; width: 10px; height: 10px; border-radius: 50%; background: var(--gold); border: 2px solid var(--bg-card); }
+  .meeting-block .time-badge { display: inline-block; padding: 2px 10px; background: rgba(212,175,55,0.15); border: 1px solid rgba(212,175,55,0.3); color: var(--gold); border-radius: 6px; font-size: 12px; font-weight: 700; font-family: 'Consolas', monospace; margin-bottom: 8px; }
+  .meeting-block h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .meeting-block .who { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+  .meeting-block .who .coach-name { color: #9b59b6; }
+  .meeting-block .who .mgr-name { color: #1abc9c; }
+  .meeting-block .content { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+  .meeting-block .content ul { padding-left: 18px; margin-top: 4px; }
+  .meeting-block .content li { margin-bottom: 2px; }
+  .meeting-block.highlight { border-color: var(--accent-red); background: rgba(231,76,60,0.04); }
+  .meeting-block.highlight::before { background: var(--accent-red); }
+
+  /* Issue card */
+  .issue-card { padding: 16px 20px; background: var(--bg-section); border-radius: 10px; margin-bottom: 12px; }
+  .issue-card.coach-issue { border-left: 3px solid #9b59b6; }
+  .issue-card.mgr-issue { border-left: 3px solid #1abc9c; }
+  .issue-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .issue-card h4 .icon { font-size: 16px; }
+  .issue-card ul { padding-left: 18px; }
+  .issue-card li { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; line-height: 1.6; }
+  .issue-card li strong { color: var(--text-primary); }
+
+  /* Flow diagram */
+  .flow-box { padding: 18px 22px; background: var(--bg-section); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; }
+  .flow-title { font-size: 13px; font-weight: 600; color: var(--gold); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .flow-title::before { content: ''; width: 3px; height: 16px; background: var(--gold); border-radius: 2px; }
+  .flow-line { font-family: 'Consolas', monospace; font-size: 13px; color: var(--text-secondary); line-height: 2; padding-left: 12px; }
+  .flow-line .coach-text { color: #9b59b6; }
+  .flow-line .mgr-text { color: #1abc9c; }
+  .flow-line .arrow { color: var(--gold); margin: 0 6px; }
+
+  .footer { text-align: center; padding: 36px 20px; color: var(--text-dim); font-size: 12px; border-top: 1px solid var(--border); margin-top: 36px; }
+  .footer span { color: var(--gold-dim); }
+
+  /* ========== 编辑系统 ========== */
+  .edit-toolbar { position: fixed; top: 16px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+  .edit-toolbar .tb-btn { width: 48px; height: 48px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+  .edit-toolbar .tb-btn:hover { border-color: var(--gold); background: var(--bg-card-hover); transform: scale(1.08); }
+  .edit-toolbar .tb-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
+  .edit-toolbar .tb-btn.save-btn { background: rgba(46,204,113,0.15); border-color: rgba(46,204,113,0.4); color: #2ecc71; }
+  .edit-toolbar .tb-btn.save-btn:hover { background: #2ecc71; color: #000; }
+  .edit-toolbar .tb-btn.add-btn { background: rgba(52,152,219,0.15); border-color: rgba(52,152,219,0.4); color: #3498db; }
+  .edit-toolbar .tb-btn.add-btn:hover { background: #3498db; color: #fff; }
+
+  body.edit-mode .task-card,
+  body.edit-mode .share-card,
+  body.edit-mode .issue-card,
+  body.edit-mode .meeting-block,
+  body.edit-mode .section-body,
+  body.edit-mode .kpi-table td,
+  body.edit-mode .flow-box { outline: 1px dashed rgba(212,175,55,0.3); cursor: text; }
+  body.edit-mode .task-card:focus-within,
+  body.edit-mode .share-card:focus-within,
+  body.edit-mode .meeting-block:focus,
+  body.edit-mode .kpi-table td:focus { outline: 2px solid var(--gold); background: rgba(212,175,55,0.05); }
+  body.edit-mode [contenteditable="true"]:empty::before { content: '点击编辑...'; color: var(--text-dim); font-style: italic; }
+
+  .del-btn { display: none; position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 6px; border: 1px solid rgba(231,76,60,0.4); background: rgba(231,76,60,0.15); color: #e74c3c; font-size: 12px; cursor: pointer; align-items: center; justify-content: center; transition: all 0.15s; z-index: 10; line-height: 1; }
+  .del-btn:hover { background: #e74c3c; color: #fff; transform: scale(1.1); }
+  body.edit-mode .del-btn { display: flex; }
+  body.edit-mode .task-card,
+  body.edit-mode .share-card,
+  body.edit-mode .issue-card { position: relative; }
+
+  .edit-banner { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 9998; padding: 8px 20px; background: linear-gradient(90deg, rgba(212,175,55,0.9), rgba(139,116,33,0.9)); color: #000; font-size: 13px; font-weight: 600; text-align: center; letter-spacing: 1px; }
+  body.edit-mode .edit-banner { display: block; }
+  body.edit-mode { padding-top: 36px; }
+
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px); padding: 12px 28px; background: #2ecc71; color: #000; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 99999; opacity: 0; transition: all 0.35s cubic-bezier(0.4,0,0.2,1); pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media print {
+    body { background: #fff; color: #111; }
+    .section { break-inside: avoid; border-color: #ddd; }
+    .section-header { background: #f5f5f5; }
+    .task-card, .share-card, .issue-card, .meeting-block { border-color: #ddd; background: #fafafa; }
+    .header h1, .header-sub { color: #111; }
+    .header h1 span { color: #8B7421; }
+    .legend-bar { background: #f5f5f5; border-color: #ddd; }
+    .footer { color: #999; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge">UR ESPORTS CS2</div>
+    <h1>教练与领队<span>工作细分分类表</span></h1>
+    <div class="header-sub">日常训练周 · 赛事期间 · 周六例会 · 独立KPI · 协作分工</div>
+    <div class="header-meta">
+      <span><div class="dot" style="background:var(--gold)"></div> v2.0</span>
+      <span><div class="dot" style="background:var(--accent-green)"></div> 2026年6月</span>
+      <span><div class="dot" style="background:#9b59b6"></div> 教练 HZ</span>
+      <span><div class="dot" style="background:#1abc9c"></div> 领队 Smokkky</span>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend-bar">
+    <div class="legend-item"><div class="legend-dot" style="background:#2ecc71"></div><span class="desc">🟢 日常训练周工作</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e74c3c"></div><span class="desc">🔴 赛事期间工作</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f1c40f"></div><span class="desc">🟡 每周六例会</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#9b59b6"></div><span class="desc">🟣 教练独立</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1abc9c"></div><span class="desc">🔵 领队独立</span></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card train">
+      <div class="stat-label">🟢 日常训练周</div>
+      <div class="stat-nums">
+        <div class="stat-num"><div class="num">12</div><div class="role">教练项</div></div>
+        <div class="stat-num"><div class="num">12</div><div class="role">领队项</div></div>
+        <div class="stat-num"><div class="num">8</div><div class="role">协作项</div></div>
+      </div>
+    </div>
+    <div class="stat-card event">
+      <div class="stat-label">🔴 赛事期间</div>
+      <div class="stat-nums">
+        <div class="stat-num"><div class="num">5</div><div class="role">教练项</div></div>
+        <div class="stat-num"><div class="num">4</div><div class="role">领队项</div></div>
+        <div class="stat-num"><div class="num">1</div><div class="role">协作项</div></div>
+      </div>
+    </div>
+    <div class="stat-card meeting">
+      <div class="stat-label">🟡 周六例会</div>
+      <div class="stat-nums">
+        <div class="stat-num"><div class="num">40</div><div class="role">分钟</div></div>
+        <div class="stat-num"><div class="num">6</div><div class="role">议程</div></div>
+        <div class="stat-num"><div class="num">2</div><div class="role">汇报人</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PART 1: 日常训练周 ==================== -->
+  <div class="section train-section">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--train-green);color:#2ecc71">🟢</div>
+      <h2>第一部分：日常训练周完成的工作</h2>
+      <span class="badge badge-train">周一至周五训练周期</span>
+    </div>
+    <div class="section-body">
+
+      <!-- 教练独立 -->
+      <div class="role-divider">
+        <div class="role-icon coach">🎯</div>
+        <h3>教练·独立完成的工作</h3>
+        <span class="role-sub">12 项 · 核心产出：战术设计 + 选手培养 + 训练管控</span>
+      </div>
+      <div class="task-grid">
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-01</span>战术风格与体系设计</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每月</span></div>
+          <div class="desc">根据选手特点确定队伍战术风格，制定赛季战术路线图，明确每张地图战术核心理念，每月评估适配性</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：战术本完整度（5图×2方）= 100%</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-02</span>选手角色手册编写</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每季度</span></div>
+          <div class="desc">为每个位置编写角色手册：IGL→指挥节奏/信息整合；狙击手→关键局打开/区域封锁；步枪手→执行/补枪；自由人→信息/非常规</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：5个角色手册按时交付 = 100%</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-03</span>战术本维护与更新</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每次新增</span></div>
+          <div class="desc">命名规则：完成战术本基建后，新增的战术：地图缩写名_T/CT.docx，24小时内更新完毕，领队检查与战术总表完全匹配</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：战术本与总表匹配率 = 100%</span>
+            <span class="kpi-tag warn">超24h未更新 = 不合格</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-04</span>选手短板识别与教导</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每日</span></div>
+          <div class="desc">识别薄弱环节（枪法/道具/走位/决策/信息），制定训练计划，跟踪改善进度</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：选手短板改善率 ≥ 70%/月</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-05</span>低级失误识别与纠正</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每场</span></div>
+          <div class="desc">6类失误分类（交流/道具/走位/战术素养/经济/时间管理），分级处理（A致命/B严重/C一般）</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：A/B级低级失误率 ≤ 3次/场</span>
+            <span class="kpi-tag warn">同一选手同类失误3次+ = 启动专项纠正</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-06</span>训练赛战术安排</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每日</span></div>
+          <div class="desc">明确每局训练目标，安排战术执行方案，赛中指挥与调整</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：训练赛战术执行率 ≥ 85%</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-07</span>Demo 复盘分析</h4>
+          <div class="meta"><span class="p p1">P1</span><span class="freq">每场</span></div>
+          <div class="desc">训练赛后复盘≥30分钟，重点复盘执行失败的战术、个人失误、关键回合逐帧分析</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：赛后复盘完成率 = 100%</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-08</span>对手情报收集与分析</h4>
+          <div class="meta"><span class="p p1">P1</span><span class="freq">每周</span></div>
+          <div class="desc">跟踪主要对手近期比赛结果和战术变化，赛前情报简报，对手Demo分析</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：对手情报更新频率 ≥ 1次/周</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-10</span>地图池规划</h4>
+          <div class="meta"><span class="p p1">P1</span><span class="freq">每赛季</span></div>
+          <div class="desc">维持5张主力地图+1-2张备选，评估地图池适配性，根据版本调整</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：主力地图5张×2方完整战术体系</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-11</span>经济管理策略制定</h4>
+          <div class="meta"><span class="p p1">P1</span><span class="freq">每月</span></div>
+          <div class="desc">明确各经济情况下的购买策略（全购/半购/ECO/强起），连败止损方案</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：每图经济策略表覆盖率 = 100%</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-13</span>一对一沟通与选手管理</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每周</span></div>
+          <div class="desc">对问题选手面对面聊天，给出警告和建议，记录沟通内容，连续未改善→书面警告→改善不理想→下方+换人</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：一对一沟通完成率 = 100%</span>
+            <span class="kpi-tag warn">问题选手漏沟通 = 不合格</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-14</span>选手综合评估打分</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每周/每月</span></div>
+          <div class="desc">周度7维度评分+月度5维度百分制，作为末位淘汰依据</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：选手评估表填写率 = 100%</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 领队独立 -->
+      <div class="role-divider">
+        <div class="role-icon manager">📋</div>
+        <h3>领队·独立完成的工作</h3>
+        <span class="role-sub">12 项 · 核心产出：数据录入 + 后勤保障 + 文档归档</span>
+      </div>
+      <div class="task-grid">
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-01</span>训练简报填写</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每日</span></div>
+          <div class="desc">训练结束后30分钟内完成腾讯文档「UR_CS2_训练日志」的更新</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：简报按时提交率 = 100%</span>
+            <span class="kpi-tag warn">超30分钟 = 延迟</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-02</span>训练赛数据维护</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每日</span></div>
+          <div class="desc">训练赛结束后30分钟内完成JSON文件上传，同时查看每日简报/训练日志在网页端的赛训汇总报告的准确性</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：数据上传准时率 = 100%</span>
+            <span class="kpi-tag target">KPI：数据准确率 ≥ 98%</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-03</span>训练考勤与纪律管理</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每日</span></div>
+          <div class="desc">训练时段出勤监控，迟到/缺席记录，训练期间纪律监督</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：选手出勤率 ≥ 90%</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-04</span>录像命名与归档</h4>
+          <div class="meta"><span class="p p1">P1</span><span class="freq">每场</span></div>
+          <div class="desc">按命名规则（日期_对手_地图.FLV）重命名并归档至局域网 02_录像/</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：录像命名规范率 = 100%</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-05</span>队员个人信息表维护</h4>
+          <div class="meta"><span class="p p1">P1</span><span class="freq">人员变动时</span></div>
+          <div class="desc">20列字段维护（含多Steam账号、Faceit/5E ID、手机号、紧急联系人等）</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：人员变动后24h内同步</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-07</span>外设库存管理</h4>
+          <div class="meta"><span class="p p1">P1</span><span class="freq">每周</span></div>
+          <div class="desc">外设库存表维护（型号/数量/在用/备件），损坏登记与返修流程</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：外设库存周更新 = 100%</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-08</span>生活保障</h4>
+          <div class="meta"><span class="p p1">P1</span><span class="freq">每日</span></div>
+          <div class="desc">基地餐饮/饮水/零食补给，住宿问题响应，办公区域整洁维护</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：生活问题响应 ≤ 2小时</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-10</span>财务与预算管理</h4>
+          <div class="meta"><span class="p p2">P2</span><span class="freq">每月</span></div>
+          <div class="desc">月度成本报表填写，补给审批（≤500领队审批），费用报销整理</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：月度成本报表月末交付 = 100%</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-11</span>应急处理</h4>
+          <div class="meta"><span class="p p1">P1</span><span class="freq">即时</span></div>
+          <div class="desc">6类突发场景处理（请假/设备故障/CS2崩溃/情绪冲突/比赛争议/签证问题）</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：设备故障响应 ≤ 15分钟</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-12</span>局域网文件归档</h4>
+          <div class="meta"><span class="p p1">P1</span><span class="freq">每周</span></div>
+          <div class="desc">检查所有文件命名规范性、补漏、确保存储位置正确</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：文件归档规范率 = 100%</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-13</span>赛训数据同步检查</h4>
+          <div class="meta"><span class="p p1">P1</span><span class="freq">每日</span></div>
+          <div class="desc">17:30自动同步后检查ur-esports.cn数据完整性，异常反馈</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：数据异常发现后2h内反馈</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-14</span>文档归档与周报</h4>
+          <div class="meta"><span class="p p1">P1</span><span class="freq">每周</span></div>
+          <div class="desc">赛训汇总报告（按周）、月度成本报表整理</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：周报周五交付 = 100%</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 协作工作 -->
+      <div class="role-divider">
+        <div class="role-icon collab">🤝</div>
+        <h3>教练+领队·协作工作</h3>
+        <span class="role-sub">8 项 · 日常训练周期间的协作</span>
+      </div>
+
+      <div class="share-card">
+        <div class="share-header"><span class="id">CS-01</span><h4>训练赛对手筛选</h4><span class="p p1">P1</span><span class="freq" style="font-size:11px;color:var(--text-dim)">每周</span></div>
+        <div class="split">
+          <div class="coach-part"><div class="part-label">🎯 教练</div><div class="part-content">提出对手等级要求（S/A/B级），明确练图/练战术目标</div></div>
+          <div class="mgr-part"><div class="part-label">📋 领队</div><div class="part-content">负责约战联络、确认时间服务器</div></div>
+        </div>
+      </div>
+
+      <div class="share-card">
+        <div class="share-header"><span class="id">CS-02</span><h4>训练赛执行</h4><span class="p p0">P0</span><span class="freq" style="font-size:11px;color:var(--text-dim)">每日</span></div>
+        <div class="split">
+          <div class="coach-part"><div class="part-label">🎯 教练</div><div class="part-content">简报发布、场上指挥、赛中调整</div></div>
+          <div class="mgr-part"><div class="part-label">📋 领队</div><div class="part-content">考勤监督、纪律管理、训练日志填写</div></div>
+        </div>
+      </div>
+
+      <div class="share-card">
+        <div class="share-header"><span class="id">CS-03</span><h4>选手状态跟踪</h4><span class="p p0">P0</span><span class="freq" style="font-size:11px;color:var(--text-dim)">每日</span></div>
+        <div class="split">
+          <div class="coach-part"><div class="part-label">🎯 教练</div><div class="part-content">关注竞技状态、战术执行度、短板表现</div></div>
+          <div class="mgr-part"><div class="part-label">📋 领队</div><div class="part-content">关注生活作息、情绪波动、人际关系</div></div>
+        </div>
+      </div>
+
+      <div class="share-card">
+        <div class="share-header"><span class="id">CS-04</span><h4>战术本与总表同步</h4><span class="p p0">P0</span><span class="freq" style="font-size:11px;color:var(--text-dim)">每次更新</span></div>
+        <div class="split">
+          <div class="coach-part"><div class="part-label">🎯 教练</div><div class="part-content">更新战术本内容、确认战术编号和名称</div></div>
+          <div class="mgr-part"><div class="part-label">📋 领队</div><div class="part-content">同步腾讯文档战术总表、校验匹配度</div></div>
+        </div>
+      </div>
+
+      <div class="share-card">
+        <div class="share-header"><span class="id">CS-06</span><h4>试训队员管理</h4><span class="p p1">P1</span><span class="freq" style="font-size:11px;color:var(--text-dim)">按需</span></div>
+        <div class="split">
+          <div class="coach-part"><div class="part-label">🎯 教练</div><div class="part-content">技战术考核、2周试训周期设计、评估报告</div></div>
+          <div class="mgr-part"><div class="part-label">📋 领队</div><div class="part-content">接机安顿、信息收集、生活翻译、入队沟通</div></div>
+        </div>
+      </div>
+
+      <div class="share-card">
+        <div class="share-header"><span class="id">CS-07</span><h4>选手情绪/队内冲突处理</h4><span class="p p0">P0</span><span class="freq" style="font-size:11px;color:var(--text-dim)">按需</span></div>
+        <div class="split">
+          <div class="coach-part"><div class="part-label">🎯 教练</div><div class="part-content">竞技层面沟通（战术分歧、场上矛盾）</div></div>
+          <div class="mgr-part"><div class="part-label">📋 领队</div><div class="part-content">生活层面沟通（作息、人际关系、心理状态）</div></div>
+        </div>
+      </div>
+
+      <div class="share-card">
+        <div class="share-header"><span class="id">CS-08</span><h4>数据录入与文档维护</h4><span class="p p1">P1</span><span class="freq" style="font-size:11px;color:var(--text-dim)">每日</span></div>
+        <div class="split">
+          <div class="coach-part"><div class="part-label">🎯 教练</div><div class="part-content">确认战术/失误/评估数据准确性</div></div>
+          <div class="mgr-part"><div class="part-label">📋 领队</div><div class="part-content">维护三表（训练日志/JSON/战术总表）</div></div>
+        </div>
+      </div>
+
+      <div class="share-card">
+        <div class="share-header"><span class="id">CS-09</span><h4>外籍选手管理</h4><span class="p p1">P1</span><span class="freq" style="font-size:11px;color:var(--text-dim)">按需</span></div>
+        <div class="split">
+          <div class="coach-part"><div class="part-label">🎯 教练</div><div class="part-content">训练沟通、战术术语翻译，赛训规划安排，考核评分公布</div></div>
+          <div class="mgr-part"><div class="part-label">📋 领队</div><div class="part-content">签证、生活翻译、合同执行、文化适应</div></div>
+        </div>
+      </div>
+
+      <!-- 教练KPI汇总 -->
+      <div class="role-divider" style="margin-top:28px">
+        <div class="role-icon coach">📊</div>
+        <h3>教练·日常训练周KPI汇总</h3>
+      </div>
+      <table class="kpi-table coach-kpi">
+        <thead><tr><th>维度</th><th>指标</th><th>目标值</th><th>考核周期</th></tr></thead>
+        <tbody>
+          <tr><td>战术设计</td><td>战术本完整度（5图×2方）</td><td>100%</td><td>每月</td></tr>
+          <tr><td>战术执行</td><td>训练赛战术执行率</td><td>≥ 85%</td><td>每周</td></tr>
+          <tr><td>选手培养</td><td>选手短板改善率</td><td>≥ 70%</td><td>每月</td></tr>
+          <tr><td>训练质量</td><td>A/B级低级失误率</td><td>≤ 3次/场</td><td>每周</td></tr>
+          <tr><td>训练质量</td><td>训练赛态度评分</td><td>≥ 4/5</td><td>每周</td></tr>
+          <tr><td>选手管理</td><td>一对一沟通完成率</td><td>100%</td><td>每周</td></tr>
+          <tr><td>选手管理</td><td>选手评估表填写率</td><td>100%</td><td>每月</td></tr>
+          <tr><td>复盘质量</td><td>赛后复盘完成率</td><td>100%</td><td>每场</td></tr>
+          <tr><td>文档规范</td><td>战术本与总表匹配率</td><td>100%</td><td>每次更新</td></tr>
+        </tbody>
+      </table>
+
+      <!-- 领队KPI汇总 -->
+      <div class="role-divider" style="margin-top:28px">
+        <div class="role-icon manager">📊</div>
+        <h3>领队·日常训练周KPI汇总</h3>
+      </div>
+      <table class="kpi-table mgr-kpi">
+        <thead><tr><th>维度</th><th>指标</th><th>目标值</th><th>考核周期</th></tr></thead>
+        <tbody>
+          <tr><td>赛训执行</td><td>训练简报按时提交率</td><td>100%</td><td>每日</td></tr>
+          <tr><td>赛训执行</td><td>训练赛数据上传准时率</td><td>100%</td><td>每日</td></tr>
+          <tr><td>赛训执行</td><td>三表数据准确率</td><td>≥ 98%</td><td>每日</td></tr>
+          <tr><td>团队管理</td><td>选手出勤率</td><td>≥ 90%</td><td>每月</td></tr>
+          <tr><td>团队管理</td><td>人员变动信息同步时效</td><td>≤ 24小时</td><td>按需</td></tr>
+          <tr><td>后勤保障</td><td>设备故障响应时间</td><td>≤ 15分钟</td><td>实时</td></tr>
+          <tr><td>后勤保障</td><td>补给采购到位时效</td><td>≤ 3个工作日</td><td>按需</td></tr>
+          <tr><td>文档规范</td><td>录像命名规范率</td><td>100%</td><td>每场</td></tr>
+          <tr><td>文档规范</td><td>文件归档规范率</td><td>100%</td><td>每周</td></tr>
+        </tbody>
+      </table>
+
+    </div>
+  </div>
+
+  <!-- ==================== PART 2: 赛事期间 ==================== -->
+  <div class="section event-section">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--event-red);color:#e74c3c">🔴</div>
+      <h2>第二部分：赛事期间完成的工作</h2>
+      <span class="badge badge-event">比赛日 + 赛前备战 + 赛后收尾</span>
+    </div>
+    <div class="section-body">
+
+      <!-- 教练独立 -->
+      <div class="role-divider">
+        <div class="role-icon coach">🎯</div>
+        <h3>教练·独立完成的工作</h3>
+        <span class="role-sub">5 项 · 核心产出：赛事指挥 + BP策略 + 情报分析</span>
+      </div>
+      <div class="task-grid">
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-09</span>Ban/Pick 策略制定</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每赛</span></div>
+          <div class="desc">赛前确定 BP 方案，准备2-3套备选，BO3/BO5图池覆盖确认，对手BP习惯分析</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：Ban/Pick胜率 ≥ 55%</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-09b</span>赛中实时指挥</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每赛</span></div>
+          <div class="desc">与IGL分工：教练负责宏观战术调整，IGL负责回合内微操；技术暂停快速复盘调整；关键经济局决策；暂停时机把握</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：技术暂停后翻盘率 ≥ 40%</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-08b</span>赛前对手情报简报</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每赛</span></div>
+          <div class="desc">赛前24小时完成对手情报简报：强图/弱图/惯用战术/关键选手/近期战绩/BP倾向</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：赛前情报简报交付 = 100%</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-coach">C-12</span>试训选手技战术评估</h4>
+          <div class="meta"><span class="p p1">P1</span><span class="freq">按需</span></div>
+          <div class="desc">5维度考核（枪法/战术理解/团队配合/态度/潜力），提交评估报告</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：试训评估报告48h内交付</span>
+          </div>
+        </div>
+
+        <div class="task-card full">
+          <h4><span class="id id-coach">C-15</span>训练赛质量管控</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每场</span></div>
+          <div class="desc">监督训练态度，纠正敷衍行为，确保攻防质量标准执行，态度底线守门</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：训练赛态度评分 ≥ 4/5</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 领队独立 -->
+      <div class="role-divider">
+        <div class="role-icon manager">📋</div>
+        <h3>领队·独立完成的工作</h3>
+        <span class="role-sub">4 项 · 核心产出：后勤保障 + 行程管理 + 设备保障</span>
+      </div>
+      <div class="task-grid">
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-09</span>差旅安排</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每赛</span></div>
+          <div class="desc">赛事行程规划（交通/住宿/餐饮），优先直飞/高铁，酒店近赛场/网络条件优，预订执行，报销单据收集</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：差旅安排赛前3天确认</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-06</span>赛前设备调试</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每赛</span></div>
+          <div class="desc">比赛机/外设/网络调试确认，驱动版本锁定，备用机就位，CS2设置同步确认</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：设备赛前1小时完成调试</span>
+            <span class="kpi-tag warn">设备问题影响比赛 = 严重事故</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-04b</span>比赛录像归档</h4>
+          <div class="meta"><span class="p p1">P1</span><span class="freq">每赛</span></div>
+          <div class="desc">比赛录像按命名规则归档至局域网，Demo入库，关键回合标注</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：比赛录像赛后2h内归档</span>
+          </div>
+        </div>
+
+        <div class="task-card">
+          <h4><span class="id id-mgr">M-11b</span>赛中后勤与应急</h4>
+          <div class="meta"><span class="p p0">P0</span><span class="freq">每赛</span></div>
+          <div class="desc">赛中餐饮/水分补充，技术暂停设备处理，场外信息屏蔽，突发情况应急响应</div>
+          <div class="kpi-section">
+            <span class="kpi-tag target">KPI：比赛准时到场率 = 100%</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 赛事协作 -->
+      <div class="role-divider">
+        <div class="role-icon collab">🤝</div>
+        <h3>教练+领队·赛事日协作</h3>
+        <span class="role-sub">1 项核心协作 + 流程图</span>
+      </div>
+
+      <div class="share-card">
+        <div class="share-header"><span class="id">CS-05</span><h4>比赛日全流程协作</h4><span class="p p0">P0</span><span class="freq" style="font-size:11px;color:var(--text-dim)">每赛</span></div>
+        <div class="split">
+          <div class="coach-part"><div class="part-label">🎯 教练</div><div class="part-content">Ban/Pick决策 → 赛中指挥 → 技术暂停调整 → 赛后复盘</div></div>
+          <div class="mgr-part"><div class="part-label">📋 领队</div><div class="part-content">设备调试 → 行程协调 → 录像归档 → 后勤保障</div></div>
+        </div>
+      </div>
+
+      <div class="flow-box">
+        <div class="flow-title">赛事日全流程</div>
+        <div class="flow-line">赛前24h <span class="arrow">→</span> <span class="coach-text">教练：情报简报 + BP方案</span> / <span class="mgr-text">领队：行程确认 + 设备打包</span></div>
+        <div class="flow-line">赛前2h <span class="arrow">→</span> <span class="coach-text">教练：最终战术确认</span> / <span class="mgr-text">领队：到场 + 设备调试</span></div>
+        <div class="flow-line">赛中 <span class="arrow">→</span> <span class="coach-text">教练：BP + 指挥 + 暂停调整</span> / <span class="mgr-text">领队：后勤 + 录像 + 应急</span></div>
+        <div class="flow-line">赛后 <span class="arrow">→</span> <span class="coach-text">教练：复盘 + 数据确认</span> / <span class="mgr-text">领队：归档 + 简报 + 收拾</span></div>
+      </div>
+
+      <!-- 教练赛事KPI -->
+      <div class="role-divider" style="margin-top:28px">
+        <div class="role-icon coach">📊</div>
+        <h3>教练·赛事期间KPI汇总</h3>
+      </div>
+      <table class="kpi-table coach-kpi">
+        <thead><tr><th>维度</th><th>指标</th><th>目标值</th><th>考核周期</th></tr></thead>
+        <tbody>
+          <tr><td>赛事指挥</td><td>Ban/Pick胜率</td><td>≥ 55%</td><td>每赛</td></tr>
+          <tr><td>赛事指挥</td><td>技术暂停后翻盘率</td><td>≥ 40%</td><td>每赛</td></tr>
+          <tr><td>赛事准备</td><td>赛前情报简报交付率</td><td>100%</td><td>每赛</td></tr>
+          <tr><td>选手评估</td><td>试训评估报告时效</td><td>48h内</td><td>按需</td></tr>
+          <tr><td>训练质量</td><td>训练赛态度评分</td><td>≥ 4/5</td><td>每周</td></tr>
+        </tbody>
+      </table>
+
+      <!-- 领队赛事KPI -->
+      <div class="role-divider" style="margin-top:28px">
+        <div class="role-icon manager">📊</div>
+        <h3>领队·赛事期间KPI汇总</h3>
+      </div>
+      <table class="kpi-table mgr-kpi">
+        <thead><tr><th>维度</th><th>指标</th><th>目标值</th><th>考核周期</th></tr></thead>
+        <tbody>
+          <tr><td>赛事保障</td><td>比赛准时到场率</td><td>100%</td><td>每赛</td></tr>
+          <tr><td>赛事保障</td><td>设备赛前调试完成</td><td>赛前1小时</td><td>每赛</td></tr>
+          <tr><td>差旅安排</td><td>差旅安排确认时效</td><td>赛前3天</td><td>每赛</td></tr>
+          <tr><td>文档归档</td><td>比赛录像归档时效</td><td>赛后2小时</td><td>每赛</td></tr>
+        </tbody>
+      </table>
+
+    </div>
+  </div>
+
+  <!-- ==================== PART 3: 每周六例会 ==================== -->
+  <div class="section meeting-section">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--meeting-gold);color:#f1c40f">🟡</div>
+      <h2>第三部分：每周六例会</h2>
+      <span class="badge badge-meeting">约40分钟 · 教练+领队双向汇报</span>
+    </div>
+    <div class="section-body">
+
+      <!-- 例会概述 -->
+      <div style="padding:16px 20px;background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.2);border-radius:10px;margin-bottom:20px;">
+        <h3 style="font-size:15px;color:var(--gold);margin-bottom:8px;">📋 例会定位</h3>
+        <div style="font-size:13px;color:var(--text-secondary);line-height:1.8;">
+          每周六上午固定召开，参会人：教练HZ + 领队Smokkky（必要时邀请赛训总监aiwazap列席）。<br>
+          目的：<strong style="color:var(--text-primary)">信息对齐 · 问题暴露 · 决策推进 · 行动落地</strong>，不是汇报流水账，而是聚焦问题和决策。
+        </div>
+      </div>
+
+      <!-- 教练需指出的问题 -->
+      <div class="role-divider">
+        <div class="role-icon coach">⚠️</div>
+        <h3>教练·需着重指出的问题</h3>
+      </div>
+
+      <div class="issue-card coach-issue">
+        <h4><span class="icon">🎯</span>战术执行与体系问题</h4>
+        <ul>
+          <li><strong>战术执行率不达标</strong>：哪些图/哪方执行率低？原因分析（选手不执行/战术本身有缺陷/对手针对）</li>
+          <li><strong>战术体系适配性</strong>：当前战术风格是否适配选手阵容？是否需要调整方向？</li>
+          <li><strong>新战术测试结果</strong>：本周测试了哪些新战术？可行性评估？需要修改还是淘汰？</li>
+        </ul>
+      </div>
+
+      <div class="issue-card coach-issue">
+        <h4><span class="icon">👤</span>选手个人问题</h4>
+        <ul>
+          <li><strong>短板未改善</strong>：上周指出的短板，本周有无进展？需要调整训练方案吗？</li>
+          <li><strong>低级失误反复</strong>：同一选手同类失误出现3次+，是否需要升级处理（专项纠正/书面警告/约谈）</li>
+          <li><strong>态度/情绪问题</strong>：训练态度消极、不执行战术、场上情绪失控、队内冲突</li>
+          <li><strong>末位淘汰预警</strong>：月度评分偏低选手，是否需要启动淘汰/引援流程</li>
+        </ul>
+      </div>
+
+      <div class="issue-card coach-issue">
+        <h4><span class="icon">🎮</span>训练质量与对手分析</h4>
+        <ul>
+          <li><strong>训练赛质量评估</strong>：本周训练赛对手等级（S/A/B）分布、战术执行情况、态度问题</li>
+          <li><strong>练图策略调整</strong>：当前弱图/强图，下周需要重点练哪张图？为什么？</li>
+          <li><strong>对手情报更新</strong>：本周收集了哪些对手信息？下周约战建议（约谁/练什么）</li>
+        </ul>
+      </div>
+
+      <!-- 领队需指出的问题 -->
+      <div class="role-divider">
+        <div class="role-icon manager">⚠️</div>
+        <h3>领队·需着重指出的问题</h3>
+      </div>
+
+      <div class="issue-card mgr-issue">
+        <h4><span class="icon">📊</span>数据与文档问题</h4>
+        <ul>
+          <li><strong>三表数据异常</strong>：训练日志/JSON数据/战术总表有无不一致？哪些数据需要修正？</li>
+          <li><strong>赛训数据同步异常</strong>：ur-esports.cn数据是否完整？有无缺失/错误？</li>
+          <li><strong>文件归档问题</strong>：录像/战术本/文档是否有未命名/未归档/存储位置错误？</li>
+        </ul>
+      </div>
+
+      <div class="issue-card mgr-issue">
+        <h4><span class="icon">🏠</span>后勤与保障问题</h4>
+        <ul>
+          <li><strong>设备故障</strong>：本周有无设备故障？处理结果？是否需要采购/返修？</li>
+          <li><strong>生活保障</strong>：餐饮/住宿/外设补给有无问题？选手有无生活方面诉求？</li>
+          <li><strong>财务预算</strong>：本月费用是否超预算？是否需要审批额外采购？</li>
+        </ul>
+      </div>
+
+      <div class="issue-card mgr-issue">
+        <h4><span class="icon">👥</span>人员与纪律问题</h4>
+        <ul>
+          <li><strong>考勤异常</strong>：本周有无迟到/缺席/请假？频次？是否需要升级处理？</li>
+          <li><strong>选手违规</strong>：训练期间直播/娱乐/不专注等违规行为，是否需要上报/警告</li>
+          <li><strong>人员变动</strong>：试训队员进展？是否需要引援？有无离队意向？</li>
+        </ul>
+      </div>
+
+      <!-- 例会大纲 -->
+      <div class="role-divider" style="margin-top:28px">
+        <div class="role-icon collab">📅</div>
+        <h3>周六例会·会议大纲（约40分钟）</h3>
+      </div>
+
+      <div class="meeting-timeline">
+
+        <div class="meeting-block">
+          <div class="time-badge">0-3 min</div>
+          <h4>开场与上周行动项回顾</h4>
+          <div class="who">主持人：<span class="coach-name">教练 HZ</span></div>
+          <div class="content">
+            <ul>
+              <li>回顾上周例会的行动项，逐条确认完成状态</li>
+              <li>未完成的行动项：说明原因 + 重新排期</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="meeting-block">
+          <div class="time-badge">3-12 min</div>
+          <h4>教练汇报：本周训练与战术</h4>
+          <div class="who">汇报人：<span class="coach-name">教练 HZ</span>（9分钟）</div>
+          <div class="content">
+            <ul>
+              <li><strong>训练赛总结</strong>：本周训练赛场次/对手/结果/战术执行率/态度评分</li>
+              <li><strong>选手状态评估</strong>：5人周度评分简报（亮点+问题+下周目标）</li>
+              <li><strong>短板与失误</strong>：本周新发现短板 + 低级失误统计 + 处理方案</li>
+              <li><strong>战术体系</strong>：新战术测试结果 + 战术本更新情况 + 匹配校验结果</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="meeting-block">
+          <div class="time-badge">12-18 min</div>
+          <h4>领队汇报：本周数据与保障</h4>
+          <div class="who">汇报人：<span class="mgr-name">领队 Smokkky</span>（6分钟）</div>
+          <div class="content">
+            <ul>
+              <li><strong>数据情况</strong>：三表完整度/数据准确率/同步异常/归档状态</li>
+              <li><strong>考勤纪律</strong>：出勤率/迟到缺席/违规记录</li>
+              <li><strong>后勤保障</strong>：设备状况/生活补给/财务支出/外设库存</li>
+              <li><strong>人员变动</strong>：试训进展/引援需求/其他人员事项</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="meeting-block highlight">
+          <div class="time-badge">18-30 min</div>
+          <h4>⚠️ 问题讨论与决策（核心环节）</h4>
+          <div class="who">双方讨论（12分钟）</div>
+          <div class="content">
+            <ul>
+              <li><strong>优先讨论P0问题</strong>：选手态度/队内冲突/训练质量不达标</li>
+              <li><strong>选手处理决策</strong>：书面警告？专项纠正训练？约谈？淘汰预警？</li>
+              <li><strong>训练策略调整</strong>：下周练图方向？约战对手？新战术优先级？</li>
+              <li><strong>需要上报赛训总监的事项</strong>：确认上报内容/时间/方式</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="meeting-block">
+          <div class="time-badge">30-37 min</div>
+          <h4>下周工作计划对齐</h4>
+          <div class="who">双方确认（7分钟）</div>
+          <div class="content">
+            <ul>
+              <li><strong>教练下周重点</strong>：练哪些图/测试哪些战术/重点关注哪位选手/一对一流安排</li>
+              <li><strong>领队下周重点</strong>：数据补录/设备维护/差旅安排/文档归档</li>
+              <li><strong>协作事项确认</strong>：约战对手/试训安排/赛事准备</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="meeting-block">
+          <div class="time-badge">37-40 min</div>
+          <h4>行动项确认与散会</h4>
+          <div class="who">主持人：<span class="coach-name">教练 HZ</span></div>
+          <div class="content">
+            <ul>
+              <li>逐条确认本周行动项（谁/做什么/什么时间完成）</li>
+              <li>记录至「例会行动项跟踪表」</li>
+              <li>需要赛训总监审批的事项，领队在会后24小时内上报</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 例会行动项跟踪表 -->
+      <div style="margin-top:24px;padding:16px 20px;background:var(--bg-section);border:1px solid var(--border);border-radius:10px;">
+        <h4 style="font-size:14px;color:var(--gold);margin-bottom:12px;">📋 例会行动项跟踪表</h4>
+        <table class="kpi-table" style="margin-top:0">
+          <thead><tr><th>日期</th><th>行动项</th><th>负责人</th><th>截止日期</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td></td><td></td><td></td><td></td><td>⬜</td></tr>
+            <tr><td></td><td></td><td></td><td></td><td>⬜</td></tr>
+            <tr><td></td><td></td><td></td><td></td><td>⬜</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span>UR ESPORTS</span> · 教练与领队工作细分分类表 v2.0 · 2026年6月 · 末位淘汰，持续进化
+  </div>
+
+</div>
+
+<!-- 编辑模式横幅 -->
+<div class="edit-banner">📝 编辑模式已开启 — 点击文字即可修改，点 × 删除项目，完成后点保存</div>
+
+<!-- 编辑工具栏 -->
+<div class="edit-toolbar">
+  <button class="tb-btn" id="editToggle" title="切换编辑模式" onclick="toggleEditMode()">✏️</button>
+  <button class="tb-btn save-btn" id="saveBtn" title="保存并导出" onclick="saveDocument()">💾</button>
+  <button class="tb-btn add-btn" id="addBtn" title="添加新项目" onclick="addItem()">➕</button>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+let editMode = false;
+
+function toggleEditMode() {
+  editMode = !editMode;
+  document.body.classList.toggle('edit-mode', editMode);
+  document.getElementById('editToggle').classList.toggle('active', editMode);
+  const selectors = '.task-card h4, .task-card .desc, .share-card h4, .share-card .part-content, .issue-card li, .meeting-block .content li, .kpi-table td, .section-header h2, .role-divider h3, .flow-line';
+  document.querySelectorAll(selectors).forEach(el => { el.contentEditable = editMode ? 'true' : 'false'; });
+  if (editMode) {
+    document.querySelectorAll('.task-card, .share-card, .issue-card').forEach(card => {
+      if (!card.querySelector('.del-btn')) {
+        const btn = document.createElement('button'); btn.className = 'del-btn'; btn.textContent = '×';
+        btn.onclick = function(e) { e.stopPropagation(); card.style.opacity='0'; card.style.transform='scale(0.9)'; setTimeout(() => card.remove(), 200); };
+        card.appendChild(btn);
+      }
+    });
+  }
+}
+
+function addItem() {
+  if (!editMode) { showToast('请先开启编辑模式'); return; }
+  const choice = prompt('添加到哪个板块？\n1. 日常训练周-教练独立\n2. 日常训练周-领队独立\n3. 日常训练周-协作\n4. 赛事期间-教练独立\n5. 赛事期间-领队独立\n6. 周六例会-教练问题\n7. 周六例会-领队问题\n输入编号：');
+  if (!choice) return;
+  const title = prompt('新项目标题：'); if (!title) return;
+  const desc = prompt('项目描述：') || '';
+  showToast('已添加：' + title);
+}
+
+function saveDocument() {
+  const clone = document.querySelector('.page').cloneNode(true);
+  clone.querySelectorAll('.del-btn, .edit-banner, .edit-toolbar, .toast').forEach(el => el.remove());
+  clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+  const fullHTML = `<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>${document.title}</title>\n${document.querySelector('style').outerHTML}\n</head>\n<body>\n${clone.outerHTML}\n</body>\n</html>`;
+  const htmlBlob = new Blob([fullHTML], { type: 'text/html;charset=utf-8' });
+  const htmlUrl = URL.createObjectURL(htmlBlob);
+  const a = document.createElement('a'); a.href = htmlUrl; a.download = 'UR_CS2_工作细分分类表_已编辑.html'; a.click();
+  URL.revokeObjectURL(htmlUrl);
+  showToast('✅ 已保存！HTML文件已下载');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+<script id="urRoleFilter">
+(function(){
+  var role = new URLSearchParams(location.search).get('role');
+  if (role !== 'coach' && role !== 'leader') return;
+  var other = role === 'coach' ? '领队·' : '教练·';
+  document.querySelectorAll('.role-divider').forEach(function(div){
+    var h = div.querySelector('h3');
+    var t = h ? h.textContent.trim() : '';
+    if (t.indexOf(other) !== 0) return; // 只隐藏"对方·"开头；"教练+领队·"共显
+    var el = div;
+    while (el) {
+      var next = el.nextElementSibling;
+      el.style.display = 'none';
+      el = (next && !(next.classList && next.classList.contains('role-divider'))) ? next : null;
+    }
+  });
+})();
+</script>
+</body>
+</html>

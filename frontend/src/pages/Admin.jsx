@@ -1,199 +1,43 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
+import { useLang } from '../i18n';
+import { useSearchParams } from 'react-router-dom';
 import api from '../api';
-
-/* ── 常量 ── */
-const ROLE_MAP = { admin: '管理员', player: '选手', coach: '教练', team_lead: '领队', analyst: '分析师', manager: '经理', ceo: 'CEO', pending: '待审核' };
-const ROLE_COLORS = {
-  admin: 'bg-ur-purple/20 text-ur-purple border-ur-purple/30',
-  player: 'bg-ur-cyan/15 text-ur-cyan border-ur-cyan/30',
-  coach: 'bg-ur-amber/15 text-ur-amber border-ur-amber/30',
-  team_lead: 'bg-ur-indigo/15 text-ur-indigo border-ur-indigo/30',
-  analyst: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
-  manager: 'bg-orange-500/15 text-orange-400 border-orange-500/25',
-  ceo: 'bg-ur-rose/15 text-ur-rose border-ur-rose/30',
-  pending: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-};
-const DIVISION_MAP = { cs2: 'CS2', val: 'Valorant', all: '全部' };
-const EMPTY_FORM = { username: '', password: '', steam_id: '', role: 'player', division: 'cs2' };
-
-/* ================================================================
-   用户表单弹窗（创建 / 编辑复用）
-   ================================================================ */
-function UserFormModal({ mode, init, onClose, onSave, error }) {
-  const [f, setF] = useState(
-    mode === 'edit'
-      ? { username: init.username, steam_id: init.steam_id, role: init.role, division: init.division || 'cs2', password: '' }
-      : { ...EMPTY_FORM }
-  );
-  const isCreate = mode === 'create';
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!f.username || !f.steam_id || !f.role)
-      return;
-    if (isCreate && !f.password)
-      return;
-    if (!/^\d{17}$/.test(f.steam_id.trim()))
-      return;
-    onSave({
-      username: f.username.trim(),
-      steam_id: f.steam_id.trim(),
-      role: f.role,
-      division: f.division,
-      password: f.password || undefined,
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <form
-        onSubmit={handleSubmit}
-        onClick={e => e.stopPropagation()}
-        className="data-card w-full max-w-md mx-4 space-y-4 animate-fade-up"
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-lg font-bold text-white">
-            {isCreate ? '创建用户' : '编辑用户'}
-          </h3>
-          <button type="button" onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-
-        {error && <div className="p-2.5 bg-ur-rose/10 border border-ur-rose/30 rounded-lg text-xs text-ur-rose">{error}</div>}
-
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">用户名 <span className="text-ur-rose">*</span></label>
-          <input value={f.username} onChange={e => setF({ ...f, username: e.target.value })}
-            placeholder="登录用户名" maxLength={32}
-            className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2.5 text-white text-sm
-                       focus:border-ur-cyan focus:outline-none placeholder:text-gray-600" />
-        </div>
-
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">
-            {isCreate ? '密码' : '新密码'}
-            {isCreate && <span className="text-ur-rose"> *</span>}
-            {!isCreate && <span className="text-gray-600 ml-1">(留空不修改)</span>}
-          </label>
-          <input type="password" value={f.password} onChange={e => setF({ ...f, password: e.target.value })}
-            placeholder={isCreate ? '设置登录密码' : '留空则保持原密码'} minLength={6}
-            className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2.5 text-white text-sm
-                       focus:border-ur-cyan focus:outline-none placeholder:text-gray-600" />
-        </div>
-
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Steam64 ID <span className="text-ur-rose">*</span></label>
-          <input value={f.steam_id} onChange={e => setF({ ...f, steam_id: e.target.value })}
-            placeholder="7656119XXXXXXXXXXXX（17位数字）" maxLength={17}
-            className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2.5 text-white text-sm
-                       focus:border-ur-cyan focus:outline-none placeholder:text-gray-600 font-mono tracking-wide" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">职位 <span className="text-ur-rose">*</span></label>
-            <select value={f.role} onChange={e => setF({ ...f, role: e.target.value })}
-              className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2.5 text-white text-sm
-                         focus:border-ur-cyan focus:outline-none cursor-pointer">
-              <option value="admin">管理员</option>
-              <option value="player">选手</option>
-              <option value="coach">教练</option>
-              <option value="team_lead">领队</option>
-              <option value="analyst">分析师</option>
-              <option value="manager">经理</option>
-              <option value="ceo">CEO</option>
-              <option value="pending">待审核</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">分部</label>
-            <select value={f.division} onChange={e => setF({ ...f, division: e.target.value })}
-              className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2.5 text-white text-sm
-                         focus:border-ur-cyan focus:outline-none cursor-pointer">
-              <option value="cs2">CS2</option>
-              <option value="val">Valorant</option>
-              <option value="all">全部</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="flex gap-3 pt-1">
-          <button type="button" onClick={onClose}
-            className="flex-1 py-2.5 text-sm border border-ur-border rounded-lg text-gray-400 hover:text-white hover:border-gray-500 transition-colors">
-            取消
-          </button>
-          <button type="submit"
-            className="flex-1 py-2.5 text-sm font-display bg-ur-cyan text-ur-bg rounded-lg hover:bg-ur-cyan/80 transition-all">
-            {isCreate ? '创建' : '保存'}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-/* ================================================================
-   赛程表单（创建 / 编辑复用）
-   ================================================================ */
-function ScheduleForm({ init, onSave, onClose }) {
-  const isEdit = !!init.editId;
-  const [f, setF] = useState(init.editId ? { ...init } : { match_date: '', match_time: '', opponent: '', event_name: '', match_type: 'official', bo_format: 'BO1', notes: '', division: 'cs2', location_type: 'online', source_link: '', stage: '', region: '' });
-
-  const submit = (e) => {
-    e.preventDefault();
-    if (!f.match_date || !f.opponent) return;
-    onSave(f);
-  };
-
-  const field = (label, key, opts = {}) => (
-    <div>
-      <label className="block text-xs text-gray-500 mb-1">{label}</label>
-      {opts.options ? (
-        <select value={f[key] || ''} onChange={e => setF({ ...f, [key]: e.target.value })}
-          className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2 text-white text-xs focus:border-ur-cyan focus:outline-none cursor-pointer">
-          {opts.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      ) : (
-        <input type={opts.type || 'text'} value={f[key] || ''} onChange={e => setF({ ...f, [key]: e.target.value })}
-          placeholder={opts.placeholder || ''} className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2 text-white text-xs focus:border-ur-cyan focus:outline-none placeholder:text-gray-600" />
-      )}
-    </div>
-  );
-
-  return (
-    <form onSubmit={submit} className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        {field('日期 *', 'match_date', { type: 'date' })}
-        {field('时间', 'match_time', { type: 'time' })}
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {field('对手 *', 'opponent', { placeholder: '对手名称' })}
-        {field('赛事名称', 'event_name', { placeholder: '如 IEM Chengdu 2026' })}
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        {field('赛制', 'bo_format', { options: [{ value: 'BO1', label: 'BO1' }, { value: 'BO3', label: 'BO3' }, { value: 'BO5', label: 'BO5' }] })}
-        {field('类型', 'match_type', { options: [{ value: 'official', label: '正式赛' }, { value: 'scrim', label: '训练赛' }] })}
-        {field('方式', 'location_type', { options: [{ value: 'online', label: '线上' }, { value: 'offline', label: '线下' }, { value: 'hybrid', label: '混合' }] })}
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {field('阶段', 'stage', { placeholder: '如 Qualifier / 海选' })}
-        {field('区域', 'region', { placeholder: '如 Asia / China' })}
-      </div>
-      {field('来源链接', 'source_link', { placeholder: 'https://liquipedia.net/...' })}
-      {field('备注', 'notes', { placeholder: '额外说明' })}
-      <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onClose} className="flex-1 py-2 text-xs border border-ur-border rounded-lg text-gray-400 hover:text-white hover:border-gray-500 transition-colors">取消</button>
-        <button type="submit" className="flex-1 py-2 text-xs font-display bg-ur-amber/80 text-ur-bg rounded-lg hover:bg-ur-amber transition-all">{isEdit ? '保存' : '添加'}</button>
-      </div>
-    </form>
-  );
-}
+import TournamentManager from './TournamentManager';
+import Users from './Users';
+import './workstation-v2.css';
 
 /* ================================================================
    主组件
    ================================================================ */
+/* ── 可折叠栏（数据管理 v2：赛事管理默认展开，其余默认收起） ── */
+function AdminSection({ title, sub, defaultOpen, children }) {
+  const [open, setOpen] = useState(!!defaultOpen);
+  return (
+    <div className="mb-5 rounded-2xl border border-ur-border bg-ur-card">
+      <div className="flex items-center justify-between px-5 py-4 cursor-pointer select-none hover:bg-white/[0.02]"
+        onClick={() => setOpen(o => !o)}>
+        <h3 className="font-sans font-semibold text-base text-white flex items-center gap-2">
+          <span className="w-1 h-4 rounded bg-ur-amber" />{title}
+          {sub && <span className="text-xs font-normal text-gray-500">{sub}</span>}
+        </h3>
+        <span className="text-ur-muted text-sm">{open ? '▾ 收起' : '› 展开'}</span>
+      </div>
+      {open && <div className="px-5 pb-5">{children}</div>}
+    </div>
+  );
+}
+
 export default function Admin() {
+  const DM_NAV = [
+    { id: 'tour',     label: '赛事管理',   icon: 'trophy' },
+    { id: 'maintain', label: '数据维护',   icon: 'log' },
+    { id: 'json',     label: '训练赛JSON', icon: 'quick' },
+    { id: 'dict',     label: '字段库维护', icon: 'mistakes' },
+    { id: 'users',    label: '用户与权限', icon: 'hub' },
+  ];
+  const [sec, setSec] = useState('tour');
+  const { t } = useLang();
+
   /* ── JSON Import State ── */
   const [jsonFiles, setJsonFiles] = useState([]);
   const [opponent, setOpponent] = useState('');
@@ -201,55 +45,50 @@ export default function Admin() {
   const [batchResults, setBatchResults] = useState(null);
   const [importError, setImportError] = useState(null);
 
-  /* ── ETL Sync State ── */
-  const [etlRunning, setEtlRunning] = useState(false);
-  const [etlResult, setEtlResult] = useState(null);
-  const [hltvRunning, setHltvRunning] = useState(false);
-  const [hltvResult, setHltvResult] = useState(null);
+  /* ── Image Import State (旧, 保留兼容) ── */
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageResult, setImageResult] = useState(null);
+  const [imageOpponent, setImageOpponent] = useState('');
+  const [imageMatchDate, setImageMatchDate] = useState('');
 
-  /* ── User Management State ── */
-  const [users, setUsers] = useState([]);
-  const [pendingUsers, setPendingUsers] = useState([]);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [usersError, setUsersError] = useState(null);
+  /* ── 手动录入 State ── */
+  const emptyUrRow = () => ({ player_id: '', kills: '', deaths: '', assists: '', adr: '', rating: '' });
+  const emptyOppRow = () => ({ name: '', kills: '', deaths: '', assists: '', adr: '', rating: '' });
+  const [rosterPlayers, setRosterPlayers] = useState([]);
+  const [manualForm, setManualForm] = useState({ match_date: '', opponent: '', map_name: '', our_score: '', their_score: '', match_type: 'official', tournament_id: '', stage_id: '', is_walkover: false, walkover_winner: 'us' });
+  // 正赛录入用：赛事列表 + 选中赛事的阶段列表
+  const [tournamentOpts, setTournamentOpts] = useState([]);
+  const [stageOpts, setStageOpts] = useState([]);
+  const [urRows, setUrRows] = useState([emptyUrRow(), emptyUrRow(), emptyUrRow(), emptyUrRow(), emptyUrRow()]);
+  const [urOpen, setUrOpen] = useState(false); // UR 选手数据默认收起（OCR 为主）
+  const [oppRows, setOppRows] = useState([emptyOppRow(), emptyOppRow(), emptyOppRow(), emptyOppRow(), emptyOppRow()]);
+  const [bpSteps, setBpSteps] = useState([]); // 本场 BP 流程 [{team,action,map}]
+  const [manualSubmitting, setManualSubmitting] = useState(false);
+  const [manualResult, setManualResult] = useState(null);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrMsg, setOcrMsg] = useState(null);
 
-  /* ── Modal State ── */
-  const [modal, setModal] = useState(null);        // { type: 'create'|'edit', user? }
-  const [modalError, setModalError] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null); // user id to delete
+  /* ── 已录入比赛列表 / 编辑 / 删除 State ── */
+  const [matchList, setMatchList] = useState([]);
+  const [matchListLoading, setMatchListLoading] = useState(false);
+  const [matchListType, setMatchListType] = useState('all'); // all | scrim | official
+  const [matchListSearch, setMatchListSearch] = useState('');
+  const [editingMatchId, setEditingMatchId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   /* ── Logs State ── */
   const [logs, setLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
 
-  /* ── Schedule State ── */
-  const [upcoming, setUpcoming] = useState([]);
-  const [upcomingLoading, setUpcomingLoading] = useState(false);
-  const [scheduleModal, setScheduleModal] = useState(null);
-  const [scheduleError, setScheduleError] = useState(null);
-  const [scheduleDelete, setScheduleDelete] = useState(null);
-  const [linkUrl, setLinkUrl] = useState('');
-  const [linkLoading, setLinkLoading] = useState(false);
-  const [linkResult, setLinkResult] = useState(null);
 
-  const EMPTY_SCHEDULE = { match_date: '', match_time: '', opponent: '', event_name: '', match_type: 'official', bo_format: 'BO1', notes: '', division: 'cs2', location_type: 'online', source_link: '', stage: '', region: '' };
-
-  /* ── 数据加载 ── */
-  const loadUsers = useCallback(async () => {
-    setUsersLoading(true);
-    setUsersError(null);
-    try {
-      const [uRes, pRes] = await Promise.all([
-        api.get('/admin/users'),
-        api.get('/admin/pending-users'),
-      ]);
-      setUsers(uRes.data);
-      setPendingUsers(pRes.data);
-    } catch (e) {
-      setUsersError('加载用户列表失败');
-    }
-    setUsersLoading(false);
-  }, []);
+  /* ── Error Types State ── */
+  const [errTypes, setErrTypes] = useState([]);
+  const [errTypesLoading, setErrTypesLoading] = useState(false);
+  const [errTypeEdit, setErrTypeEdit] = useState(null); // null | {editing object}
+  const [errTypeForm, setErrTypeForm] = useState({ category: '', name: '', keywords: '', description: '', severity: 'mid' });
+  const [errTypeFilter, setErrTypeFilter] = useState('');
 
   const loadLogs = useCallback(async () => {
     setLogsLoading(true);
@@ -260,47 +99,300 @@ export default function Admin() {
     setLogsLoading(false);
   }, []);
 
-  useEffect(() => { loadUsers(); loadLogs(); }, [loadUsers, loadLogs]);
+  useEffect(() => { loadLogs(); }, [loadLogs]);
 
-  /* ── 赛程管理 ── */
-  const loadUpcoming = useCallback(async () => {
-    setUpcomingLoading(true);
-    try { const { data } = await api.get('/admin/upcoming'); setUpcoming(data); } catch {}
-    setUpcomingLoading(false);
+  /* ── 手动录入逻辑 ── */
+  useEffect(() => {
+    api.get('/players?division=cs2&status=active&team_type=roster')
+      .then(({ data }) => {
+        const list = Array.isArray(data) ? data : [];
+        // 前端兜底过滤：只保留现役正式队员(active+roster)，排除离队(former/left)等
+        const filtered = list.filter(p =>
+          (p.status === 'active' || p.status === undefined) &&
+          (p.team_type === 'roster' || p.team_type === undefined)
+        );
+        setRosterPlayers(filtered);
+      })
+      .catch(() => {});
   }, []);
-  useEffect(() => { loadUpcoming(); }, [loadUpcoming]);
 
-  const handleScheduleSave = async (form) => {
-    setScheduleError(null);
+  // 加载赛事列表（供正赛录入的"选赛事"下拉）
+  useEffect(() => {
+    api.get('/tournaments')
+      .then(({ data }) => setTournamentOpts(Array.isArray(data) ? data : []))
+      .catch(() => setTournamentOpts([]));
+  }, []);
+
+  // 选中赛事后，拉取该赛事的阶段列表（供"选阶段"下拉）
+  useEffect(() => {
+    if (manualForm.match_type !== 'official' || !manualForm.tournament_id) {
+      setStageOpts([]);
+      return;
+    }
+    api.get(`/tournaments/${manualForm.tournament_id}`)
+      .then(({ data }) => setStageOpts(Array.isArray(data?.stages) ? data.stages : []))
+      .catch(() => setStageOpts([]));
+  }, [manualForm.match_type, manualForm.tournament_id]);
+
+  // 选了正赛阶段后，按该阶段 BO 初始化 BP 流程模板（BO1 单图无 BP；编辑模式不重置）
+  useEffect(() => {
+    if (editingMatchId) return;
+    if (manualForm.match_type !== 'official' || !manualForm.stage_id) { setBpSteps([]); return; }
+    const stage = stageOpts.find(s => String(s.id) === String(manualForm.stage_id));
+    const bo = (stage?.bo_format || 'BO1').toUpperCase();
+    const TPL = {
+      BO3: [['ur','ban'],['opp','ban'],['ur','pick'],['opp','pick'],['ur','ban'],['opp','ban'],['','decider']],
+      BO5: [['ur','ban'],['opp','ban'],['ur','pick'],['opp','pick'],['ur','pick'],['opp','pick'],['','decider']],
+    };
+    if (!TPL[bo]) { setBpSteps([]); return; }
+    setBpSteps(TPL[bo].map(([team, action]) => ({ team, action, map: '' })));
+  }, [manualForm.match_type, manualForm.stage_id, stageOpts, editingMatchId]);
+
+  const setUrRow = (i, key, val) => setUrRows(rows => rows.map((r, j) => j === i ? { ...r, [key]: val } : r));
+  const setOppRow = (i, key, val) => setOppRows(rows => rows.map((r, j) => j === i ? { ...r, [key]: val } : r));
+
+  /* ── 已录入比赛：加载列表（按类型，近 120 天） ── */
+  const loadMatchList = useCallback(async () => {
+    setMatchListLoading(true);
     try {
-      if (scheduleModal?.editId) {
-        await api.put(`/admin/upcoming/${scheduleModal.editId}`, form);
-      } else {
-        await api.post('/admin/upcoming', form);
+      const { data } = await api.get('/matches/grouped', { params: { matchType: 'official', days: 120 } });
+      const flat = [];
+      (data.groups || []).forEach(g => {
+        (g.maps || []).forEach(m => {
+          flat.push({
+            id: m.id,
+            match_date: g.match_date,
+            opponent: g.opponent,
+            map_name: m.map_name,
+            our_score: m.our_score,
+            their_score: m.their_score,
+            result: m.result,
+            is_walkover: m.is_walkover,
+            match_type: g.match_type,
+            tournament_name: g.tournament_name,
+          });
+        });
+      });
+      flat.sort((a, b) => (b.id || 0) - (a.id || 0)); // 按录入时间倒序（id 为自增录入序，不受比赛日期编辑影响）
+      setMatchList(flat);
+    } catch { setMatchList([]); }
+    setMatchListLoading(false);
+  }, [matchListType]);
+
+  useEffect(() => { loadMatchList(); }, [loadMatchList]);
+
+  /* ── 编辑：拉取整场数据回填表单，进入编辑模式 ── */
+  const startEditMatch = async (id) => {
+    setManualResult(null);
+    try {
+      const { data } = await api.get(`/training/manual-match/${id}`);
+      setManualForm({
+        match_date: data.match_date || '',
+        opponent: data.opponent || '',
+        map_name: data.map_name || '',
+        our_score: data.our_score != null ? String(data.our_score) : '',
+        their_score: data.their_score != null ? String(data.their_score) : '',
+        match_type: data.match_type || 'scrim',
+        tournament_id: data.tournament_id != null ? String(data.tournament_id) : '',
+        stage_id: data.stage_id != null ? String(data.stage_id) : '',
+        is_walkover: !!data.is_walkover,
+        walkover_winner: (Number(data.our_score) > Number(data.their_score)) ? 'us' : 'them',
+      });
+      try { setBpSteps(data.bp_json ? JSON.parse(data.bp_json) : []); } catch { setBpSteps([]); }
+      const ur = [emptyUrRow(), emptyUrRow(), emptyUrRow(), emptyUrRow(), emptyUrRow()];
+      (data.ur_players || []).slice(0, 5).forEach((p, i) => {
+        ur[i] = {
+          player_id: p.player_id ? String(p.player_id) : '',
+          kills: p.kills ?? '', deaths: p.deaths ?? '', assists: p.assists ?? '',
+          adr: p.adr ?? '', rating: p.rating ?? '',
+        };
+      });
+      setUrRows(ur);
+      const opp = [emptyOppRow(), emptyOppRow(), emptyOppRow(), emptyOppRow(), emptyOppRow()];
+      (data.opp_players || []).slice(0, 5).forEach((p, i) => {
+        opp[i] = {
+          name: p.name || '',
+          kills: p.kills ?? '', deaths: p.deaths ?? '', assists: p.assists ?? '',
+          adr: p.adr ?? '', rating: p.rating ?? '',
+        };
+      });
+      setOppRows(opp);
+      setEditingMatchId(id);
+      setUrOpen(true); // 编辑回填后展开核对
+      document.getElementById('manual-entry-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) {
+      setManualResult({ success: false, message: e.response?.data?.error || '加载比赛数据失败' });
+    }
+  };
+
+  /* ── 退出编辑模式，清空表单（keepMsg=true 时保留结果提示） ── */
+  const cancelEditMatch = (keepMsg = false) => {
+    setEditingMatchId(null);
+    setManualForm({ match_date: '', opponent: '', map_name: '', our_score: '', their_score: '', match_type: 'official', tournament_id: '', stage_id: '', is_walkover: false, walkover_winner: 'us' });
+    setUrRows([emptyUrRow(), emptyUrRow(), emptyUrRow(), emptyUrRow(), emptyUrRow()]);
+    setOppRows([emptyOppRow(), emptyOppRow(), emptyOppRow(), emptyOppRow(), emptyOppRow()]);
+    if (!keepMsg) setManualResult(null);
+  };
+
+  /* ── 删除整场（含选手数据，不可恢复，先确认） ── */
+  const deleteMatch = async (id) => {
+    if (!window.confirm('确定删除这场比赛？该场的选手数据会一并删除，且不可恢复。')) return;
+    setDeletingId(id);
+    try {
+      const { data } = await api.delete(`/training/manual-match/${id}`);
+      setManualResult({ success: true, message: data.message || '已删除' });
+      if (editingMatchId === id) cancelEditMatch(true);
+      loadMatchList();
+    } catch (e) {
+      setManualResult({ success: false, message: e.response?.data?.error || '删除失败' });
+    }
+    setDeletingId(null);
+  };
+
+  // 从近期赛事页「编辑」跳转而来：URL ?edit=<id> → 自动回填该场进入编辑模式
+  useEffect(() => {
+    const eid = searchParams.get('edit');
+    if (eid) {
+      startEditMatch(Number(eid));
+      searchParams.delete('edit');
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const handleManualSubmit = async () => {
+    setManualResult(null);
+    const f = manualForm;
+    if (!f.match_date || !f.opponent.trim()) {
+      setManualResult({ success: false, message: '请填写比赛日期和对手名称' }); return;
+    }
+    // 正赛必须选赛事（阶段可选）
+    if (f.match_type === 'official' && !f.tournament_id) {
+      setManualResult({ success: false, message: '正赛录入需先选择所属赛事' }); return;
+    }
+    // 弃权场次：免填比分与选手；正常场次才校验
+    if (!f.is_walkover) {
+      if (!f.map_name) {
+        setManualResult({ success: false, message: '请先选择本场是第几张图（地图）' }); return;
       }
-      setScheduleModal(null);
-      loadUpcoming();
-      loadLogs();
-    } catch (e) {
-      setScheduleError(e.response?.data?.error || '保存失败');
+      if (f.our_score === '' || f.their_score === '') {
+        setManualResult({ success: false, message: '比分为空——请先上传该图记分板截图，由识别自动填入比分' }); return;
+      }
+      const filled = urRows.filter(r => r.player_id && r.kills !== '' && r.deaths !== '' && r.adr !== '');
+      if (filled.length < 5) { setManualResult({ success: false, message: `UR 选手数据不全（${filled.length}/5），需填满 5 名` }); return; }
+      if (new Set(filled.map(r => r.player_id)).size < 5) { setManualResult({ success: false, message: '5 名选手有重复，请检查下拉选择' }); return; }
     }
-  };
 
-  const handleScheduleDelete = async (id) => {
-    try { await api.delete(`/admin/upcoming/${id}`); setScheduleDelete(null); loadUpcoming(); loadLogs(); } catch {}
-  };
-
-  const handleLinkLookup = async () => {
-    if (!linkUrl.trim()) return;
-    setLinkLoading(true); setLinkResult(null);
+    setManualSubmitting(true);
     try {
-      const { data } = await api.post('/admin/lookup-tournament', { url: linkUrl.trim() });
-      setLinkResult(data);
+      const payload = {
+        match_date: f.match_date, opponent: f.opponent.trim(), map_name: f.map_name,
+        our_score: f.our_score, their_score: f.their_score,
+        match_type: f.match_type,
+        tournament_id: f.match_type === 'official' ? f.tournament_id : null,
+        stage_id: f.match_type === 'official' ? (f.stage_id || null) : null,
+        is_walkover: f.is_walkover,
+        walkover_winner: f.walkover_winner,
+        ur_players: urRows,
+        opp_players: oppRows.filter(r => r.name.trim()),
+        bp_json: (f.match_type === 'official' && bpSteps.length) ? JSON.stringify(bpSteps) : null,
+      };
+      const { data } = editingMatchId
+        ? await api.put(`/training/manual-match/${editingMatchId}`, payload)
+        : await api.post('/training/manual-match', payload);
+      setManualResult({ success: true, message: data.message });
+      loadMatchList();
+      if (editingMatchId) {
+        cancelEditMatch(true);
+      } else {
+        setUrRows([emptyUrRow(), emptyUrRow(), emptyUrRow(), emptyUrRow(), emptyUrRow()]);
+        setOppRows([emptyOppRow(), emptyOppRow(), emptyOppRow(), emptyOppRow(), emptyOppRow()]);
+        setManualForm(prev => ({ ...prev, our_score: '', their_score: '', is_walkover: false }));
+      }
     } catch (e) {
-      setLinkResult({ error: e.response?.data?.error || '查询失败' });
+      setManualResult({ success: false, message: e.response?.data?.error || (editingMatchId ? '更新失败' : '录入失败') });
     }
-    setLinkLoading(false);
+    setManualSubmitting(false);
   };
+
+  // 截图自动识别：上传记分板 → AI 提取 → 填入表单（用户核对后再录入）
+  const handleOcrFile = async (file) => {
+    if (!file) return;
+    setOcrMsg(null);
+    setOcrLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const { data } = await api.post('/admin/ocr-match-image', fd);
+      if (Array.isArray(data.ur_players) && data.ur_players.length) {
+        const rows = [emptyUrRow(), emptyUrRow(), emptyUrRow(), emptyUrRow(), emptyUrRow()];
+        data.ur_players.slice(0, 5).forEach((p, i) => {
+          rows[i] = {
+            player_id: p.player_id ? String(p.player_id) : '',
+            kills: p.kills ?? '', deaths: p.deaths ?? '', assists: p.assists ?? '',
+            adr: p.adr ?? '', rating: p.rating ?? '',
+          };
+        });
+        setUrRows(rows);
+      }
+      if (Array.isArray(data.opp_players) && data.opp_players.length) {
+        const rows = [emptyOppRow(), emptyOppRow(), emptyOppRow(), emptyOppRow(), emptyOppRow()];
+        data.opp_players.slice(0, 5).forEach((p, i) => {
+          rows[i] = {
+            name: p.name ?? '',
+            kills: p.kills ?? '', deaths: p.deaths ?? '', assists: p.assists ?? '',
+            adr: p.adr ?? '', rating: p.rating ?? '',
+          };
+        });
+        setOppRows(rows);
+      }
+      setManualForm(f => ({
+        ...f,
+        our_score: data.our_score != null ? String(data.our_score) : f.our_score,
+        their_score: data.their_score != null ? String(data.their_score) : f.their_score,
+      }));
+      setUrOpen(true); // 识别完成自动展开核对
+      setOcrMsg({ success: true, message: `识别完成：比分 ${data.our_score ?? '?'} : ${data.their_score ?? '?'}，我方 ${(data.ur_players || []).length} 人（自动匹配花名册 ${data.matched || 0} 人）、对方 ${(data.opp_players || []).length} 人。请核对后录入。` });
+    } catch (e) {
+      setOcrMsg({ success: false, message: e.response?.data?.error || '识别失败，请重试或换张更清晰的截图' });
+    }
+    setOcrLoading(false);
+  };
+
+  /* ── 犯错类型管理 ── */
+  const loadErrTypes = useCallback(async () => {
+    setErrTypesLoading(true);
+    try { const { data } = await api.get('/training-plans/error-types'); setErrTypes(data); } catch {}
+    setErrTypesLoading(false);
+  }, []);
+  useEffect(() => { loadErrTypes(); }, [loadErrTypes]);
+
+  const handleErrTypeSave = async () => {
+    try {
+      if (errTypeEdit?.id) {
+        await api.put(`/training-plans/error-types/${errTypeEdit.id}`, errTypeForm);
+      } else {
+        await api.post('/training-plans/error-types', errTypeForm);
+      }
+      setErrTypeEdit(null);
+      setErrTypeForm({ category: '', name: '', keywords: '', description: '', severity: 'mid' });
+      loadErrTypes();
+    } catch (e) { alert('保存失败: ' + (e.response?.data?.error || e.message)); }
+  };
+
+  const handleErrTypeDelete = async (id) => {
+    if (!confirm('确定删除此犯错类型？')) return;
+    try { await api.delete(`/training-plans/error-types/${id}`); loadErrTypes(); } catch {}
+  };
+
+  const handleErrTypeSeed = async () => {
+    try {
+      const { data } = await api.post('/training-plans/error-types/seed');
+      alert(data.message + (data.count ? ` (${data.count}条)` : ''));
+      loadErrTypes();
+    } catch (e) { alert('初始化失败: ' + (e.response?.data?.error || e.message)); }
+  };
+
 
   /* ── JSON 导入逻辑 ── */
   const extractOpponentFromFilename = (filename) => {
@@ -342,582 +434,568 @@ export default function Admin() {
     setImporting(false);
   };
 
-  /* ── ETL 同步 ── */
-  const handleEtlSync = async () => {
-    setEtlRunning(true);
-    setEtlResult(null);
+  /* ── 赛事数据图片解析 ── */
+  const handleImageImport = async () => {
+    if (imageFiles.length === 0) { setImageResult({ success: false, message: '请选择至少一个图片文件' }); return; }
+    if (!imageOpponent.trim()) { setImageResult({ success: false, message: '请输入对手名称' }); return; }
+    if (!imageMatchDate) { setImageResult({ success: false, message: '请选择比赛日期' }); return; }
+    setImageUploading(true);
+    setImageResult(null);
     try {
-      const { data } = await api.post('/admin/run-etl');
-      setEtlResult({ success: true, data });
+      const form = new FormData();
+      imageFiles.forEach(f => form.append('images', f));
+      form.append('opponent', imageOpponent.trim());
+      form.append('match_date', imageMatchDate);
+      const { data } = await api.post('/admin/parse-match-images', form);
+      setImageResult({ success: true, message: data.message, players: data.players, errors: data.errors });
+      if (data.players && data.players.length > 0) {
+        setImageFiles([]);
+        setImageOpponent('');
+        setImageMatchDate('');
+        const input = document.getElementById('image-file-input');
+        if (input) input.value = '';
+      }
     } catch (e) {
-      setEtlResult({ success: false, error: e.response?.data?.error || 'ETL同步失败', hint: e.response?.data?.hint });
+      setImageResult({ success: false, message: e.response?.data?.error || '解析失败' });
     }
-    setEtlRunning(false);
-  };
-
-  /* ── HLTV 同步 ── */
-  const handleHltvSyncLocal = async () => {
-    setHltvRunning(true);
-    setHltvResult(null);
-    try {
-      const { data } = await api.post('/admin/sync-hltv');
-      setHltvResult({ success: true, data });
-    } catch (e) {
-      setHltvResult({ success: false, error: e.response?.data?.error || 'HLTV同步失败', hint: e.response?.data?.hint });
-    }
-    setHltvRunning(false);
-  };
-
-  /* ── 用户操作 ── */
-  const handleCreate = async (form) => {
-    setModalError(null);
-    try {
-      await api.post('/admin/create-user', form);
-      setModal(null);
-      loadUsers();
-      loadLogs();
-    } catch (e) {
-      setModalError(e.response?.data?.error || '创建失败');
-    }
-  };
-
-  const handleUpdate = async (form) => {
-    if (!modal?.user) return;
-    setModalError(null);
-    try {
-      await api.put(`/admin/user/${modal.user.id}`, form);
-      setModal(null);
-      loadUsers();
-      loadLogs();
-    } catch (e) {
-      setModalError(e.response?.data?.error || '更新失败');
-    }
-  };
-
-  const handleApprove = async (id) => {
-    try {
-      await api.post(`/admin/approve-user/${id}`);
-      loadUsers();
-      loadLogs();
-    } catch { /* ignore */ }
-  };
-
-  const handleDelete = async (id) => {
-    try {
-      await api.delete(`/admin/user/${id}`);
-      setDeleteConfirm(null);
-      loadUsers();
-      loadLogs();
-    } catch { /* ignore */ }
+    setImageUploading(false);
   };
 
   /* ── 渲染 ── */
   return (
-    <div className="max-w-4xl mx-auto pb-12">
-      <h2 className="font-display text-2xl font-bold text-white mb-1">数据管理</h2>
-      <p className="text-gray-500 text-sm mb-6">数据导入 · 用户管理 · 系统配置</p>
+    <div className="max-w-[1440px] mx-auto pb-12 px-4">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="font-sans font-semibold text-2xl font-bold text-white">{t('admin.title')}</h2>
+      </div>
+      <p className="text-gray-500 text-sm mb-6">{t('admin.subtitle')}</p>
 
-      {/* ════════════════════════════════════════════════════════════
-          区块 1：训练赛 JSON 导入
-         ════════════════════════════════════════════════════════════ */}
-      <div className="data-card mb-5">
-        <h3 className="font-display text-base font-semibold text-white mb-4 flex items-center gap-2">
-          <span className="w-1 h-4 rounded bg-ur-cyan" />
-          训练赛 JSON 导入
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">对手名称 <span className="text-gray-600 text-xs">(可选，自动从文件名识别)</span></label>
-            <input type="text" value={opponent} onChange={e => setOpponent(e.target.value)}
-              placeholder="自动从文件名识别，如 0508_Mongolz.A_M1.json → Mongolz.A"
-              className="w-full bg-ur-bg border border-ur-border text-white rounded-lg px-4 py-2.5 text-sm
-                         focus:border-ur-cyan focus:outline-none placeholder:text-gray-600" />
-          </div>
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm text-gray-400 mb-1.5">JSON 数据文件 <span className="text-ur-rose">*</span></label>
-          <input id="json-file-input" type="file" accept=".json" multiple
-            onChange={e => {
-              const selected = Array.from(e.target.files || []);
-              setJsonFiles(prev => [...prev, ...selected]);
-              if (selected.length > 0 && !opponent) {
-                const inferred = extractOpponentFromFilename(selected[0].name);
-                if (inferred && !opponent) setOpponent(inferred);
-              }
-              setImportError(null); setBatchResults(null);
-            }}
-            className="w-full text-sm text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg
-                       file:border-0 file:text-sm file:font-display file:bg-ur-indigo/20 file:text-ur-cyan
-                       hover:file:bg-ur-indigo/30 file:cursor-pointer" />
-        </div>
-        {jsonFiles.length > 0 && (
-          <div className="mb-4">
-            <p className="text-xs text-gray-500 mb-2">已选 {jsonFiles.length} 个文件</p>
-            <div className="max-h-32 overflow-y-auto space-y-1">
-              {jsonFiles.map((f, i) => (
-                <div key={i} className="flex items-center justify-between bg-ur-bg rounded px-3 py-1.5 text-sm group">
-                  <span className="text-gray-300 truncate mr-2">{f.name}</span>
-                  <button onClick={() => removeFile(i)} disabled={importing}
-                    className="text-gray-600 hover:text-ur-rose transition-colors shrink-0 disabled:opacity-30" title="移除">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        <div className="flex items-center gap-3">
-          <button onClick={handleJsonImport} disabled={importing || jsonFiles.length === 0}
-            className="px-6 py-2.5 text-sm font-display bg-ur-cyan text-ur-bg rounded-lg
-                       hover:bg-ur-cyan/80 disabled:opacity-50 transition-all">
-            {importing ? `导入中 (${jsonFiles.length} 文件)...` : `导入到数据库 (${jsonFiles.length > 0 ? jsonFiles.length + ' 文件' : ''})`}
-          </button>
-          <span className="text-xs text-gray-600">CS2 比赛 JSON → matches + player_stats</span>
-        </div>
-        {batchResults && (
-          <div className="mt-4 space-y-2">
-            <div className="p-3 bg-ur-indigo/10 border border-ur-indigo/30 rounded-lg text-sm flex items-center gap-3">
-              <span className="font-display text-ur-cyan">
-                批量导入完成：{batchResults.filter(r => r.success).length}/{batchResults.length} 成功
-              </span>
-            </div>
-            {batchResults.map((r, i) => (
-              <div key={i} className={`p-3 rounded-lg text-sm border ${r.success ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-ur-rose/10 border-ur-rose/30'}`}>
-                <p className={`font-display mb-0.5 ${r.success ? 'text-emerald-400' : 'text-ur-rose'}`}>
-                  {r.success ? '✓' : '✗'} {r.filename}
-                </p>
-                {r.success ? (
-                  <p className="text-gray-400">{r.map} · {r.score} · {r.opponent && `${r.opponent} · `}{r.result === 'win' ? '胜' : r.result === 'loss' ? '负' : '平'} · {r.players} 名选手数据
-                    {r.players === 0 && r.totalEntries > 0 && <span className="text-ur-amber ml-1">({r.totalEntries} 条记录未匹配)</span>}
-                  </p>
-                ) : <p className="text-ur-rose/70">{r.error}</p>}
-                {r.success && r.players === 0 && r.skippedReasons?.length > 0 && (
-                  <div className="mt-1.5 bg-ur-amber/10 border border-ur-amber/20 rounded p-2 text-xs">
-                    <p className="text-ur-amber/80 font-display mb-1">诊断信息：</p>
-                    {r.skippedReasons.map((reason, j) => <p key={j} className="text-gray-500 ml-2 leading-relaxed">{reason}</p>)}
-                  </div>
-                )}
+      <div className="ws2-layout">
+        <aside className="ws2-nav">
+          <div className="ws2-nav-group">
+            <div className="ws2-nav-gname">数据管理</div>
+            {DM_NAV.map((it) => (
+              <div key={it.id} className={'ws2-nav-item ' + (sec === it.id ? 'ws2-nav-on' : '')} onClick={() => setSec(it.id)}>
+                <img src={`/reshape/home/icons/icon-${it.icon}.png`} alt="" />
+                <span>{it.label}</span>
               </div>
             ))}
           </div>
-        )}
-        {importError && (
-          <div className="mt-4 p-3 bg-ur-rose/10 border border-ur-rose/30 rounded-lg text-sm text-ur-rose">{importError}</div>
-        )}
-      </div>
+        </aside>
+        <main className="ws2-main">
+      {/* ══ ① 赛事管理（默认展开） ══ */}
+      {sec === 'tour' && (<div className="mb-5 rounded-2xl border border-ur-border bg-ur-card p-5">
+        <TournamentManager />
+      </div>)}
 
-      {/* ════════════════════════════════════════════════════════════
-          区块 1.5：数据同步工具
-         ════════════════════════════════════════════════════════════ */}
-      <div className="data-card mb-5">
-        <h3 className="font-display text-base font-semibold text-white mb-4 flex items-center gap-2">
-          <span className="w-1 h-4 rounded bg-[#D4AF37]" />
-          数据同步工具
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* ETL 同步 */}
-          <div className="p-4 rounded-lg" style={{ background: 'rgba(212,175,55,0.05)', border: '1px solid rgba(212,175,55,0.15)' }}>
-            <h4 className="font-display text-sm text-[#D4AF37] mb-2">ETL 数据同步</h4>
-            <p className="text-xs text-gray-500 mb-3">从本地 Excel 文件（训练日志/简报/战术/比赛数据）全量导入到数据库</p>
-            <button onClick={handleEtlSync} disabled={etlRunning}
-              className="w-full px-4 py-2 text-sm font-display bg-[#D4AF37] text-black rounded-lg
-                         hover:bg-[#D4AF37]/80 disabled:opacity-50 transition-all">
-              {etlRunning ? '⏳ 同步中...（约30秒）' : '▶ 执行 ETL 同步'}
-            </button>
-            {etlResult && (
-              <div className={`mt-3 p-3 rounded-lg text-xs border ${
-                etlResult.success ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-ur-rose/10 border-ur-rose/30 text-ur-rose'
-              }`}>
-                {etlResult.success ? (
-                  <div>
-                    <p className="font-display mb-1">✅ ETL 同步完成</p>
-                    {etlResult.data && <p className="text-gray-400">{JSON.stringify(etlResult.data)}</p>}
-                  </div>
-                ) : (
-                  <div>
-                    <p className="font-display mb-1">❌ {etlResult.error}</p>
-                    {etlResult.hint && <p className="text-gray-500 mt-1">{etlResult.hint}</p>}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+      {/* ══ ② 数据维护（默认收起：仅正赛录入 + OCR + 已录入编辑） ══ */}
+      {sec === 'maintain' && (<div className="mb-5 rounded-2xl border border-ur-border bg-ur-card p-5">
+      <div className="grid grid-cols-1 gap-6 mb-5 items-stretch">
 
-          {/* HLTV 同步 */}
-          <div className="p-4 rounded-lg" style={{ background: 'rgba(104,232,255,0.05)', border: '1px solid rgba(104,232,255,0.15)' }}>
-            <h4 className="font-display text-sm text-[#68e8ff] mb-2">HLTV 比赛同步</h4>
-            <p className="text-xs text-gray-500 mb-3">从 HLTV 爬取 UR 战队正式比赛数据（最多10场）和选手资料</p>
-            <button onClick={handleHltvSyncLocal} disabled={hltvRunning}
-              className="w-full px-4 py-2 text-sm font-display bg-[#68e8ff] text-black rounded-lg
-                         hover:bg-[#68e8ff]/80 disabled:opacity-50 transition-all">
-              {hltvRunning ? '⏳ 同步中...（约2分钟）' : '▶ 执行 HLTV 同步'}
-            </button>
-            {hltvResult && (
-              <div className={`mt-3 p-3 rounded-lg text-xs border ${
-                hltvResult.success ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-ur-rose/10 border-ur-rose/30 text-ur-rose'
-              }`}>
-                {hltvResult.success ? (
-                  <div>
-                    <p className="font-display mb-1">✅ HLTV 同步完成</p>
-                    {hltvResult.data && (
-                      <div className="text-gray-400 space-y-0.5">
-                        <p>发现 {hltvResult.data.players_found || 0} 名选手 · {hltvResult.data.matches_scraped || 0} 场比赛</p>
-                        <p>新增 {hltvResult.data.matches_inserted || 0} · 更新 {hltvResult.data.matches_updated || 0}</p>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div>
-                    <p className="font-display mb-1">❌ {hltvResult.error}</p>
-                    {hltvResult.hint && <p className="text-gray-500 mt-1">{hltvResult.hint}</p>}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ════════════════════════════════════════════════════════════
-          区块 2：用户与成员管理
-         ════════════════════════════════════════════════════════════ */}
-      <div className="data-card mb-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-display text-base font-semibold text-white flex items-center gap-2">
-            <span className="w-1 h-4 rounded bg-ur-purple" />
-            用户与成员管理
+        {/* ── 手动录入比赛数据 ── */}
+        <div id="manual-entry-card" className="data-card" style={editingMatchId ? { borderColor: 'rgba(212,175,55,0.5)', boxShadow: '0 0 0 1px rgba(212,175,55,0.25)' } : undefined}>
+          <h3 className="font-sans font-semibold text-base font-semibold text-white mb-1 flex items-center gap-2 flex-wrap">
+            <span className="w-1 h-4 rounded" style={{ background: editingMatchId ? '#D4AF37' : '#34d399' }} />
+            {editingMatchId ? '编辑比赛数据' : '手动录入比赛数据'}
+            {editingMatchId && <span className="text-xs font-normal px-2 py-0.5 rounded bg-ur-amber/15 text-ur-amber border border-ur-amber/30">编辑中 · #{editingMatchId}</span>}
           </h3>
-          <button onClick={() => { setModalError(null); setModal({ type: 'create' }); }}
-            className="px-4 py-1.5 text-xs font-display bg-ur-purple/20 text-ur-purple border border-ur-purple/30 rounded-lg
-                       hover:bg-ur-purple/30 transition-all flex items-center gap-1.5">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            创建用户
-          </button>
-        </div>
+          <p className="text-xs text-gray-500 mb-4">
+            {editingMatchId
+              ? '正在修改这场已录入的比赛，改完点「保存修改」覆盖原记录；点「取消编辑」放弃。'
+              : '客场无 JSON 时手动填写，须填满 5 名 UR 选手（击杀/死亡/助攻/ADR/Rating）方可录入。'}
+          </p>
 
-        {/* 待审核提示 */}
-        {pendingUsers.length > 0 && (
-          <div className="mb-4 p-3 bg-ur-amber/10 border border-ur-amber/30 rounded-lg flex items-center justify-between">
-            <p className="text-sm text-ur-amber">
-              <span className="font-display">{pendingUsers.length}</span> 个账号待审核
-            </p>
-            <button onClick={() => {
-              const section = document.getElementById('pending-section');
-              if (section) section.scrollIntoView({ behavior: 'smooth' });
-            }} className="text-xs text-ur-amber/70 hover:text-ur-amber transition-colors">
-              查看 →
-            </button>
+          {/* 比赛类型：仅录正赛（训练赛数据走训练日志/JSON 导入；编辑历史训练赛时如实显示其类型） */}
+          <div className="mb-3">
+            <label className="block text-xs text-gray-500 mb-1.5">比赛类型</label>
+            <div className={`px-3 py-2 rounded-lg text-xs font-medium border ${manualForm.match_type === 'official' ? 'bg-ur-amber/15 border-ur-amber/40 text-ur-amber' : 'bg-ur-accent/15 border-ur-accent/40 text-ur-accent'}`}>
+              {manualForm.match_type === 'official' ? '正赛（手动录入仅限正赛）' : '训练赛（历史记录编辑中）'}
+            </div>
           </div>
-        )}
 
-        {usersError && (
-          <div className="mb-4 p-3 bg-ur-rose/10 border border-ur-rose/30 rounded-lg text-sm text-ur-rose">{usersError}</div>
-        )}
+          {/* 正赛：选赛事 + 选阶段 */}
+          {manualForm.match_type === 'official' && (
+            <div className="grid grid-cols-2 gap-2.5 mb-3 p-3 rounded-lg bg-ur-amber/[0.06] border border-ur-amber/20">
+              <div>
+                <label className="block text-xs text-ur-amber mb-1">所属赛事 <span className="text-ur-rose">*</span></label>
+                <select value={manualForm.tournament_id}
+                  onChange={e => setManualForm(f => ({ ...f, tournament_id: e.target.value, stage_id: '' }))}
+                  className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2 text-white text-xs focus:border-ur-amber focus:outline-none">
+                  <option value="">选择赛事</option>
+                  {tournamentOpts.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-ur-amber mb-1">所属阶段 <span className="text-gray-600">(可选)</span></label>
+                <select value={manualForm.stage_id}
+                  onChange={e => setManualForm(f => ({ ...f, stage_id: e.target.value }))}
+                  disabled={!manualForm.tournament_id}
+                  className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2 text-white text-xs focus:border-ur-amber focus:outline-none disabled:opacity-40">
+                  <option value="">{manualForm.tournament_id ? '选择阶段' : '请先选赛事'}</option>
+                  {stageOpts.map(s => <option key={s.id} value={s.id}>{s.stage_name}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
 
-        {/* 用户表格 */}
-        {usersLoading ? (
-          <div className="text-center py-8 text-gray-500 text-sm">加载中...</div>
-        ) : users.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 text-sm">暂无用户</div>
-        ) : (
-          <div className="overflow-x-auto -mx-1">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="text-left py-2.5 px-3 text-xs text-gray-500 font-medium">用户名</th>
-                  <th className="text-left py-2.5 px-3 text-xs text-gray-500 font-medium hidden md:table-cell">Steam64 ID</th>
-                  <th className="text-left py-2.5 px-3 text-xs text-gray-500 font-medium">职位</th>
-                  <th className="text-left py-2.5 px-3 text-xs text-gray-500 font-medium hidden sm:table-cell">分部</th>
-                  <th className="text-left py-2.5 px-3 text-xs text-gray-500 font-medium hidden lg:table-cell">创建时间</th>
-                  <th className="text-right py-2.5 px-3 text-xs text-gray-500 font-medium">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                    <td className="py-3 px-3">
-                      <span className="text-white font-display">{u.username}</span>
-                      {u.role === 'pending' && (
-                        <span className="ml-2 tag tag-draw text-[10px]">待审</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 hidden md:table-cell">
-                      <span className="text-gray-400 font-mono text-xs tracking-wide">{u.steam_id}</span>
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className={`tag ${ROLE_COLORS[u.role] || ROLE_COLORS.pending}`}>
-                        {ROLE_MAP[u.role] || u.role}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 hidden sm:table-cell">
-                      <span className="chip text-[11px]">{DIVISION_MAP[u.division] || u.division}</span>
-                    </td>
-                    <td className="py-3 px-3 hidden lg:table-cell">
-                      <span className="text-gray-500 text-xs">{u.created_at?.split(' ')[0] || '-'}</span>
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {u.role === 'pending' && (
-                          <button onClick={() => handleApprove(u.id)}
-                            className="px-2.5 py-1 text-[11px] font-display rounded-md bg-emerald-500/15 text-emerald-400
-                                       border border-emerald-500/25 hover:bg-emerald-500/25 transition-colors"
-                            title="审核通过">
-                            通过
-                          </button>
-                        )}
-                        <button onClick={() => { setModalError(null); setModal({ type: 'edit', user: u }); }}
-                          className="px-2.5 py-1 text-[11px] font-display rounded-md bg-ur-cyan/10 text-ur-cyan
-                                     border border-ur-cyan/20 hover:bg-ur-cyan/20 transition-colors"
-                          title="编辑">
-                          编辑
-                        </button>
-                        {u.role !== 'admin' && (
-                          <button onClick={() => setDeleteConfirm(u.id)}
-                            className="px-2.5 py-1 text-[11px] font-display rounded-md bg-ur-rose/10 text-ur-rose
-                                       border border-ur-rose/20 hover:bg-ur-rose/20 transition-colors"
-                            title="删除">
-                            删除
-                          </button>
-                        )}
+          {/* 弃权开关 */}
+          <div className="mb-4 p-3 rounded-lg bg-ur-bg border border-ur-border">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" checked={manualForm.is_walkover}
+                onChange={e => setManualForm(f => ({ ...f, is_walkover: e.target.checked }))}
+                className="w-4 h-4 accent-ur-amber" />
+              <span className="text-xs font-semibold text-ur-amber">弃权场次</span>
+              <span className="text-[11px] text-gray-500">（对手或我方弃权 · 无需填比分和选手）</span>
+            </label>
+            {manualForm.is_walkover && (
+              <div className="mt-3">
+                <label className="block text-xs text-gray-500 mb-1.5">弃权结果 <span className="text-ur-rose">*</span></label>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setManualForm(f => ({ ...f, walkover_winner: 'us' }))}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${manualForm.walkover_winner === 'us' ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400' : 'bg-ur-bg border-ur-border text-gray-500 hover:text-gray-300'}`}>
+                    我方胜（对手弃权）
+                  </button>
+                  <button type="button" onClick={() => setManualForm(f => ({ ...f, walkover_winner: 'them' }))}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${manualForm.walkover_winner === 'them' ? 'bg-ur-rose/15 border-ur-rose/40 text-ur-rose' : 'bg-ur-bg border-ur-border text-gray-500 hover:text-gray-300'}`}>
+                    对方胜（我方弃权）
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 比赛信息 */}
+          <div className="grid grid-cols-2 gap-2.5 mb-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">比赛日期 <span className="text-ur-rose">*</span></label>
+              <input type="date" value={manualForm.match_date} onChange={e => setManualForm(f => ({ ...f, match_date: e.target.value }))}
+                className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2 text-white text-xs focus:border-ur-accent focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">对手名称 <span className="text-ur-rose">*</span></label>
+              <input type="text" value={manualForm.opponent} onChange={e => setManualForm(f => ({ ...f, opponent: e.target.value }))}
+                placeholder="如 TYLOO" className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2 text-white text-xs focus:border-ur-accent focus:outline-none placeholder:text-gray-600" />
+            </div>
+            {!manualForm.is_walkover && (<>
+            {manualForm.match_type === 'official' && bpSteps.length > 0 && (
+              <div className="col-span-2 mb-3 p-3 rounded-lg bg-ur-amber/[0.06] border border-ur-amber/20">
+                <div className="text-xs font-semibold text-ur-amber mb-2">本场 BP 流程 <span className="text-gray-500 font-normal">（一次定下打哪几张图 · Pick/决胜即 Map1/2/3）</span></div>
+                <div className="space-y-1.5">
+                  {bpSteps.map((step, i) => {
+                    const mapIdx = bpSteps.slice(0, i + 1).filter(s => s.action === 'pick' || s.action === 'decider').length;
+                    const isMap = step.action === 'pick' || step.action === 'decider';
+                    return (
+                      <div key={i} className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-gray-600 w-4 text-right shrink-0">{i + 1}</span>
+                        <select value={step.team} onChange={e => setBpSteps(s => s.map((x, j) => j === i ? { ...x, team: e.target.value } : x))}
+                          className="bg-ur-bg border border-ur-border rounded px-1.5 py-1 text-white text-[11px] focus:outline-none shrink-0">
+                          <option value="ur">我方</option><option value="opp">对方</option><option value="">—</option>
+                        </select>
+                        <select value={step.action} onChange={e => setBpSteps(s => s.map((x, j) => j === i ? { ...x, action: e.target.value } : x))}
+                          className="bg-ur-bg border border-ur-border rounded px-1.5 py-1 text-white text-[11px] focus:outline-none shrink-0">
+                          <option value="ban">Ban</option><option value="pick">Pick</option><option value="decider">决胜图</option>
+                        </select>
+                        <select value={step.map} onChange={e => setBpSteps(s => s.map((x, j) => j === i ? { ...x, map: e.target.value } : x))}
+                          className="flex-1 min-w-0 bg-ur-bg border border-ur-border rounded px-2 py-1 text-white text-[11px] focus:outline-none">
+                          <option value="">选地图</option>
+                          {['Mirage', 'Ancient', 'Overpass', 'Nuke', 'Inferno', 'Anubis', 'Dust2', 'Vertigo', 'Train'].map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                        {isMap && <span className="text-[10px] text-ur-amber w-10 shrink-0 text-right">Map{mapIdx}</span>}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">这次录第几张图 <span className="text-ur-rose">*</span></label>
+              {(() => {
+                const hasBP = manualForm.match_type === 'official' && bpSteps.length > 0;
+                const picks = bpSteps.filter(s => s.action === 'pick' || s.action === 'decider');
+                const named = picks.map((s, i) => ({ idx: i + 1, map: s.map })).filter(x => x.map);
+                if (hasBP && named.length === 0) {
+                  return <div className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2 text-[11px] text-gray-600">请先在上方 BP 里选好各图地图</div>;
+                }
+                return (
+                  <select value={manualForm.map_name} onChange={e => setManualForm(f => ({ ...f, map_name: e.target.value }))}
+                    className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2 text-white text-xs focus:border-ur-accent focus:outline-none">
+                    <option value="">{hasBP ? '选第几张图' : '选择地图'}</option>
+                    {hasBP
+                      ? named.map(x => <option key={x.map} value={x.map}>Map{x.idx} · {x.map}</option>)
+                      : ['Mirage', 'Ancient', 'Overpass', 'Nuke', 'Inferno', 'Anubis', 'Dust2', 'Vertigo', 'Train'].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                );
+              })()}
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">本图比分 <span className="text-[10px] text-gray-600">（由下方截图识别自动填入）</span></label>
+              <div className="w-full bg-ur-bg border border-ur-border rounded-lg px-3 py-2 text-xs flex items-center justify-center">
+                {(manualForm.our_score !== '' && manualForm.their_score !== '')
+                  ? <span className="font-mono text-white text-sm">{manualForm.our_score} : {manualForm.their_score}</span>
+                  : <span className="text-gray-600">上传记分板截图后自动识别比分</span>}
+              </div>
+            </div>
+            </>)}
           </div>
-        )}
 
-        {/* 待审核列表 */}
-        {pendingUsers.length > 0 && (
-          <div id="pending-section" className="mt-6 pt-4 border-t border-white/[0.06]">
-            <h4 className="text-sm font-display text-ur-amber mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-ur-amber" />
-              待审核账号 ({pendingUsers.length})
-            </h4>
-            <div className="space-y-2">
-              {pendingUsers.map(u => (
-                <div key={u.id} className="flex items-center justify-between bg-ur-bg rounded-lg px-4 py-2.5">
-                  <div className="flex items-center gap-4">
-                    <span className="text-white font-display text-sm">{u.username}</span>
-                    <span className="text-gray-500 font-mono text-xs">{u.steam_id}</span>
-                    <span className="text-gray-600 text-xs">{u.created_at}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => handleApprove(u.id)}
-                      className="px-3 py-1 text-xs font-display rounded-md bg-emerald-500/15 text-emerald-400
-                                 border border-emerald-500/25 hover:bg-emerald-500/25 transition-colors">
-                      审核通过
-                    </button>
-                    <button onClick={() => setDeleteConfirm(u.id)}
-                      className="px-3 py-1 text-xs font-display rounded-md bg-ur-rose/10 text-ur-rose
-                                 border border-ur-rose/20 hover:bg-ur-rose/20 transition-colors">
-                      拒绝
-                    </button>
-                  </div>
+          {!manualForm.is_walkover && (<>
+          {/* 截图自动识别 */}
+          <div className="mb-3 p-3 rounded-lg bg-ur-indigo/[0.06] border border-ur-indigo/25">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-ur-indigo">📷 截图自动识别</div>
+                <div className="text-[11px] text-gray-500 mt-0.5">上传记分板结算截图，AI 自动填入选手数据与比分，识别后请核对</div>
+              </div>
+              <label className={`px-3 py-2 rounded-lg text-xs font-medium border cursor-pointer whitespace-nowrap flex-shrink-0 ${ocrLoading ? 'opacity-50 pointer-events-none' : ''} bg-ur-indigo/15 border-ur-indigo/40 text-ur-indigo hover:bg-ur-indigo/25`}>
+                {ocrLoading ? '识别中…' : '选择截图'}
+                <input type="file" accept="image/*" className="hidden" disabled={ocrLoading}
+                  onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; handleOcrFile(file); }} />
+              </label>
+            </div>
+            {ocrMsg && (
+              <div className={`mt-2 text-[11px] leading-relaxed ${ocrMsg.success ? 'text-emerald-400' : 'text-ur-rose'}`}>{ocrMsg.success ? '✓ ' : '✗ '}{ocrMsg.message}</div>
+            )}
+          </div>
+          {/* UR 选手数据（默认收起：以截图识别为主、手动为辅；识别/编辑后自动展开核对） */}
+          <details className="mb-3" open={urOpen} onToggle={e => setUrOpen(e.target.open)}>
+            <summary className="text-xs font-sans font-semibold text-emerald-400 cursor-pointer select-none mb-1.5">
+              UR 选手数据（5 名）<span className="text-ur-rose">*</span>
+              <span className="text-gray-500 font-normal ml-2">以截图识别为主 · 点击展开手动填写/核对</span>
+            </summary>
+            <div className="grid grid-cols-[1fr_42px_42px_42px_50px_52px] gap-1.5 text-[10px] text-gray-600 px-1 mb-1">
+              <span>选手</span><span className="text-center">杀</span><span className="text-center">死</span><span className="text-center">助攻</span><span className="text-center">ADR</span><span className="text-center">Rating</span>
+            </div>
+            <div className="space-y-1.5">
+              {urRows.map((r, i) => (
+                <div key={i} className="grid grid-cols-[1fr_42px_42px_42px_50px_52px] gap-1.5">
+                  <select value={r.player_id} onChange={e => setUrRow(i, 'player_id', e.target.value)}
+                    className="bg-ur-bg border border-ur-border rounded px-2 py-1.5 text-white text-xs focus:border-ur-accent focus:outline-none">
+                    <option value="">选择选手</option>
+                    {rosterPlayers.map(p => <option key={p.id} value={p.id}>{p.nickname}</option>)}
+                  </select>
+                  <input type="number" min="0" value={r.kills} onChange={e => setUrRow(i, 'kills', e.target.value)}
+                    className="bg-ur-bg border border-ur-border rounded px-1 py-1.5 text-white text-xs text-center focus:border-ur-accent focus:outline-none" />
+                  <input type="number" min="0" value={r.deaths} onChange={e => setUrRow(i, 'deaths', e.target.value)}
+                    className="bg-ur-bg border border-ur-border rounded px-1 py-1.5 text-white text-xs text-center focus:border-ur-accent focus:outline-none" />
+                  <input type="number" min="0" value={r.assists} onChange={e => setUrRow(i, 'assists', e.target.value)}
+                    className="bg-ur-bg border border-ur-border rounded px-1 py-1.5 text-white text-xs text-center focus:border-ur-accent focus:outline-none" />
+                  <input type="number" min="0" step="0.1" value={r.adr} onChange={e => setUrRow(i, 'adr', e.target.value)}
+                    className="bg-ur-bg border border-ur-border rounded px-1 py-1.5 text-white text-xs text-center focus:border-ur-accent focus:outline-none" />
+                  <input type="number" min="0" step="0.01" value={r.rating} onChange={e => setUrRow(i, 'rating', e.target.value)}
+                    className="bg-ur-bg border border-ur-border rounded px-1 py-1.5 text-white text-xs text-center focus:border-ur-accent focus:outline-none" />
                 </div>
               ))}
             </div>
+          </details>
+
+          {/* 对手选手数据（可选） */}
+          <details className="mb-4 group">
+            <summary className="text-xs text-gray-400 cursor-pointer select-none hover:text-gray-200 mb-1">对手选手数据（可选，点击展开）</summary>
+            <div className="grid grid-cols-[1fr_42px_42px_42px_50px_52px] gap-1.5 text-[10px] text-gray-600 px-1 mb-1 mt-2">
+              <span>对手名</span><span className="text-center">杀</span><span className="text-center">死</span><span className="text-center">助攻</span><span className="text-center">ADR</span><span className="text-center">Rating</span>
+            </div>
+            <div className="space-y-1.5">
+              {oppRows.map((r, i) => (
+                <div key={i} className="grid grid-cols-[1fr_42px_42px_42px_50px_52px] gap-1.5">
+                  <input type="text" value={r.name} onChange={e => setOppRow(i, 'name', e.target.value)} placeholder={`对手 ${i + 1}`}
+                    className="bg-ur-bg border border-ur-border rounded px-2 py-1.5 text-white text-xs focus:border-ur-accent focus:outline-none placeholder:text-gray-600" />
+                  <input type="number" min="0" value={r.kills} onChange={e => setOppRow(i, 'kills', e.target.value)}
+                    className="bg-ur-bg border border-ur-border rounded px-1 py-1.5 text-white text-xs text-center focus:border-ur-accent focus:outline-none" />
+                  <input type="number" min="0" value={r.deaths} onChange={e => setOppRow(i, 'deaths', e.target.value)}
+                    className="bg-ur-bg border border-ur-border rounded px-1 py-1.5 text-white text-xs text-center focus:border-ur-accent focus:outline-none" />
+                  <input type="number" min="0" value={r.assists} onChange={e => setOppRow(i, 'assists', e.target.value)}
+                    className="bg-ur-bg border border-ur-border rounded px-1 py-1.5 text-white text-xs text-center focus:border-ur-accent focus:outline-none" />
+                  <input type="number" min="0" step="0.1" value={r.adr} onChange={e => setOppRow(i, 'adr', e.target.value)}
+                    className="bg-ur-bg border border-ur-border rounded px-1 py-1.5 text-white text-xs text-center focus:border-ur-accent focus:outline-none" />
+                  <input type="number" min="0" step="0.01" value={r.rating} onChange={e => setOppRow(i, 'rating', e.target.value)}
+                    className="bg-ur-bg border border-ur-border rounded px-1 py-1.5 text-white text-xs text-center focus:border-ur-accent focus:outline-none" />
+                </div>
+              ))}
+            </div>
+          </details>
+          </>)}
+
+          <div className="flex gap-2">
+            <button onClick={handleManualSubmit} disabled={manualSubmitting}
+              className={`flex-1 px-6 py-2.5 text-sm font-sans font-semibold rounded-lg disabled:opacity-50 transition-all ${editingMatchId ? 'bg-ur-amber text-black hover:bg-ur-amber/80' : 'bg-emerald-500 text-white hover:bg-emerald-500/80'}`}>
+              {manualSubmitting ? (editingMatchId ? '保存中...' : '录入中...') : (editingMatchId ? '保存修改' : '录入到数据库')}
+            </button>
+            {editingMatchId && (
+              <button type="button" onClick={() => cancelEditMatch()} disabled={manualSubmitting}
+                className="px-5 py-2.5 text-sm font-sans font-semibold bg-white/5 text-gray-300 border border-ur-border rounded-lg hover:bg-white/10 disabled:opacity-50 transition-all">
+                取消编辑
+              </button>
+            )}
           </div>
-        )}
+
+          {manualResult && (
+            <div className={`mt-3 p-3 rounded-lg text-sm border ${manualResult.success ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-ur-rose/10 border-ur-rose/30 text-ur-rose'}`}>
+              {manualResult.success ? '✓ ' : '✗ '}{manualResult.message}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ════════════════════════════════════════════════════════════
-          区块 3：赛程管理
+          已录入比赛 — 编辑 / 删除
          ════════════════════════════════════════════════════════════ */}
       <div className="data-card mb-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-display text-base font-semibold text-white flex items-center gap-2">
-            <span className="w-1 h-4 rounded bg-ur-amber" />赛程管理
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h3 className="font-sans font-semibold text-base text-white flex items-center gap-2">
+            <span className="w-1 h-4 rounded bg-ur-amber" />已录入正赛
+            <span className="text-xs font-normal text-gray-500">
+              {matchList.filter(m => !matchListSearch || (m.opponent || '').toLowerCase().includes(matchListSearch.toLowerCase())).length} 场 · 按录入时间倒序
+            </span>
           </h3>
-          <button onClick={() => { setScheduleError(null); setScheduleModal({}); }}
-            className="px-4 py-1.5 text-xs font-display bg-ur-amber/20 text-ur-amber border border-ur-amber/30 rounded-lg hover:bg-ur-amber/30 transition-all flex items-center gap-1.5">
-            + 添加赛事
-          </button>
-        </div>
-
-        {/* Link 查询区 */}
-        <div className="mb-4 p-3 bg-ur-bg rounded-lg border border-ur-border">
-          <label className="text-xs text-gray-500 mb-1.5 block">赛事链接查询（粘贴链接后自动抓取赛事名称）</label>
-          <div className="flex gap-2">
-            <input type="text" value={linkUrl} onChange={e => setLinkUrl(e.target.value)}
-              placeholder="https://liquipedia.net/counterstrike/..." className="flex-1 bg-ur-bg border border-ur-border rounded-lg px-3 py-2 text-white text-xs focus:border-ur-cyan focus:outline-none placeholder:text-gray-600" />
-            <button onClick={handleLinkLookup} disabled={linkLoading || !linkUrl.trim()}
-              className="px-4 py-2 text-xs font-display bg-ur-cyan/20 text-ur-cyan border border-ur-cyan/30 rounded-lg hover:bg-ur-cyan/30 disabled:opacity-40 transition-all">
-              {linkLoading ? '查询中...' : '查询'}
+          <div className="flex gap-1.5 items-center">
+            <button onClick={loadMatchList} disabled={matchListLoading}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-ur-border bg-ur-bg text-gray-400 hover:text-gray-200 disabled:opacity-50 transition-all">
+              {matchListLoading ? '加载中…' : '刷新'}
             </button>
           </div>
-          {linkResult && (
-            <div className="mt-2 p-2 bg-ur-indigo/10 border border-ur-indigo/20 rounded text-xs">
-              {linkResult.error ? (
-                <span className="text-ur-rose">{linkResult.error}</span>
-              ) : (
-                <div className="space-y-0.5">
-                  <p><span className="text-gray-500">页面标题:</span> <span className="text-gray-200">{linkResult.pageTitle}</span></p>
-                  {linkResult.ogTitle && <p><span className="text-gray-500">OG标题:</span> <span className="text-gray-200">{linkResult.ogTitle}</span></p>}
-                  {linkResult.description && <p><span className="text-gray-500">描述:</span> <span className="text-gray-400">{linkResult.description.slice(0,200)}</span></p>}
+        </div>
+
+        <input value={matchListSearch} onChange={e => setMatchListSearch(e.target.value)}
+          placeholder="搜索对手名…"
+          className="w-full h-9 px-3 mb-3 rounded-lg bg-ur-bg border border-ur-border text-white text-sm outline-none focus:border-ur-accent/40 placeholder:text-gray-600" />
+
+        <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: 360 }}>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-gray-600 text-xs border-b border-ur-border">
+                <th className="text-left py-2 pl-2 font-medium whitespace-nowrap">日期</th>
+                <th className="text-left py-2 font-medium">类型</th>
+                <th className="text-left py-2 font-medium">对手</th>
+                <th className="text-left py-2 font-medium">地图</th>
+                <th className="text-center py-2 font-medium">比分</th>
+                <th className="text-center py-2 font-medium">结果</th>
+                <th className="text-right py-2 pr-2 font-medium">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                const rows = matchList.filter(m => !matchListSearch || (m.opponent || '').toLowerCase().includes(matchListSearch.toLowerCase()));
+                if (matchListLoading) return (<tr><td colSpan={7} className="text-center py-6 text-gray-600 text-xs">加载中…</td></tr>);
+                if (rows.length === 0) return (<tr><td colSpan={7} className="text-center py-6 text-gray-600 text-xs">近 120 天暂无正赛记录</td></tr>);
+                return rows.map(m => {
+                  const isEditing = editingMatchId === m.id;
+                  const rc = m.result === 'win' ? '#35e59d' : m.result === 'loss' ? '#ff597d' : '#ffc45c';
+                  return (
+                    <tr key={m.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+                      style={isEditing ? { background: 'rgba(212,175,55,0.08)' } : undefined}>
+                      <td className="py-1.5 pl-2 font-mono text-gray-400 text-xs whitespace-nowrap">{m.match_date}</td>
+                      <td className="py-1.5">
+                        <span className="text-xs px-1.5 py-0.5 rounded whitespace-nowrap"
+                          style={m.match_type === 'official'
+                            ? { background: 'rgba(212,175,55,0.12)', color: '#D4AF37' }
+                            : { background: 'rgba(104,232,255,0.12)', color: '#68e8ff' }}>
+                          {m.match_type === 'official' ? '正赛' : '训练赛'}
+                        </span>
+                      </td>
+                      <td className="py-1.5 text-white font-display max-w-[160px] truncate" title={m.opponent}>{m.opponent}</td>
+                      <td className="py-1.5 text-gray-300 whitespace-nowrap">{m.is_walkover ? '弃权' : (m.map_name || '-')}</td>
+                      <td className="py-1.5 text-center font-mono whitespace-nowrap" style={{ color: rc }}>{m.our_score}-{m.their_score}</td>
+                      <td className="py-1.5 text-center">
+                        <span className={`tag text-xs ${m.result === 'win' ? 'tag-win' : m.result === 'loss' ? 'tag-loss' : 'tag-draw'}`}>
+                          {m.result === 'win' ? '胜' : m.result === 'loss' ? '负' : '平'}
+                        </span>
+                      </td>
+                      <td className="py-1.5 pr-2 text-right whitespace-nowrap">
+                        <button onClick={() => startEditMatch(m.id)}
+                          className="px-2 py-0.5 text-xs text-gray-500 hover:text-ur-amber transition-colors">编辑</button>
+                        <button onClick={() => deleteMatch(m.id)} disabled={deletingId === m.id}
+                          className="px-2 py-0.5 text-xs text-gray-500 hover:text-ur-rose disabled:opacity-50 transition-colors">
+                          {deletingId === m.id ? '删除中…' : '删除'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                });
+              })()}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[11px] text-gray-600 mt-2">点「编辑」会把整场数据回填到上方表单（自动滚到顶部），改完保存即覆盖原记录；「删除」会连同该场选手数据一并移除，不可恢复。</p>
+      </div>
+
+      </div>)}
+
+      {/* ══ ③ 赛事数据 JSON 文件（默认收起） ══ */}
+      {sec === 'json' && (<div className="mb-5 rounded-2xl border border-ur-border bg-ur-card p-5">
+      <div className="grid grid-cols-1 gap-6 items-stretch">
+        {/* ── 左：JSON 数据导入 ── */}
+        <div className="data-card flex flex-col">
+          <h3 className="font-sans font-semibold text-base font-semibold text-white mb-4 flex items-center gap-2">
+            <span className="w-1 h-4 rounded bg-ur-accent" />
+            训练赛 JSON
+          </h3>
+          <p className="text-xs text-gray-500 mb-4">主场服务器下载的赛事 JSON 文件，可多选批量导入。选手数据按 Steam ID 自动匹配入库。</p>
+          <div className="mb-4">
+            <label className="block text-sm text-gray-400 mb-1.5">对手名称 <span className="text-gray-600 text-xs">(可选)</span></label>
+            <input type="text" value={opponent} onChange={e => setOpponent(e.target.value)}
+              placeholder="自动从文件名识别，如 0508_Mongolz.A_M1.json → Mongolz.A"
+              className="w-full bg-ur-bg border border-ur-border text-white rounded-lg px-4 py-2.5 text-sm
+                         focus:border-ur-accent focus:outline-none placeholder:text-gray-600" />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm text-gray-400 mb-1.5">JSON 数据文件 <span className="text-ur-rose">*</span></label>
+            <input id="json-file-input" type="file" accept=".json" multiple
+              onChange={e => {
+                const selected = Array.from(e.target.files || []);
+                setJsonFiles(prev => [...prev, ...selected]);
+                if (selected.length > 0 && !opponent) {
+                  const inferred = extractOpponentFromFilename(selected[0].name);
+                  if (inferred && !opponent) setOpponent(inferred);
+                }
+                setImportError(null); setBatchResults(null);
+              }}
+              className="w-full text-sm text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg
+                         file:border-0 file:text-sm file:font-sans font-semibold file:bg-ur-accent/20 file:text-ur-accent
+                         hover:file:bg-ur-accent/30 file:cursor-pointer" />
+          </div>
+          {jsonFiles.length > 0 && (
+            <div className="mb-4">
+              <p className="text-xs text-gray-500 mb-2">已选 {jsonFiles.length} 个文件</p>
+              <div className="max-h-32 overflow-y-auto space-y-1">
+                {jsonFiles.map((f, i) => (
+                  <div key={i} className="flex items-center justify-between bg-ur-bg rounded px-3 py-1.5 text-sm group">
+                    <span className="text-gray-300 truncate mr-2">{f.name}</span>
+                    <button onClick={() => removeFile(i)} disabled={importing}
+                      className="text-gray-600 hover:text-ur-rose transition-colors shrink-0 disabled:opacity-30" title="移除">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="mt-auto pt-2">
+            <p className="text-xs text-gray-600 mb-2">{t('admin.importDesc')}</p>
+            <button onClick={handleJsonImport} disabled={importing || jsonFiles.length === 0}
+              className="w-full px-6 py-2.5 text-sm font-sans font-semibold bg-ur-accent text-white rounded-lg
+                         hover:bg-ur-accent-hover disabled:opacity-50 transition-all">
+              {importing ? `导入中 (${jsonFiles.length} 文件)...` : `导入到数据库 (${jsonFiles.length > 0 ? jsonFiles.length + ' 文件' : ''})`}
+            </button>
+          </div>
+          {importError && (
+            <div className="mt-4 p-3 bg-ur-rose/10 border border-ur-rose/30 rounded-lg text-sm text-ur-rose">{importError}</div>
+          )}
+          {batchResults && (
+            <div className="mt-4 space-y-2">
+              <div className="p-3 bg-ur-accent/10 border border-ur-indigo/30 rounded-lg text-sm flex items-center gap-3">
+                <span className="font-sans font-semibold text-ur-accent">
+                  批量导入完成：{batchResults.filter(r => r.success).length}/{batchResults.length} 成功
+                </span>
+              </div>
+              {batchResults.map((r, i) => (
+                <div key={i} className={`p-3 rounded-lg text-sm border ${r.success ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-ur-rose/10 border-ur-rose/30'}`}>
+                  <p className={`font-sans font-semibold mb-0.5 ${r.success ? 'text-emerald-400' : 'text-ur-rose'}`}>
+                    {r.success ? '✓' : '✗'} {r.filename}
+                  </p>
+                  {r.success ? (
+                    <p className="text-gray-400">{r.map} · {r.score} · {r.opponent && `${r.opponent} · `}{r.result === 'win' ? '胜' : r.result === 'loss' ? '负' : '平'} · {r.players} 名选手数据
+                      {r.players === 0 && r.totalEntries > 0 && <span className="text-ur-amber ml-1">({r.totalEntries} 条记录未匹配)</span>}
+                    </p>
+                  ) : <p className="text-ur-rose/70">{r.error}</p>}
+                  {r.success && r.players === 0 && r.skippedReasons?.length > 0 && (
+                    <div className="mt-1.5 bg-ur-amber/10 border border-ur-amber/20 rounded p-2 text-xs">
+                      <p className="text-ur-amber/80 font-sans font-semibold mb-1">诊断信息：</p>
+                      {r.skippedReasons.map((reason, j) => <p key={j} className="text-gray-500 ml-2 leading-relaxed">{reason}</p>)}
+                    </div>
+                  )}
                 </div>
-              )}
+              ))}
             </div>
           )}
         </div>
 
-        {/* 赛程列表 */}
-        {upcomingLoading ? (
-          <div className="text-center py-6 text-gray-500 text-sm">加载中...</div>
-        ) : upcoming.length === 0 ? (
-          <div className="text-center py-6 text-gray-500 text-sm">暂无即将赛事</div>
-        ) : (
-          <div className="space-y-2">
-            {upcoming.map(m => (
-              <div key={m.id} className="bg-ur-bg rounded-lg px-4 py-3 border border-ur-border hover:border-gray-600 transition-colors group">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="text-white font-display text-sm">{m.event_name || '未命名赛事'}</span>
-                      <span className={`tag text-[10px] ${m.match_type === 'scrim' ? 'tag-draw' : 'bg-ur-amber/15 text-ur-amber border-ur-amber/30'}`}>
-                        {m.match_type === 'scrim' ? '训练赛' : '正式赛'}
-                      </span>
-                      <span className="tag bg-ur-cyan/10 text-ur-cyan border-ur-cyan/20 text-[10px]">{m.bo_format || '-'}</span>
-                      {m.location_type && m.location_type !== 'online' && (
-                        <span className="tag bg-ur-purple/15 text-ur-purple border-ur-purple/25 text-[10px]">{m.location_type === 'offline' ? '线下' : '混合'}</span>
-                      )}
-                      {m.stage && <span className="text-ur-amber text-[11px]">{m.stage}</span>}
-                      {m.region && <span className="text-gray-500 text-[11px]">{m.region}</span>}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-400">
-                      <span className="font-mono">{m.match_date}</span>
-                      {m.match_time && <span>{m.match_time.slice(0,5)}</span>}
-                      <span className="text-white font-display">vs {m.opponent}</span>
-                      {m.notes && <span className="text-gray-500 truncate ml-2">{m.notes}</span>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 ml-3 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => { setScheduleError(null); const { created_at, ...rest } = m; setScheduleModal({ editId: m.id, ...rest }); }}
-                      className="px-2 py-1 text-[11px] font-display rounded bg-ur-cyan/10 text-ur-cyan border border-ur-cyan/20 hover:bg-ur-cyan/20 transition-colors">编辑</button>
-                    <button onClick={() => setScheduleDelete(m.id)}
-                      className="px-2 py-1 text-[11px] font-display rounded bg-ur-rose/10 text-ur-rose border border-ur-rose/20 hover:bg-ur-rose/20 transition-colors">删除</button>
-                  </div>
-                </div>
-                {m.source_link && (
-                  <a href={m.source_link} target="_blank" rel="noopener noreferrer"
-                    className="text-[11px] text-ur-cyan/60 hover:text-ur-cyan mt-1.5 inline-block truncate max-w-full">{m.source_link}</a>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
+      </div>)}
 
       {/* ════════════════════════════════════════════════════════════
-          区块 4：操作日志
+          犯错类型管理
          ════════════════════════════════════════════════════════════ */}
-      <div className="data-card">
-        <h3 className="font-display text-base font-semibold text-white mb-4 flex items-center gap-2">
-          <span className="w-1 h-4 rounded bg-gray-600" />
-          操作日志
-        </h3>
-        {logsLoading ? (
-          <div className="text-center py-6 text-gray-500 text-sm">加载中...</div>
-        ) : logs.length === 0 ? (
-          <div className="text-center py-6 text-gray-500 text-sm">暂无操作记录</div>
-        ) : (
-          <div className="overflow-x-auto -mx-1">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="text-left py-2.5 px-3 text-xs text-gray-500 font-medium">时间</th>
-                  <th className="text-left py-2.5 px-3 text-xs text-gray-500 font-medium">操作者</th>
-                  <th className="text-left py-2.5 px-3 text-xs text-gray-500 font-medium">操作</th>
-                  <th className="text-left py-2.5 px-3 text-xs text-gray-500 font-medium hidden md:table-cell">详情</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((l, i) => (
-                  <tr key={l.id || i} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                    <td className="py-2.5 px-3 text-gray-500 text-xs whitespace-nowrap">{l.created_at || '-'}</td>
-                    <td className="py-2.5 px-3">
-                      <span className="text-gray-300 text-xs">{l.username || '系统'}</span>
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <span className="chip text-[11px]">{l.action || '-'}</span>
-                    </td>
-                    <td className="py-2.5 px-3 hidden md:table-cell">
-                      <span className="text-gray-500 text-xs">{l.details || '-'}</span>
-                    </td>
-                  </tr>
+      {/* ══ ④ 字段库维护（默认收起） ══ */}
+      {sec === 'dict' && (<div className="mb-5 rounded-2xl border border-ur-border bg-ur-card p-5">
+      <div>
+        <div className="flex items-center justify-end mb-4">
+          <div className="flex gap-2">
+            {errTypes.length === 0 && (
+              <button onClick={handleErrTypeSeed}
+                className="px-3 py-1.5 text-xs font-sans font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 rounded-lg hover:bg-emerald-500/25 transition-all">
+                初始化54条
+              </button>
+            )}
+            <button onClick={() => { setErrTypeEdit({}); setErrTypeForm({ category: '', name: '', keywords: '', description: '', severity: 'mid' }); }}
+              className="px-3 py-1.5 text-xs font-sans font-semibold bg-ur-accent/15 text-ur-accent border border-ur-accent/25 rounded-lg hover:bg-ur-accent/25 transition-all">
+              + 新增
+            </button>
+          </div>
+        </div>
+
+        <input value={errTypeFilter} onChange={e => setErrTypeFilter(e.target.value)}
+          placeholder={t('admin.searchErrors')} className="w-full h-9 px-3 mb-3 rounded-lg bg-ur-bg border border-ur-border text-white text-sm outline-none focus:border-ur-accent/40 placeholder:text-gray-600" />
+
+        {errTypeEdit && (
+          <div className="mb-4 p-3 bg-ur-bg rounded-lg border border-ur-accent/20 space-y-2">
+            <div className="grid grid-cols-3 gap-2">
+              <input value={errTypeForm.category} onChange={e => setErrTypeForm({...errTypeForm, category: e.target.value})}
+                placeholder="大类" className="h-8 px-2 rounded bg-white/5 border border-ur-border text-white text-xs outline-none" />
+              <input value={errTypeForm.name} onChange={e => setErrTypeForm({...errTypeForm, name: e.target.value})}
+                placeholder="犯错名称 *" className="h-8 px-2 rounded bg-white/5 border border-ur-border text-white text-xs outline-none col-span-2" />
+            </div>
+            <input value={errTypeForm.keywords} onChange={e => setErrTypeForm({...errTypeForm, keywords: e.target.value})}
+              placeholder="关键词(逗号分隔，用于自动匹配教练点评)" className="w-full h-8 px-2 rounded bg-white/5 border border-ur-border text-white text-xs outline-none" />
+            <div className="flex gap-2 items-center">
+              <select value={errTypeForm.severity} onChange={e => setErrTypeForm({...errTypeForm, severity: e.target.value})}
+                className="h-8 px-2 rounded bg-white/5 border border-ur-border text-white text-xs outline-none">
+                <option value="high">高</option><option value="mid">中</option><option value="low">低</option>
+              </select>
+              <button onClick={handleErrTypeSave}
+                className="h-8 px-4 rounded bg-ur-accent/20 text-ur-accent text-xs font-semibold border border-ur-accent/30 hover:bg-ur-accent/30">
+                {errTypeEdit.id ? '更新' : '添加'}
+              </button>
+              <button onClick={() => setErrTypeEdit(null)}
+                className="h-8 px-3 rounded bg-white/5 text-gray-400 text-xs border border-ur-border hover:bg-white/10">取消</button>
+            </div>
+          </div>
+        )}
+
+        <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 320px)' }}>
+          {(() => {
+            const filtered = errTypes.filter(e =>
+              !errTypeFilter || e.name.toLowerCase().includes(errTypeFilter.toLowerCase()) ||
+              e.category.toLowerCase().includes(errTypeFilter.toLowerCase()) ||
+              (e.keywords||'').toLowerCase().includes(errTypeFilter.toLowerCase())
+            );
+            const cats = [...new Set(filtered.map(e => e.category))];
+            return cats.map(cat => (
+              <div key={cat} className="mb-3">
+                <div className="text-xs text-gray-500 font-semibold mb-1.5 sticky top-0 bg-[var(--color-background-primary,#0f1620)] py-1">{cat} ({filtered.filter(e=>e.category===cat).length})</div>
+                {filtered.filter(e => e.category === cat).map(e => (
+                  <div key={e.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/[0.03] group text-xs">
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${e.severity==='high'?'bg-ur-rose':e.severity==='mid'?'bg-ur-amber':'bg-emerald-400'}`} />
+                    <span className="text-white flex-1 truncate">{e.name}</span>
+                    <span className="text-gray-600 truncate max-w-[160px]">{e.keywords}</span>
+                    <button onClick={() => { setErrTypeEdit(e); setErrTypeForm({ category: e.category, name: e.name, keywords: e.keywords||'', description: e.description||'', severity: e.severity||'mid' }); }}
+                      className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-ur-accent transition-all">✎</button>
+                    <button onClick={() => handleErrTypeDelete(e.id)}
+                      className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-ur-rose transition-all">✕</button>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              </div>
+            ));
+          })()}
+        </div>
+      </div>
+      </div>)}
+
+      {/* ══ ⑤ 用户与权限（v2 页面内嵌） ══ */}
+      {sec === 'users' && (<div className="mb-5 rounded-2xl border border-ur-border bg-ur-card p-5">
+        <Users />
+      </div>)}
+        </main>
       </div>
 
-      {/* ════════════════════════════════════════════════════════════
-          弹窗
-         ════════════════════════════════════════════════════════════ */}
-
-      {/* 删除确认 */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-             onClick={() => setDeleteConfirm(null)}>
-          <div className="data-card w-full max-w-sm mx-4 space-y-4 animate-fade-up" onClick={e => e.stopPropagation()}>
-            <h3 className="font-display text-lg font-bold text-white">确认删除</h3>
-            <p className="text-gray-400 text-sm">此操作将永久删除该用户账号，无法恢复。确定继续？</p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirm(null)}
-                className="flex-1 py-2.5 text-sm border border-ur-border rounded-lg text-gray-400 hover:text-white hover:border-gray-500 transition-colors">
-                取消
-              </button>
-              <button onClick={() => handleDelete(deleteConfirm)}
-                className="flex-1 py-2.5 text-sm font-display bg-ur-rose/80 text-white rounded-lg hover:bg-ur-rose transition-all">
-                确认删除
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 赛程删除确认 */}
-      {scheduleDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setScheduleDelete(null)}>
-          <div className="data-card w-full max-w-sm mx-4 space-y-4 animate-fade-up" onClick={e => e.stopPropagation()}>
-            <h3 className="font-display text-lg font-bold text-white">删除赛事</h3>
-            <p className="text-gray-400 text-sm">确认删除此赛事？此操作不可撤销。</p>
-            <div className="flex gap-3">
-              <button onClick={() => setScheduleDelete(null)} className="flex-1 py-2.5 text-sm border border-ur-border rounded-lg text-gray-400 hover:text-white hover:border-gray-500 transition-colors">取消</button>
-              <button onClick={() => handleScheduleDelete(scheduleDelete)} className="flex-1 py-2.5 text-sm font-display bg-ur-rose/80 text-white rounded-lg hover:bg-ur-rose transition-all">确认删除</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 赛程编辑/创建弹窗 */}
-      {scheduleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setScheduleModal(null)}>
-          <div className="data-card w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto space-y-3 animate-fade-up" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="font-display text-lg font-bold text-white">{scheduleModal.editId ? '编辑赛事' : '添加赛事'}</h3>
-              <button type="button" onClick={() => setScheduleModal(null)} className="text-gray-500 hover:text-white transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
-            </div>
-            {scheduleError && <div className="p-2 bg-ur-rose/10 border border-ur-rose/30 rounded-lg text-xs text-ur-rose">{scheduleError}</div>}
-            <ScheduleForm init={scheduleModal} onSave={handleScheduleSave} onClose={() => setScheduleModal(null)} />
-          </div>
-        </div>
-      )}
-
-      {/* 创建 / 编辑用户弹窗 */}
-      {modal && (
-        <UserFormModal
-          mode={modal.type}
-          init={modal.user}
-          onClose={() => setModal(null)}
-          onSave={modal.type === 'create' ? handleCreate : handleUpdate}
-          error={modalError}
-        />
-      )}
     </div>
   );
 }

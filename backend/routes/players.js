@@ -28,7 +28,6 @@ const PLAYER_FIELDS = {
   '离队日期': 'leave_date', 'leave_date': 'leave_date',
   '状态': 'status', 'status': 'status',
   '类型': 'team_type', 'team_type': 'team_type',
-  'HLTV链接': 'hltv_url', 'HLTV': 'hltv_url', 'hltv_url': 'hltv_url',
   '选手介绍': 'bio', '简介': 'bio', 'bio': 'bio',
   '头像': 'avatar_url', 'avatar_url': 'avatar_url',
 };
@@ -39,6 +38,7 @@ router.get('/', auth, async (req, res) => {
     const [rows] = await db.query(
       `SELECT * FROM players WHERE division = 'cs2'
        ORDER BY CASE team_type WHEN 'staff' THEN 1 WHEN 'roster' THEN 2 WHEN 'former' THEN 3 END,
+       CASE WHEN team_type = 'roster' THEN (CASE roster_status WHEN 'starter' THEN 1 WHEN 'bench' THEN 2 WHEN 'demoted' THEN 3 ELSE 1 END) ELSE 0 END,
        CASE team_type WHEN 'former' THEN leave_date END DESC,
        CASE team_type WHEN 'former' THEN NULL ELSE join_date END ASC,
        real_name ASC`
@@ -53,8 +53,8 @@ router.get('/', auth, async (req, res) => {
 // ========== 下载选手导入模板 ==========
 router.get('/template', adminAuth, (req, res) => {
   const wb = XLSX.utils.book_new();
-  const headers = ['游戏昵称*', '真实姓名', 'Steam ID', '职位', '场上角色', '入队日期', '离队日期', '类型', '状态', 'HLTV链接', '选手介绍'];
-  const example = ['0z', '辜龙', '76561198000000001', '选手', 'IGL/指挥', '2025-01-01', '', 'roster', 'active', 'https://www.hltv.org/player/xxx', '队伍核心指挥'];
+  const headers = ['游戏昵称*', '真实姓名', 'Steam ID', '职位', '场上角色', '入队日期', '离队日期', '类型', '状态', '选手介绍'];
+  const example = ['0z', '辜龙', '76561198000000001', '选手', 'IGL/指挥', '2025-01-01', '', 'roster', 'active', '队伍核心指挥'];
   const ws = XLSX.utils.aoa_to_sheet([headers, example]);
   ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length * 2 + 2, 14) }));
   XLSX.utils.book_append_sheet(wb, ws, '选手名单');
@@ -94,13 +94,20 @@ router.get('/:id', auth, async (req, res) => {
 
 // 创建选手（管理员）
 router.post('/', adminAuth, async (req, res) => {
-  const { nickname, real_name, steam_id, role, in_game_role, join_date, status, team_type, hltv_url, bio } = req.body;
+  const { nickname, real_name, steam_id, game_steam_id, role, in_game_role, join_date, status, team_type, bio, id_5e, id_pw, id_faceit_sea, id_faceit_eu } = req.body;
   try {
     const [result] = await db.query(
-      `INSERT INTO players (nickname, real_name, steam_id, role, in_game_role, join_date, status, team_type, hltv_url, bio, division)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'cs2')`,
-      [nickname, real_name, steam_id, role, in_game_role, join_date, status || 'active', team_type || 'roster', hltv_url, bio]
+      `INSERT INTO players (nickname, real_name, steam_id, game_steam_id, role, in_game_role, join_date, status, team_type, bio, id_5e, id_pw, id_faceit_sea, id_faceit_eu, division)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'cs2')`,
+      [nickname, real_name, steam_id, game_steam_id, role, in_game_role, join_date, status || 'active', team_type || 'roster', bio, id_5e || null, id_pw || null, id_faceit_sea || null, id_faceit_eu || null]
     );
+    // 同步到 player_id_mappings
+    if (game_steam_id && game_steam_id.trim()) {
+      try {
+        await db.query('INSERT OR IGNORE INTO player_id_mappings (player_id, game_id) VALUES (?, ?)',
+          [result.insertId, game_steam_id.trim()]);
+      } catch { /* ignore */ }
+    }
     res.json({ id: result.insertId, message: '选手创建成功' });
   } catch { res.status(500).json({ error: '创建失败' }); }
 });
@@ -121,7 +128,7 @@ router.put('/reorder', auth, async (req, res) => {
 
 // PUT /players/:id — 更新选手信息（admin专用，含全部字段）
 router.put('/:id', adminAuth, async (req, res) => {
-  const fields = ['nickname','real_name','steam_id','role','in_game_role','join_date','leave_date','status','team_type','hltv_url','bio','birth_date','avatar_url'];
+  const fields = ['nickname','real_name','steam_id','game_steam_id','role','in_game_role','join_date','leave_date','status','team_type','roster_status','bio','birth_date','avatar_url','leave_reason','id_5e','id_pw','id_faceit_sea','id_faceit_eu'];
   const updates = fields.filter(f => req.body[f] !== undefined);
   if (!updates.length) return res.status(400).json({ error: '无更新内容' });
   try {
@@ -129,6 +136,15 @@ router.put('/:id', adminAuth, async (req, res) => {
       `UPDATE players SET ${updates.map(f => `${f}=?`).join(',')} WHERE id=?`,
       [...updates.map(f => req.body[f]), req.params.id]
     );
+    // 同步 game_steam_id 到 player_id_mappings
+    if (req.body.game_steam_id && req.body.game_steam_id.trim()) {
+      try {
+        await db.query(
+          'INSERT OR IGNORE INTO player_id_mappings (player_id, game_id) VALUES (?, ?)',
+          [req.params.id, req.body.game_steam_id.trim()]
+        );
+      } catch { /* 映射表更新失败不影响主流程 */ }
+    }
     res.json({ message: '更新成功' });
   } catch { res.status(500).json({ error: '更新失败' }); }
 });
@@ -237,7 +253,6 @@ router.post('/import', adminAuth, upload.single('file'), async (req, res) => {
         }
       }
 
-      const hltv_url = mapVal('hltv_url');
       const bio = mapVal('bio');
       const avatar_url = mapVal('avatar_url');
 
@@ -247,16 +262,16 @@ router.post('/import', adminAuth, upload.single('file'), async (req, res) => {
         if (existing.length) {
           await db.query(
             `UPDATE players SET real_name=?, steam_id=?, role=?, in_game_role=?, join_date=?, leave_date=?,
-             status=?, team_type=?, hltv_url=?, bio=?, avatar_url=?, updated_at=datetime('now','localtime')
+             status=?, team_type=?, bio=?, avatar_url=?, updated_at=datetime('now','localtime')
              WHERE id=?`,
-            [real_name, steam_id, role, in_game_role, jd, ld, status, team_type, hltv_url, bio, avatar_url, existing[0].id]
+            [real_name, steam_id, role, in_game_role, jd, ld, status, team_type, bio, avatar_url, existing[0].id]
           );
         } else {
           await db.query(
             `INSERT INTO players (nickname, real_name, steam_id, role, in_game_role, join_date, leave_date,
-             status, team_type, hltv_url, bio, avatar_url, division)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'cs2')`,
-            [nickname, real_name, steam_id, role, in_game_role, jd, ld, status, team_type, hltv_url, bio, avatar_url]
+             status, team_type, bio, avatar_url, division)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'cs2')`,
+            [nickname, real_name, steam_id, role, in_game_role, jd, ld, status, team_type, bio, avatar_url]
           );
         }
         imported++;
@@ -308,6 +323,27 @@ router.post('/:id/avatar', auth, avatarUpload.single('file'), async (req, res) =
     if (!req.file) return res.status(400).json({ error: '请上传图片' });
     const url = `/uploads/avatars/${req.file.filename}`;
     await db.query('UPDATE players SET avatar_url = ? WHERE id = ?', [url, req.params.id]);
+    res.json({ url });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /players/:id/contract — 上传合同（r52，含试训队员；PDF/图片）
+const contractUpload = multer({
+  storage: multer.diskStorage({
+    destination: path.join(__dirname, '..', 'uploads', 'contracts'),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      cb(null, `contract_${req.params.id}_${Date.now()}${ext}`);
+    },
+  }),
+});
+router.post('/:id/contract', auth, contractUpload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: '请上传合同文件' });
+    const url = `/uploads/contracts/${req.file.filename}`;
+    await db.query('UPDATE players SET contract_url = ? WHERE id = ?', [url, req.params.id]);
     res.json({ url });
   } catch (e) {
     res.status(500).json({ error: e.message });

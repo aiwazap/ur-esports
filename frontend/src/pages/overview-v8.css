@@ -1,0 +1,380 @@
+/* ════════════════════════════════════════════════════════════
+   首页 r22 · overview-v8.css
+   design tokens：底 #040817；卡片渐变 rgba(12,20,56,.9)→rgba(7,12,34,.9)
+   边框 rgba(80,120,255,.30)，hover rgba(120,160,255,.6)
+   文字 #e9efff / #aebbe4 / #8fa5d8 / #7288bd
+   ════════════════════════════════════════════════════════════ */
+
+.ov8-root {
+  --ov8-grad-green:  linear-gradient(90deg, #22c55e, #10b981);
+  --ov8-grad-orange: linear-gradient(90deg, #f59e0b, #f97316);
+  --ov8-grad-red:    linear-gradient(90deg, #ef4444, #b91c1c);
+  max-width: 1492px;
+  margin: 0 auto;
+  padding: 0 0 28px;
+  background: linear-gradient(180deg, #050a1d 0%, #060b24 40%, #04081a 100%);
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  color: #e9efff;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.ov8-loading { padding: 80px 0; text-align: center; font-size: 15px; color: #8fa5d8; }
+
+/* ── 通用卡片 ─────────────────────────────────────────────── */
+.ov8-card {
+  border: 1px solid rgba(80, 120, 255, .30);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(13, 22, 60, .85), rgba(8, 13, 38, .85));
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color .2s ease;
+}
+.ov8-card:hover { border-color: rgba(120, 160, 255, .6); }
+
+.ov8-card-head { display: flex; align-items: center; justify-content: space-between; }
+.ov8-card-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.ov8-badge {
+  font-size: 11px; font-weight: 700; color: #7ea4ff;
+  background: rgba(59, 130, 246, .14);
+  border: 1px solid rgba(90, 130, 255, .35);
+  border-radius: 9px; padding: 1px 8px;
+}
+.ov8-card-right { font-size: 12px; color: #7ea4ff; }
+.ov8-dim-note { font-size: 12px; font-weight: 400; color: #7288bd; }
+
+.ov8-empty {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  min-height: 72px; font-size: 13px; color: #7288bd;
+  border: 1px dashed rgba(80, 120, 255, .22);
+  border-radius: 8px; background: rgba(14, 23, 62, .35);
+}
+
+/* ── HERO ─────────────────────────────────────────────────── */
+.ov8-hero {
+  cursor: pointer; position: relative;
+  background:
+    radial-gradient(900px 420px at 62% 30%, rgba(37, 60, 180, .38), transparent 70%),
+    radial-gradient(700px 300px at 15% 60%, rgba(30, 45, 140, .30), transparent 70%);
+  border-bottom: 1px solid rgba(70, 110, 255, .15);
+}
+.ov8-hero-bar { display: flex; align-items: center; justify-content: space-between; height: 46px; padding: 0 28px; }
+.ov8-hero-bar-title { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: #aebbe4; }
+.ov8-hero-tick { width: 4px; height: 14px; border-radius: 2px; background: linear-gradient(180deg, #38bdf8, #7c3aed); }
+.ov8-hero-hint { font-size: 12px; color: #7288bd; }
+.ov8-hero-content { overflow: hidden; transition: max-height .65s ease, opacity .5s ease; }
+.ov8-hero-inner { position: relative; padding: 8px 28px 26px; display: flex; align-items: flex-start; }
+.ov8-hero-copy { padding-left: 24px; padding-top: 26px; width: 600px; flex: none; position: relative; z-index: 2; }
+.ov8-hero-title { font-size: 50px; font-weight: 800; line-height: 1.15; letter-spacing: .5px; white-space: nowrap; }
+.ov8-hero-title > span:first-child { color: #ffffff; }
+.ov8-hero-grad {
+  background: linear-gradient(90deg, #4fa8ff, #38e5ff);
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent;
+}
+.ov8-hero-desc { margin-top: 20px; font-size: 17px; line-height: 1.8; color: #aebbe4; }
+.ov8-hero-btns { display: flex; gap: 18px; margin-top: 30px; }
+.ov8-btn-primary {
+  display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 28px;
+  border-radius: 8px; background: linear-gradient(90deg, #2563eb, #7c3aed);
+  font-size: 17px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 0 22px rgba(80, 90, 255, .45);
+  transition: box-shadow .2s ease;
+}
+.ov8-btn-primary:hover { box-shadow: 0 0 32px rgba(110, 120, 255, .7); }
+.ov8-hero-art { flex: 1; position: relative; height: 330px; display: flex; justify-content: center; }
+.ov8-hero-art img {
+  width: 525px; height: 330px; object-fit: cover;
+  -webkit-mask-image: radial-gradient(72% 72% at 50% 48%, #000 55%, transparent 98%);
+  mask-image: radial-gradient(72% 72% at 50% 48%, #000 55%, transparent 98%);
+}
+.ov8-hero-floats { width: 170px; flex: none; position: relative; z-index: 3; padding-top: 10px; display: flex; flex-direction: column; gap: 18px; }
+.ov8-float-card {
+  border: 1px solid rgba(90, 130, 255, .4); border-radius: 12px;
+  background: linear-gradient(180deg, rgba(14, 24, 64, .9), rgba(9, 15, 42, .9));
+  padding: 14px 16px; box-shadow: 0 0 24px rgba(40, 70, 200, .35);
+}
+.ov8-float-label { display: flex; justify-content: space-between; align-items: center; font-size: 11px; letter-spacing: 1px; color: #8fa5d8; }
+.ov8-up { color: #34d399; }
+.ov8-float-value { font-size: 26px; font-weight: 800; margin-top: 6px; }
+.ov8-float-none { margin-top: 10px; font-size: 11px; color: #7288bd; }
+.ov8-gauge { display: flex; align-items: center; justify-content: center; margin-top: 8px; }
+
+/* ── 顶部三卡 ─────────────────────────────────────────────── */
+.ov8-toprow {
+  display: grid;
+  grid-template-columns: 560px 1fr 400px;
+  gap: 20px;
+  padding: 18px 28px 6px;
+  align-items: stretch;
+}
+
+/* 即将开始赛事 */
+.ov8-upc-list { display: flex; flex-direction: column; gap: 6px; flex: 1; justify-content: center; }
+.ov8-upc-row {
+  display: flex; align-items: center; gap: 10px; padding: 6px 12px;
+  border-radius: 8px; background: rgba(20, 32, 80, .55); cursor: pointer;
+  transition: background .15s ease;
+}
+.ov8-upc-row:hover { background: rgba(24, 38, 96, .65); }
+.ov8-team-badge {
+  width: 22px; height: 22px; flex: none; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: #fff;
+}
+.ov8-upc-opp { font-size: 13px; font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov8-upc-stage { width: 84px; flex: none; text-align: center; font-size: 11px; color: #8fa5d8; background: rgba(30, 45, 105, .6); border-radius: 5px; padding: 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov8-upc-time { width: 78px; flex: none; text-align: right; font-size: 12px; color: #c7d4f5; }
+.ov8-upc-status { width: 60px; flex: none; text-align: center; font-size: 11px; font-weight: 700; color: #8fa5d8; background: rgba(30, 45, 105, .5); border-radius: 5px; padding: 2px 0; overflow: hidden; white-space: nowrap; }
+.ov8-upc-status.ov8-soon { color: #fbbf24; background: rgba(251, 191, 36, .10); }
+
+/* 数据速览 2×2 */
+.ov8-glance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1; }
+.ov8-tile { border-radius: 8px; background: rgba(20, 32, 80, .55); padding: 10px 14px; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.ov8-tile-label { font-size: 12px; color: #8fa5d8; }
+.ov8-tile-value { font-size: 24px; font-weight: 800; }
+
+/* 今日训练安排 */
+.ov8-plan-list { display: flex; flex-direction: column; gap: 6px; flex: 1; justify-content: center; }
+.ov8-plan-row { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 8px; background: rgba(20, 32, 80, .55); }
+.ov8-plan-time { width: 52px; flex: none; font-size: 12px; font-weight: 700; color: #8fa5d8; }
+.ov8-plan-tick { width: 3px; height: 16px; flex: none; border-radius: 2px; background: #7288bd; }
+.ov8-plan-title { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov8-plan-status { font-size: 11px; font-weight: 700; border-radius: 5px; padding: 2px 8px; flex: none; }
+.ov8-st-done.ov8-plan-tick   { background: #34d399; }
+.ov8-st-live.ov8-plan-tick   { background: #38bdf8; }
+.ov8-st-wait.ov8-plan-tick   { background: #fbbf24; }
+.ov8-st-done.ov8-plan-status { color: #34d399; background: rgba(52, 211, 153, .12); }
+.ov8-st-live.ov8-plan-status { color: #38bdf8; background: rgba(56, 189, 248, .12); }
+.ov8-st-wait.ov8-plan-status { color: #fbbf24; background: rgba(251, 191, 36, .10); }
+
+/* ── 主区 grid ────────────────────────────────────────────── */
+.ov8-main {
+  display: grid;
+  grid-template-columns: 560px 1fr 400px;
+  gap: 20px;
+  padding: 16px 28px 0;
+}
+.ov8-panel { border-radius: 14px; padding: 18px 20px 14px; }
+.ov8-col1-r1 { grid-column: 1; grid-row: 1; }
+.ov8-col1-r2 { grid-column: 1; grid-row: 2; }
+.ov8-mapspan { grid-column: 2 / 4; }
+.ov8-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.ov8-panel-title { font-size: 18px; font-weight: 700; }
+
+/* W/L 速览条 */
+.ov8-dots-bar { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 8px; background: rgba(20, 32, 80, .55); margin-bottom: 10px; }
+.ov8-dots-label { font-size: 12px; color: #8fa5d8; flex: none; }
+.ov8-dots { display: flex; gap: 4px; flex: 1; }
+.ov8-dot {
+  width: 18px; height: 18px; border-radius: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800;
+}
+.ov8-dot-w { color: #d1fae5; background: rgba(16, 185, 129, .35); }
+.ov8-dot-l { color: #fee2e2; background: rgba(239, 68, 68, .35); }
+.ov8-dots-record { font-size: 12px; font-weight: 700; color: #c7d4f5; flex: none; }
+
+/* 比赛记录行 */
+.ov8-match-list { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.ov8-match-row {
+  display: flex; align-items: center; gap: 10px; padding: 6px 12px;
+  border-radius: 10px; border: 1px solid rgba(80, 120, 255, .18);
+  transition: background .15s ease;
+}
+.ov8-match-row:hover { background: rgba(24, 38, 96, .65); }
+.ov8-match-row.ov8-won {
+  border-left: 3px solid #10b981;
+  background: linear-gradient(90deg, rgba(16, 185, 129, .07), rgba(14, 23, 62, .5));
+}
+.ov8-match-row.ov8-lost {
+  border-left: 3px solid #ef4444;
+  background: linear-gradient(90deg, rgba(239, 68, 68, .07), rgba(14, 23, 62, .5));
+}
+.ov8-match-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+.ov8-match-opp { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov8-event-chip { font-size: 10px; font-weight: 600; color: #7ea4ff; border: 1px solid rgba(90, 130, 255, .35); border-radius: 4px; padding: 1px 6px; flex: none; white-space: nowrap; }
+.ov8-match-map { display: flex; align-items: center; gap: 7px; width: 106px; flex: none; }
+.ov8-match-map img { width: 24px; height: 24px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .5)); }
+.ov8-match-map span { font-size: 12px; color: #8fa5d8; }
+.ov8-match-score {
+  width: 76px; flex: none; font-size: 16px;
+  display: flex; align-items: baseline; justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.ov8-score-ours  { width: 28px; text-align: right; }
+.ov8-score-their { width: 28px; text-align: left; }
+.ov8-score-win  { font-weight: 800; color: #34d399; }
+.ov8-score-loss { font-weight: 800; color: #f87171; }
+.ov8-score-sep  { width: 14px; text-align: center; color: #5f74b3; }
+.ov8-score-their { font-weight: 600; color: #c7d4f5; }
+.ov8-match-date { width: 46px; flex: none; text-align: right; font-size: 11px; color: #7288bd; }
+
+/* 失误分布 */
+.ov8-err-wrap { display: flex; align-items: center; gap: 22px; margin-top: 12px; }
+.ov8-err-legend { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.ov8-err-row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 8px; border-radius: 6px; }
+.ov8-err-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.ov8-err-name { flex: 1; color: #c7d4f5; }
+
+/* 地图胜率 */
+.ov8-map-legend { display: flex; align-items: center; gap: 14px; font-size: 12px; color: #8fa5d8; }
+.ov8-map-legend span { display: flex; align-items: center; gap: 5px; }
+.ov8-map-legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.ov8-map-grid { display: grid; gap: 12px; margin-top: 16px; }
+.ov8-map-card {
+  border: 1px solid rgba(80, 120, 255, .22); border-radius: 10px;
+  background: rgba(14, 23, 62, .55); padding: 14px 8px 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  transition: border-color .15s ease, background .15s ease;
+}
+.ov8-map-card:hover { border-color: rgba(130, 170, 255, .6); background: rgba(20, 32, 86, .7); }
+.ov8-map-img { width: 100%; height: 96px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .5)); }
+.ov8-map-name { font-size: 13px; font-weight: 600; color: #c7d4f5; }
+.ov8-map-rate { font-size: 20px; font-weight: 800; line-height: 1; }
+.ov8-map-record { font-size: 11px; color: #7288bd; }
+.ov8-map-bar { width: 100%; height: 4px; border-radius: 3px; background: rgba(70, 110, 255, .18); overflow: hidden; }
+.ov8-map-bar > div { height: 100%; border-radius: 3px; }
+
+/* ── 可点击跳转 ───────────────────────────────────────────── */
+.ov8-click { cursor: pointer; }
+.ov8-tile.ov8-click:hover { background: rgba(24, 38, 96, .70); }
+.ov8-plan-row.ov8-click:hover { background: rgba(24, 38, 96, .65); }
+.ov8-match-row { cursor: pointer; }
+.ov8-link { font-size: 13px; color: #7ea4ff; cursor: pointer; }
+.ov8-link:hover { color: #ffffff; }
+.ov8-btn-ghost {
+  display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 28px;
+  border-radius: 8px; border: 1px solid rgba(110, 150, 255, .55);
+  background: rgba(15, 25, 70, .35);
+  font-size: 17px; font-weight: 600; cursor: pointer;
+  transition: background .2s ease;
+}
+.ov8-btn-ghost:hover { background: rgba(30, 45, 110, .5); }
+
+/* ── 底部入口区 ───────────────────────────────────────────── */
+.ov8-bottom { display: grid; grid-template-columns: 560px 1fr; gap: 20px; padding: 20px 28px 0; }
+.ov8-sec-title { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; margin-bottom: 14px; }
+.ov8-sec-tick { width: 4px; height: 18px; border-radius: 2px; background: linear-gradient(180deg, #38bdf8, #7c3aed); }
+.ov8-entry-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.ov8-entry {
+  border: 1px solid rgba(80, 120, 255, .30); border-radius: 12px;
+  background: linear-gradient(180deg, rgba(13, 22, 60, .85), rgba(8, 13, 38, .85));
+  padding: 16px; display: flex; align-items: center; gap: 12px;
+  transition: border-color .2s ease;
+}
+.ov8-entry:hover { border-color: rgba(120, 160, 255, .6); }
+.ov8-entry-icon {
+  width: 44px; height: 44px; flex: none; border-radius: 9px; overflow: hidden;
+  border: 1px solid rgba(90, 130, 255, .35); background: #05091c;
+  display: flex; align-items: center; justify-content: center;
+}
+.ov8-entry-img { width: 100%; height: 100%; object-fit: cover; mix-blend-mode: screen; }
+.ov8-entry-text { flex: 1; }
+.ov8-entry-name { font-size: 14px; font-weight: 700; }
+.ov8-entry-sub { font-size: 11px; color: #7288bd; margin-top: 2px; }
+.ov8-entry-arrow { color: #8fa5d8; }
+
+/* ── 地图周期弹窗 ─────────────────────────────────────────── */
+.ov8-modal-mask {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(3, 6, 18, .72); backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center;
+}
+.ov8-modal {
+  width: 380px; max-width: 92vw;
+  border: 1px solid rgba(90, 130, 255, .4); border-radius: 14px;
+  background: linear-gradient(180deg, rgba(13, 22, 60, .97), rgba(8, 13, 38, .97));
+  box-shadow: 0 0 40px rgba(40, 70, 200, .45);
+  padding: 16px 18px 18px; color: #e9efff;
+}
+.ov8-modal-head { display: flex; align-items: center; justify-content: space-between; }
+.ov8-modal-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; }
+.ov8-modal-title img { width: 34px; height: 34px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
+.ov8-modal-close { cursor: pointer; color: #8fa5d8; font-size: 14px; padding: 2px 6px; }
+.ov8-modal-close:hover { color: #ffffff; }
+.ov8-mtabs { display: flex; gap: 8px; margin-top: 12px; }
+.ov8-mtab {
+  padding: 4px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  color: #8fa5d8; background: rgba(20, 32, 80, .55); cursor: pointer;
+  border: 1px solid transparent;
+}
+.ov8-mtab:hover { color: #ffffff; }
+.ov8-mtab-on {
+  color: #ffffff; background: linear-gradient(90deg, #2563eb, #7c3aed);
+  box-shadow: 0 0 10px rgba(80, 90, 255, .4);
+}
+.ov8-modal-map { width: 560px; display: flex; flex-direction: column; }
+.ov8-rec-scroll {
+  max-height: 470px; overflow-y: auto; padding-right: 4px;
+  scrollbar-width: thin; scrollbar-color: rgba(90, 130, 255, .5) transparent;
+}
+.ov8-rec-scroll::-webkit-scrollbar { width: 7px; }
+.ov8-rec-scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, .04); border-radius: 4px; }
+.ov8-rec-scroll::-webkit-scrollbar-thumb { background: rgba(90, 130, 255, .5); border-radius: 4px; }
+.ov8-rec-scroll::-webkit-scrollbar-thumb:hover { background: rgba(120, 160, 255, .8); }
+.ov8-modal-maphead { display: flex; align-items: center; gap: 14px; }
+.ov8-modal-maphead img { width: 64px; height: 64px; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(0, 0, 0, .55)); }
+.ov8-modal-mapname { flex: 1; }
+.ov8-modal-mapname-main { font-size: 20px; font-weight: 800; }
+.ov8-modal-mapname-sub { font-size: 12px; color: #8fa5d8; margin-top: 3px; }
+.ov8-rec-list { margin-top: 14px; }
+.ov8-rec-title { font-size: 13px; font-weight: 700; color: #c7d4f5; margin-bottom: 8px; }
+.ov8-rec-item { margin-bottom: 8px; }
+.ov8-rec-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  border-radius: 8px; border: 1px solid rgba(80, 120, 255, .18);
+  transition: background .15s ease;
+}
+.ov8-rec-row:hover { background: rgba(24, 38, 96, .65); }
+.ov8-rec-row.ov8-won  { border-left: 3px solid #10b981; background: linear-gradient(90deg, rgba(16, 185, 129, .07), rgba(14, 23, 62, .5)); }
+.ov8-rec-row.ov8-lost { border-left: 3px solid #ef4444; background: linear-gradient(90deg, rgba(239, 68, 68, .07), rgba(14, 23, 62, .5)); }
+.ov8-rec-row.ov8-draw { border-left: 3px solid #f59e0b; background: linear-gradient(90deg, rgba(245, 158, 11, .07), rgba(14, 23, 62, .5)); }
+.ov8-rec-date { width: 44px; flex: none; font-size: 11px; color: #7288bd; }
+.ov8-rec-opp { width: 112px; flex: none; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov8-rec-evcol { flex: 1; min-width: 0; display: flex; align-items: center; }
+.ov8-rec-score { width: 66px; flex: none; display: flex; align-items: baseline; justify-content: center; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ov8-rec-ours   { width: 26px; text-align: right; }
+.ov8-rec-sep    { width: 12px; text-align: center; color: #5f74b3; font-weight: 400; }
+.ov8-rec-theirs { width: 26px; text-align: left; color: #c7d4f5; }
+.ov8-rec-event {
+  font-size: 10px; font-weight: 600; color: #d4af37;
+  border: 1px solid rgba(212, 175, 55, .4); background: rgba(212, 175, 55, .10);
+  border-radius: 4px; padding: 1px 6px; white-space: nowrap;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+}
+.ov8-score-draw { color: #fbbf24; }
+.ov8-rec-caret { width: 16px; flex: none; text-align: center; font-size: 12px; color: #8fa5d8; }
+.ov8-rec-detail {
+  margin: 6px 4px 2px; padding: 10px 12px;
+  border: 1px solid rgba(80, 120, 255, .22); border-radius: 8px;
+  background: rgba(10, 18, 50, .5);
+}
+.ov8-det-title { font-size: 12px; font-weight: 700; color: #7ea4ff; margin-bottom: 6px; }
+.ov8-det-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; table-layout: fixed; }
+.ov8-det-table td:first-child, .ov8-det-table th:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov8-det-table th { color: #8fa5d8; font-weight: 600; padding: 4px 6px; text-align: right; border-bottom: 1px solid rgba(70, 110, 255, .16); }
+.ov8-det-table td { padding: 4px 6px; text-align: right; border-bottom: 1px solid rgba(70, 110, 255, .10); }
+
+.ov8-firstban { margin-left: 6px; font-size: 10px; font-weight: 700; color: #d4af37; border: 1px solid rgba(212, 175, 55, .4); background: rgba(212, 175, 55, .10); border-radius: 4px; padding: 0 5px; }
+
+/* ── 窄屏回退 ─────────────────────────────────────────────── */
+@media (max-width: 1280px) {
+  .ov8-toprow, .ov8-main { grid-template-columns: 1fr; }
+  .ov8-col1-r1, .ov8-col1-r2, .ov8-mapspan { grid-column: auto; grid-row: auto; }
+  .ov8-hero-title { font-size: 34px; white-space: normal; }
+  .ov8-hero-art, .ov8-hero-floats { display: none; }
+  .ov8-hero-copy { width: auto; }
+  .ov8-map-grid { grid-template-columns: repeat(3, 1fr) !important; }
+  .ov8-bottom { grid-template-columns: 1fr; }
+}
+
+/* 平局改橙 20260707 */
+.ov8-score-draw { color: #f97316; }
+.ov8-rec-row.ov8-draw { border-left-color: #f97316; background: linear-gradient(90deg, rgba(249,115,22,.07), rgba(14,23,62,.5)); }
+
+/* 首页比赛行/圆点 平局改橙 20260707 */
+.ov8-dot-d { color: #fde7cf; background: rgba(249, 115, 22, .38); }
+.ov8-match-row.ov8-draw { border-left: 3px solid #f97316; background: linear-gradient(90deg, rgba(249,115,22,.07), rgba(14,23,62,.5)); }

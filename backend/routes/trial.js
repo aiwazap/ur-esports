@@ -25,10 +25,29 @@ async function ensureTables() {
       workstation TEXT DEFAULT '',
       status TEXT DEFAULT 'active',
       notes TEXT DEFAULT '',
+      form_json TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now','localtime')),
       updated_at TEXT DEFAULT (datetime('now','localtime'))
     )
   `);
+
+  // 兼容旧表：若 form_json 列不存在则补加（整张表单 JSON 存这里）
+  try {
+    const [cols] = await db.query(`PRAGMA table_info(trial_players)`);
+    const hasFormJson = cols.some(c => c.name === 'form_json');
+    if (!hasFormJson) {
+      await db.query(`ALTER TABLE trial_players ADD COLUMN form_json TEXT DEFAULT ''`);
+      console.log('[trial] trial_players 已补加 form_json 列');
+    }
+    // 体检报告（base64 data URL 存这里，图片或PDF）
+    const hasMedical = cols.some(c => c.name === 'medical_report');
+    if (!hasMedical) {
+      await db.query(`ALTER TABLE trial_players ADD COLUMN medical_report TEXT DEFAULT ''`);
+      console.log('[trial] trial_players 已补加 medical_report 列');
+    }
+  } catch (e) {
+    console.error('[trial] 检查/补加列失败:', e.message);
+  }
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS trial_contacts (
@@ -50,6 +69,17 @@ async function ensureTables() {
       q8 TEXT DEFAULT '',
       handler_sign TEXT DEFAULT '',
       manager_confirm TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      FOREIGN KEY (player_id) REFERENCES trial_players(id)
+    )
+  `);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS trial_contact_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      player_id INTEGER,
+      snapshot_html TEXT DEFAULT '',
+      saved_by TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (player_id) REFERENCES trial_players(id)
     )
@@ -102,13 +132,27 @@ async function ensureTables() {
 // 确保表存在
 ensureTables().catch(e => console.error('trial ensureTables error:', e.message));
 
+// 自动迁移：给老库补 form_json 列（存完整表单 JSON）
+(async () => {
+  try {
+    const [cols] = await db.query(`PRAGMA table_info(trial_players)`);
+    const hasFormJson = cols.some(c => c.name === 'form_json');
+    if (!hasFormJson) {
+      await db.query(`ALTER TABLE trial_players ADD COLUMN form_json TEXT DEFAULT ''`);
+      console.log('trial_players: 已添加 form_json 列');
+    }
+  } catch (e) {
+    console.error('trial form_json 迁移失败:', e.message);
+  }
+})();
+
 // ============================================================
 // 权限检查中间件
 // ============================================================
 function checkRole(...roles) {
   return (req, res, next) => {
     const userRole = req.user?.role || '';
-    if (roles.includes(userRole) || userRole === 'CEO' || userRole === '经理') {
+    if (roles.includes(userRole) || userRole === 'admin') {
       return next();
     }
     return res.status(403).json({ error: '权限不足' });
@@ -147,13 +191,15 @@ router.get('/players/:id', auth, async (req, res) => {
 router.post('/players', auth, async (req, res) => {
   try {
     const { name, ign, nationality, age, steam_id, faceit, phone, wechat,
-            translator, translator_phone, flight_info, room_no, workstation, notes } = req.body;
+            translator, translator_phone, flight_info, room_no, workstation, notes,
+            form_json } = req.body;
     const [result] = await db.query(
       `INSERT INTO trial_players (name, ign, nationality, age, steam_id, faceit, phone, wechat,
-         translator, translator_phone, flight_info, room_no, workstation, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         translator, translator_phone, flight_info, room_no, workstation, notes, form_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [name, ign, nationality, age, steam_id, faceit, phone, wechat,
-       translator, translator_phone, flight_info, room_no, workstation, notes]
+       translator, translator_phone, flight_info, room_no, workstation, notes,
+       form_json || '']
     );
     res.json({ id: result.insertId, message: '新增成功' });
   } catch (e) {
@@ -161,13 +207,43 @@ router.post('/players', auth, async (req, res) => {
   }
 });
 
-// 更新
+// 批量导入（接收队员数组，逐条插入）
+router.post('/players/bulk', auth, checkRole('admin', 'coach', 'team_lead'), async (req, res) => {
+  try {
+    const list = Array.isArray(req.body) ? req.body : (req.body.players || []);
+    if (!list.length) return res.status(400).json({ error: '没有可导入的数据' });
+
+    let inserted = 0;
+    const skipped = [];
+    for (const p of list) {
+      const name = (p.name || '').trim();
+      if (!name) { skipped.push('(空姓名行)'); continue; }
+      try {
+        await db.query(
+          `INSERT INTO trial_players (name, ign, nationality, age, steam_id, faceit, phone, wechat,
+             translator, translator_phone, flight_info, room_no, workstation, notes, form_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [name, p.ign||'', p.nationality||'', p.age||0, p.steam_id||'', p.faceit||'',
+           p.phone||'', p.wechat||'', p.translator||'', p.translator_phone||'',
+           p.flight_info||'', p.room_no||'', p.workstation||'', p.notes||'', p.form_json||'']
+        );
+        inserted++;
+      } catch (e) {
+        skipped.push(name + '(' + e.message + ')');
+      }
+    }
+    res.json({ message: '导入完成', inserted, skipped, total: list.length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 router.put('/players/:id', auth, async (req, res) => {
   try {
     const fields = [];
     const vals = [];
     for (const key of ['name','ign','nationality','age','steam_id','faceit','phone','wechat',
-                       'translator','translator_phone','flight_info','room_no','workstation','status','notes']) {
+                       'translator','translator_phone','flight_info','room_no','workstation','status','notes',
+                       'form_json']) {
       if (req.body[key] !== undefined) {
         fields.push(`${key} = ?`);
         vals.push(req.body[key]);
@@ -185,14 +261,60 @@ router.put('/players/:id', auth, async (req, res) => {
   }
 });
 
-// 删除
-router.delete('/players/:id', auth, checkRole('CEO', '经理'), async (req, res) => {
+// ============================================================
+// 体检报告：上传（base64）、查看、探测
+// ============================================================
+// 上传：前端把图片/PDF 转成 base64 data URL 发来，存数据库
+router.post('/players/:id/medical-report', auth, async (req, res) => {
   try {
-    await db.query('DELETE FROM trial_players WHERE id = ?', [req.params.id]);
-    // 级联删除关联数据
-    await db.query('DELETE FROM trial_contacts WHERE player_id = ?', [req.params.id]);
-    await db.query('DELETE FROM trial_scores WHERE player_id = ?', [req.params.id]);
-    await db.query('DELETE FROM trial_costs WHERE player_id = ?', [req.params.id]);
+    const { dataUrl } = req.body;
+    if (!dataUrl || typeof dataUrl !== 'string') return res.status(400).json({ error: '没有收到文件数据' });
+    await db.query(
+      `UPDATE trial_players SET medical_report = ?, updated_at = datetime('now','localtime') WHERE id = ?`,
+      [dataUrl, req.params.id]
+    );
+    res.json({ message: '体检报告已上传' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 查看：返回 base64 内容（前端拿到后渲染图片或PDF）
+router.get('/players/:id/medical-report', auth, async (req, res) => {
+  try {
+    const [rows] = await db.query(`SELECT medical_report FROM trial_players WHERE id = ?`, [req.params.id]);
+    const dataUrl = rows && rows[0] && rows[0].medical_report;
+    if (!dataUrl) return res.status(404).json({ error: '该队员还没有上传体检报告' });
+    res.json({ dataUrl });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 探测：是否已上传（前端先 HEAD/GET 判断）
+router.head('/players/:id/medical-report', auth, async (req, res) => {
+  try {
+    const [rows] = await db.query(`SELECT medical_report FROM trial_players WHERE id = ?`, [req.params.id]);
+    const has = rows && rows[0] && rows[0].medical_report;
+    res.status(has ? 200 : 404).end();
+  } catch (e) {
+    res.status(500).end();
+  }
+});
+
+// 删除
+router.delete('/players/:id', auth, checkRole('admin', 'coach', 'team_lead'), async (req, res) => {
+  try {
+    const pid = req.params.id;
+    // ⚠️ 必须先删子表（引用方），再删父表，否则外键约束会报 FOREIGN KEY constraint failed
+    await db.query('DELETE FROM trial_contacts WHERE player_id = ?', [pid]);
+    await db.query('DELETE FROM trial_scores WHERE player_id = ?', [pid]);
+    await db.query('DELETE FROM trial_costs WHERE player_id = ?', [pid]);
+    await db.query('DELETE FROM trial_contact_snapshots WHERE player_id = ?', [pid]);
+    // 入队方案表（若存在 player_id 关联）
+    try { await db.query('DELETE FROM trial_plans WHERE player_id = ?', [pid]); } catch (e) {}
+    // 最后删父表
+    await db.query('DELETE FROM trial_players WHERE id = ?', [pid]);
     res.json({ message: '删除成功' });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -254,6 +376,53 @@ router.put('/contacts/:id', auth, async (req, res) => {
     vals.push(req.params.id);
     await db.query(`UPDATE trial_contacts SET ${fields.join(', ')} WHERE id = ?`, vals);
     res.json({ message: '更新成功' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ============================================================
+// CONTACT SNAPSHOTS — 接洽表整页快照（HTML 存档 / 历史版本）
+// ============================================================
+
+// 取某队员的接洽快照列表（最新在前）
+router.get('/contacts/snapshot', auth, async (req, res) => {
+  try {
+    const pid = parseInt(req.query.player_id);
+    if (!pid) return res.json([]);
+    const [rows] = await db.query(
+      `SELECT id, player_id, snapshot_html, saved_by, created_at
+       FROM trial_contact_snapshots WHERE player_id = ? ORDER BY created_at DESC, id DESC`,
+      [pid]
+    );
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 保存一条接洽快照
+router.post('/contacts/snapshot', auth, async (req, res) => {
+  try {
+    const { player_id, snapshot_html } = req.body;
+    if (!player_id) return res.status(400).json({ error: '缺少 player_id' });
+    const savedBy = (req.user && (req.user.username || req.user.name)) || '';
+    const [result] = await db.query(
+      `INSERT INTO trial_contact_snapshots (player_id, snapshot_html, saved_by)
+       VALUES (?, ?, ?)`,
+      [parseInt(player_id), snapshot_html || '', savedBy]
+    );
+    res.json({ id: result.insertId, message: '快照已保存' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 删除一条接洽快照
+router.delete('/contacts/snapshot/:id', auth, async (req, res) => {
+  try {
+    await db.query(`DELETE FROM trial_contact_snapshots WHERE id = ?`, [parseInt(req.params.id)]);
+    res.json({ message: '已删除' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -340,7 +509,32 @@ router.post('/scores', auth, async (req, res) => {
 });
 
 // 删除评分（仅单个）
-router.delete('/scores/:id', auth, checkRole('CEO', '经理'), async (req, res) => {
+// 更新评分（编辑已有记录）
+router.put('/scores/:id', auth, checkRole('admin', 'coach', 'team_lead'), async (req, res) => {
+  try {
+    const p = req.body;
+    const weights = { d1: 0.30, d2: 0.20, d3: 0.25, d4: 0.15, d5: 0.10 };
+    const weighted = (p.d1 * weights.d1 + p.d2 * weights.d2 + p.d3 * weights.d3
+                    + p.d4 * weights.d4 + p.d5 * weights.d5).toFixed(2);
+    await db.query(
+      `UPDATE trial_scores SET
+         score_date = ?, evaluator = ?, trial_week = ?, phase = ?,
+         opponent = ?, map_name = ?, match_rating = ?, match_adr = ?, match_kast = ?,
+         d1 = ?, d1_note = ?, d2 = ?, d2_note = ?, d3 = ?, d3_note = ?,
+         d4 = ?, d4_note = ?, d5 = ?, d5_note = ?, comment = ?, weighted_score = ?
+       WHERE id = ?`,
+      [p.score_date, p.evaluator, p.trial_week, p.phase,
+       p.opponent, p.map_name, p.match_rating, p.match_adr, p.match_kast,
+       p.d1, p.d1_note, p.d2, p.d2_note, p.d3, p.d3_note, p.d4, p.d4_note, p.d5, p.d5_note,
+       p.comment, weighted, req.params.id]
+    );
+    res.json({ weighted: parseFloat(weighted), message: '评分已更新' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.delete('/scores/:id', auth, checkRole('admin', 'coach', 'team_lead'), async (req, res) => {
   try {
     await db.query('DELETE FROM trial_scores WHERE id = ?', [req.params.id]);
     res.json({ message: '评分已删除' });
@@ -375,7 +569,7 @@ router.get('/costs', auth, async (req, res) => {
 });
 
 // 新增成本项
-router.post('/costs', auth, checkRole('CEO', '经理'), async (req, res) => {
+router.post('/costs', auth, checkRole('admin', 'coach', 'team_lead'), async (req, res) => {
   try {
     const { player_id, cost_type, description, amount, notes } = req.body;
     const [result] = await db.query(
@@ -390,7 +584,7 @@ router.post('/costs', auth, checkRole('CEO', '经理'), async (req, res) => {
 });
 
 // 删除成本项
-router.delete('/costs/:id', auth, checkRole('CEO', '经理'), async (req, res) => {
+router.delete('/costs/:id', auth, checkRole('admin', 'coach', 'team_lead'), async (req, res) => {
   try {
     await db.query('DELETE FROM trial_costs WHERE id = ?', [req.params.id]);
     res.json({ message: '成本项已删除' });
@@ -414,7 +608,7 @@ router.get('/plans', auth, async (req, res) => {
   }
 });
 
-router.post('/plans', auth, checkRole('CEO', '经理'), async (req, res) => {
+router.post('/plans', auth, checkRole('admin', 'coach', 'team_lead'), async (req, res) => {
   try {
     const { player_id, title, content } = req.body;
     await db.query(`

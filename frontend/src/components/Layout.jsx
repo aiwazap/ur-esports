@@ -1,112 +1,132 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  Users,
-  ClipboardList,
-  Target,
-  Settings,
-  UserPlus,
-} from 'lucide-react';
+import { useLang } from '../i18n';
 import ParticleBackground from './ParticleBackground';
+import { Activity, Bell, Briefcase, Database, Home, LogOut, Search, Shield, UserCog, Users } from 'lucide-react';
 
-const links = [
-  { to: '/overview', label: '赛训总览', icon: LayoutDashboard },
-  { to: '/members', label: '分部成员', icon: Users },
-  { to: '/training-report', label: '赛训报告', icon: ClipboardList },
-  { to: '/tactics', label: '战术总表', icon: Target },
-  { to: '/trial-players', label: '试训人员', icon: UserPlus },
-  { to: '/admin', label: '数据管理', icon: Settings },
+const NAV_ITEMS = [
+  { to: '/overview',        icon: Home,      key: 'nav.overview' },
+  { to: '/members',         icon: Users,     key: 'nav.members' },
+  { to: '/matches',         icon: Database,  key: 'nav.matches' },
+  { to: '/training-report', icon: Activity,  key: 'nav.analytics' },
+  { to: '/workstation',     icon: Briefcase, key: 'nav.workstation' },
+  { to: '/admin',           icon: Shield,    key: 'nav.admin' },
 ];
 
-export default function Layout() {
-  const nav = useNavigate();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+function getUser() {
+  try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
+}
 
-  const logout = () => {
+export default function Layout() {
+  const { t, lang, setLang } = useLang();
+  const navigate = useNavigate();
+  const user = getUser();
+
+  const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    nav('/login');
+    navigate('/login');
   };
 
+  const langs = [
+    { code: 'zh', label: '中' },
+    { code: 'en', label: 'EN' },
+  ];
+
   return (
-    <>
+    <div className="ur-app-shell min-h-screen text-white">
       <ParticleBackground />
-      <div className="min-h-screen flex relative z-[2]">
-        {/* Sidebar — glass style */}
-        <aside className="w-56 min-h-screen glass-sidebar flex flex-col relative z-10">
-          <div className="p-5 border-b border-white/[0.08]">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center
-                              bg-gradient-to-br from-white/18 to-cyan-400/8
-                              border border-white/20
-                              shadow-[0_0_28px_rgba(104,232,255,0.18)]">
-                <img src="/logo.png" alt="UR Logo" className="w-7 h-7 object-contain drop-shadow-[0_0_10px_rgba(104,232,255,0.52)]" />
-              </div>
-              <div>
-                <p className="text-[11px] text-ur-muted leading-tight">UR Esports</p>
-                <h1 className="text-sm font-bold text-white leading-tight">CS2 Data Center</h1>
-              </div>
+      <header className="ur-topbar fixed top-0 left-0 right-0 z-40 h-[72px]">
+        <div className="ur-topbar__inner h-full max-w-screen-2xl mx-auto px-5 flex items-center justify-between">
+          <div className="ur-brand">
+            <div className="ur-brand__mark">
+              <img src="/images/ur-logo-transparent.png" alt="UR Esports" />
+            </div>
+            <div className="ur-brand__text">
+              <strong>UR Esports</strong>
+              <span>赛训数据中心</span>
             </div>
           </div>
 
-          <nav className="flex-1 p-3 space-y-1.5">
-            {links.map((l) => {
-              const Icon = l.icon;
+          <nav className="ur-nav hidden md:flex items-center">
+            {NAV_ITEMS.map(item => {
+              const Icon = item.icon;
               return (
-                <NavLink
-                  key={l.to}
-                  to={l.to}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 h-[42px] px-3.5 rounded-xl text-sm transition-all duration-200
-                     ${isActive
-                       ? 'text-white border border-cyan-400/25 bg-gradient-to-r from-cyan-400/13 to-blue-500/5'
-                       : 'text-gray-400 border border-transparent hover:text-white hover:bg-white/5'}`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <span className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                        isActive
-                          ? 'bg-cyan-400 shadow-[0_0_16px_rgba(104,232,255,1)]'
-                          : 'bg-gray-500/40'
-                      }`} />
-                      <span>{l.label}</span>
-                    </>
-                  )}
-                </NavLink>
-              );
-            })}
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  'ur-nav__item' + (isActive ? ' is-active' : '')
+                }
+              >
+                <Icon size={15} strokeWidth={1.8} />
+                {t(item.key)}
+              </NavLink>
+            );})}
           </nav>
 
-          <div className="p-4 border-t border-white/[0.08]">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400/30 to-blue-500/20
-                              flex items-center justify-center text-sm font-bold text-white
-                              border border-cyan-400/20">
-                {user.username?.[0]?.toUpperCase() || 'U'}
-              </div>
-              <div>
-                <p className="text-sm text-white">{user.username}</p>
-                <p className="text-xs text-ur-muted">{user.role}</p>
-              </div>
-            </div>
-            <button onClick={logout} className="btn-primary w-full text-xs">
-              退出登录
+          <div className="ur-actions">
+            <button className="ur-icon-btn" type="button" aria-label="搜索">
+              <Search size={18} />
             </button>
-            <p className="text-center text-[10px] text-gray-600 mt-3 leading-relaxed">
-              <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer"
-                 className="hover:text-gray-400 transition-colors">
-                沪ICP备2026023847号
-              </a>
-            </p>
-          </div>
-        </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 min-h-screen overflow-auto relative z-10">
+            <div className="ur-lang-switch">
+              {langs.map(l => (
+                <button
+                  key={l.code}
+                  onClick={() => setLang(l.code)}
+                  className={lang === l.code ? 'is-active' : ''}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+
+            <button className="ur-icon-btn ur-bell" type="button" aria-label="通知">
+              <Bell size={18} />
+            </button>
+
+            <div className="ur-user">
+              <div className="ur-user__avatar">
+                {(user.username || 'UR').slice(0, 1).toUpperCase()}
+              </div>
+              <div className="ur-user__meta hidden sm:flex">
+                <strong>{user.username || 'UR'}</strong>
+                <span>{t(`role.${user.role}`) || user.role || '在线'}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="ur-logout"
+                title={t('nav.logout')}
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="ur-mobile-nav md:hidden fixed bottom-0 left-0 right-0 z-40 px-4 py-2 flex justify-around">
+          {NAV_ITEMS.slice(0, 5).map(item => {
+            const Icon = item.icon;
+            return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                'ur-mobile-nav__item' + (isActive ? ' is-active' : '')
+              }
+            >
+              <Icon size={18} />
+              <span>{t(item.key)}</span>
+            </NavLink>
+          );})}
+        </div>
+      </header>
+
+      <main className="ur-main pt-[72px] pb-16 md:pb-0">
+        <div className="max-w-screen-2xl mx-auto p-4 md:p-6">
           <Outlet />
-        </main>
-      </div>
-    </>
+        </div>
+      </main>
+    </div>
   );
 }

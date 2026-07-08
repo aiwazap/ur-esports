@@ -1,0 +1,793 @@
+/* ============================================================
+   日期范围选择器 — 追加到 overview-dashboard.css 末尾
+   ============================================================ */
+
+.dashboard-root .db-date-range-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  background: var(--dash-bg-panel);
+  border: 1px solid var(--dash-border);
+  border-radius: 8px;
+  position: relative;
+}
+.dashboard-root .db-date-range-bar::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--dash-gradient-blue);
+  opacity: 0.4;
+  border-radius: 8px 8px 0 0;
+}
+
+.dashboard-root .db-date-range-label {
+  font-size: 11px;
+  color: var(--dash-text-dim);
+  letter-spacing: 1px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/* 快捷预设按钮 */
+.dashboard-root .db-date-presets {
+  display: flex;
+  gap: 4px;
+}
+.dashboard-root .db-preset-btn {
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  color: var(--dash-text-dim);
+  border: 1px solid var(--dash-border);
+  font-family: 'Rajdhani', 'Microsoft YaHei', sans-serif;
+}
+.dashboard-root .db-preset-btn:hover {
+  background: rgba(0, 212, 255, 0.08);
+  color: var(--dash-primary);
+  border-color: rgba(0, 212, 255, 0.3);
+}
+.dashboard-root .db-preset-btn.active {
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--dash-primary);
+  border-color: rgba(0, 212, 255, 0.3);
+}
+
+/* 日期输入框 */
+.dashboard-root .db-date-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dashboard-root .db-date-sep {
+  font-size: 11px;
+  color: var(--dash-text-dim);
+}
+.dashboard-root .db-date-input {
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--dash-border);
+  border-radius: 6px;
+  color: var(--dash-text-primary);
+  font-size: 12px;
+  outline: none;
+  font-family: 'Orbitron', monospace;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  /* 隐藏默认日历图标样式，但保留功能 */
+  color-scheme: dark;
+}
+.dashboard-root .db-date-input:hover,
+.dashboard-root .db-date-input:focus {
+  border-color: rgba(0, 212, 255, 0.4);
+  background: rgba(0, 212, 255, 0.04);
+}
+
+/* 当前范围提示 */
+.dashboard-root .db-date-range-info {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--dash-text-secondary);
+  font-family: 'Orbitron', monospace;
+  white-space: nowrap;
+}
+
+/* ── 两栏等高修正 ── */
+.dashboard-root .db-grid-2 {
+  align-items: stretch;
+}
+.dashboard-root .db-grid-2 > .db-panel {
+  display: flex;
+  flex-direction: column;
+}
+.dashboard-root .db-grid-2 > .db-panel > .db-panel-inner {
+  flex: 1;
+}
+
+/* ── 平局标签 ── */
+.dashboard-root .db-tag-draw {
+  background: rgba(255,171,0,0.15);
+  color: var(--dash-warning);
+  border: 1px solid rgba(255,171,0,0.25);
+}
+
+/* ── 全局字体放大 ── */
+.dashboard-root {
+  font-size: 14px;
+}
+.dashboard-root .db-data-table {
+  font-size: 13px;
+}
+.dashboard-root .db-data-table th {
+  font-size: 12px;
+}
+.dashboard-root .db-data-table td {
+  padding: 10px 8px;
+}
+.dashboard-root .db-kpi-label {
+  font-size: 13px;
+}
+.dashboard-root .db-kpi-value {
+  font-size: 26px;
+}
+.dashboard-root .db-kpi-trend {
+  font-size: 12px;
+}
+.dashboard-root .db-panel-title {
+  font-size: 15px;
+}
+.dashboard-root .db-panel-badge {
+  font-size: 12px;
+}
+.dashboard-root .db-map-card-name {
+  font-size: 14px;
+}
+.dashboard-root .db-map-card-count {
+  font-size: 12px;
+}
+.dashboard-root .db-map-card-wr {
+  font-size: 16px;
+}
+.dashboard-root .db-stat-label {
+  font-size: 12px;
+}
+.dashboard-root .db-stat-value {
+  font-size: 22px;
+}
+.dashboard-root .db-countdown-val {
+  font-size: 26px;
+}
+.dashboard-root .db-match-team-name {
+  font-size: 24px;
+}
+.dashboard-root .db-scrim-name {
+  font-size: 26px;
+}
+.dashboard-root .db-modal-title {
+  font-size: 20px;
+}
+.dashboard-root .db-modal-subtitle {
+  font-size: 13px;
+}
+
+/* ============================================================
+   UR 2026 neon dashboard restyle
+   ============================================================ */
+
+.dashboard-root {
+  --dash-primary: #28e6ff;
+  --dash-primary-dark: #0b7bff;
+  --dash-primary-glow: rgba(40, 230, 255, 0.34);
+  --dash-bg: #030817;
+  --dash-bg-card: rgba(8, 21, 55, 0.78);
+  --dash-bg-panel: rgba(8, 18, 48, 0.82);
+  --dash-text-primary: #edf7ff;
+  --dash-text-secondary: #a8b9d8;
+  --dash-text-dim: #657696;
+  --dash-border: rgba(72, 197, 255, 0.22);
+  --dash-border-strong: rgba(72, 197, 255, 0.42);
+  --dash-gradient-blue: linear-gradient(135deg, #22e1ff, #2d7dff 52%, #8d4cff);
+  --dash-gradient-green: linear-gradient(135deg, #43f5b5, #12b981);
+  --dash-gradient-orange: linear-gradient(135deg, #ffd56a, #ff8a30);
+  --dash-gradient-red: linear-gradient(135deg, #ff5d87, #ef2148);
+  padding: 18px 28px 34px;
+}
+
+.dashboard-root::before {
+  content: "";
+  position: fixed;
+  inset: 72px 0 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(40, 230, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(116, 86, 255, 0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black, transparent 84%);
+  opacity: 0.28;
+  z-index: -1;
+}
+
+.dashboard-root .ur-hero {
+  min-height: 360px !important;
+  max-height: none !important;
+  margin-bottom: 14px !important;
+  border-radius: 8px !important;
+  cursor: default !important;
+  justify-content: stretch !important;
+  align-items: stretch !important;
+  padding: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr) !important;
+  border: 1px solid rgba(52, 210, 255, 0.36) !important;
+  background:
+    linear-gradient(90deg, rgba(4, 11, 36, 0.98), rgba(5, 18, 55, 0.92) 52%, rgba(4, 10, 32, 0.98)),
+    radial-gradient(circle at 76% 45%, rgba(141, 76, 255, 0.3), transparent 24rem) !important;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 rgba(40, 230, 255, 0.18),
+    0 0 54px rgba(40, 230, 255, 0.08) !important;
+}
+
+.dashboard-root .ur-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(40, 230, 255, 0.11) 1px, transparent 1px),
+    linear-gradient(rgba(141, 76, 255, 0.09) 1px, transparent 1px),
+    linear-gradient(110deg, transparent 0%, rgba(40, 230, 255, 0.1) 48%, transparent 58%);
+  background-size: 46px 46px, 46px 46px, 220% 100%;
+  opacity: 0.32;
+  animation: urHeroScan 7s ease-in-out infinite;
+}
+
+.dashboard-root .ur-hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #22e1ff, #8d4cff, transparent);
+  animation: urHeroLine 4s ease-in-out infinite;
+}
+
+.dashboard-root .ur-hero__glow,
+.dashboard-root .ur-hero__fade,
+.dashboard-root .ur-hero__bar {
+  display: none !important;
+}
+
+.dashboard-root .ur-hero__content {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  width: auto !important;
+  text-align: left !important;
+  z-index: 2 !important;
+  padding: 54px 34px 42px 42px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.dashboard-root .ur-hero__eyebrow {
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(40, 230, 255, 0.26);
+  background: rgba(40, 230, 255, 0.08);
+  color: #33eaff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  margin-bottom: 18px;
+}
+
+.dashboard-root .ur-hero__title {
+  margin: 0 !important;
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: baseline;
+  text-align: left !important;
+  letter-spacing: 0 !important;
+  line-height: 0.98 !important;
+  animation: none !important;
+}
+
+.dashboard-root .ur-hero__title span {
+  font-size: clamp(44px, 5vw, 72px);
+  color: #ffffff;
+  font-weight: 950;
+  text-shadow: 0 0 28px rgba(40, 230, 255, 0.34);
+}
+
+.dashboard-root .ur-hero__title em {
+  font-style: normal;
+  font-size: clamp(32px, 3.4vw, 54px);
+  font-weight: 950;
+  background: linear-gradient(90deg, #b9fbff, #24e7ff 52%, #8d4cff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 30px rgba(40, 230, 255, 0.16);
+}
+
+.dashboard-root .ur-hero__line {
+  width: min(72%, 470px) !important;
+  height: 2px !important;
+  margin: 20px 0 0 !important;
+  animation: urLineFlow 2.8s linear infinite !important;
+}
+
+.dashboard-root .ur-hero__sub {
+  max-width: 680px;
+  margin: 18px 0 0 !important;
+  color: rgba(226, 242, 255, 0.74) !important;
+  font-size: 18px !important;
+  line-height: 1.8;
+  letter-spacing: 0 !important;
+  text-align: left !important;
+}
+
+.dashboard-root .ur-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.dashboard-root .ur-hero__actions button {
+  height: 46px;
+  padding: 0 22px;
+  border-radius: 8px;
+  border: 1px solid rgba(89, 214, 255, 0.35);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 850;
+  background: linear-gradient(135deg, rgba(34, 225, 255, 0.94), rgba(141, 76, 255, 0.92));
+  box-shadow: 0 0 28px rgba(40, 230, 255, 0.22);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.dashboard-root .ur-hero__actions button + button {
+  background: rgba(7, 22, 58, 0.76);
+  color: #e9f8ff;
+}
+
+.dashboard-root .ur-hero__actions button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+  box-shadow: 0 0 42px rgba(40, 230, 255, 0.32);
+}
+
+.dashboard-root .ur-hero__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.dashboard-root .ur-hero__chips span {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(80, 190, 255, 0.28);
+  background: rgba(5, 16, 43, 0.68);
+  color: rgba(232, 246, 255, 0.82);
+  font-size: 13px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.dashboard-root .ur-hero__visual {
+  position: relative;
+  z-index: 2;
+  min-height: 360px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.dashboard-root .ur-hero__visual::before,
+.dashboard-root .ur-hero__visual::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(40, 230, 255, 0.22);
+}
+
+.dashboard-root .ur-hero__visual::before {
+  width: 360px;
+  height: 360px;
+  box-shadow: 0 0 44px rgba(40, 230, 255, 0.12), inset 0 0 34px rgba(141, 76, 255, 0.12);
+  animation: urSpin 18s linear infinite;
+}
+
+.dashboard-root .ur-hero__visual::after {
+  width: 250px;
+  height: 250px;
+  border-style: dashed;
+  animation: urSpin 11s linear infinite reverse;
+}
+
+.dashboard-root .ur-hero__visual img {
+  position: relative;
+  z-index: 2;
+  width: min(72%, 430px);
+  max-height: 300px;
+  object-fit: contain;
+  filter:
+    invert(1)
+    drop-shadow(0 0 10px rgba(40, 230, 255, 0.78))
+    drop-shadow(0 0 30px rgba(141, 76, 255, 0.55));
+  opacity: 0.92;
+  animation: urLogoFloat 5.2s ease-in-out infinite;
+}
+
+.dashboard-root .ur-hero__ring {
+  position: absolute;
+  border-radius: 50%;
+  background: conic-gradient(from 90deg, transparent, rgba(40, 230, 255, 0.34), transparent, rgba(141, 76, 255, 0.34), transparent);
+  mask: radial-gradient(circle, transparent 58%, black 59%, black 62%, transparent 63%);
+  animation: urSpin 8s linear infinite;
+}
+
+.dashboard-root .ur-hero__ring--outer {
+  width: 430px;
+  height: 430px;
+}
+
+.dashboard-root .ur-hero__ring--inner {
+  width: 190px;
+  height: 190px;
+  animation-duration: 5.8s;
+  animation-direction: reverse;
+}
+
+.dashboard-root .ur-hero__pulse-card {
+  position: absolute;
+  z-index: 3;
+  min-width: 128px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(40, 230, 255, 0.34);
+  background: rgba(5, 17, 48, 0.78);
+  box-shadow: 0 0 28px rgba(40, 230, 255, 0.14);
+  backdrop-filter: blur(12px);
+}
+
+.dashboard-root .ur-hero__pulse-card span {
+  display: block;
+  color: #28e6ff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.3px;
+}
+
+.dashboard-root .ur-hero__pulse-card strong {
+  display: block;
+  margin-top: 4px;
+  color: #fff;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.dashboard-root .ur-hero__pulse-card--top {
+  top: 50px;
+  right: 36px;
+}
+
+.dashboard-root .ur-hero__pulse-card--bottom {
+  left: 26px;
+  bottom: 44px;
+}
+
+.dashboard-root .ur-hero__hud {
+  position: absolute;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(174, 220, 255, 0.52);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.6px;
+}
+
+.dashboard-root .ur-hero__hud i {
+  width: 52px;
+  height: 1px;
+  background: linear-gradient(90deg, #28e6ff, transparent);
+}
+
+.dashboard-root .ur-hero__hud--left {
+  left: 26px;
+  top: 22px;
+}
+
+.dashboard-root .ur-hero__hud--right {
+  top: 22px;
+  right: 28px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.dashboard-root .ur-hero__hud--right strong {
+  color: #fff;
+  font-size: 22px;
+}
+
+.dashboard-root .db-date-range-bar,
+.dashboard-root .db-panel,
+.dashboard-root .db-kpi-card,
+.dashboard-root .db-stat-card,
+.dashboard-root .db-map-card {
+  border-radius: 8px !important;
+  border-color: rgba(72, 197, 255, 0.24) !important;
+  background:
+    linear-gradient(180deg, rgba(20, 45, 98, 0.72), rgba(7, 17, 48, 0.84)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 18px 54px rgba(0, 0, 0, 0.24),
+    0 0 32px rgba(40, 230, 255, 0.06);
+}
+
+.dashboard-root .db-panel,
+.dashboard-root .db-kpi-card,
+.dashboard-root .db-map-card,
+.dashboard-root .db-stat-card {
+  animation: urPanelIn 0.58s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.dashboard-root .db-panel {
+  overflow: hidden !important;
+}
+
+.dashboard-root .db-panel::before,
+.dashboard-root .db-panel::after,
+.dashboard-root .db-panel-inner::before,
+.dashboard-root .db-panel-inner::after {
+  width: 10px !important;
+  height: 10px !important;
+  border-color: rgba(40, 230, 255, 0.78) !important;
+  filter: drop-shadow(0 0 8px rgba(40, 230, 255, 0.6));
+}
+
+.dashboard-root .db-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: auto !important;
+  height: auto !important;
+  border: 0 !important;
+  background: linear-gradient(110deg, transparent 0%, rgba(255, 255, 255, 0.12) 46%, transparent 58%);
+  transform: translateX(-120%);
+  animation: urPanelGlint 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.dashboard-root .db-panel-header {
+  border-bottom-color: rgba(72, 197, 255, 0.18) !important;
+}
+
+.dashboard-root .db-panel-title {
+  color: #ffffff;
+  font-weight: 850 !important;
+  letter-spacing: 0 !important;
+  text-shadow: 0 0 16px rgba(40, 230, 255, 0.24);
+}
+
+.dashboard-root .db-panel-badge {
+  border-color: rgba(72, 197, 255, 0.26) !important;
+  background: rgba(40, 230, 255, 0.08) !important;
+  color: #89f4ff !important;
+  border-radius: 6px !important;
+}
+
+.dashboard-root .db-kpi-row {
+  gap: 14px !important;
+  margin-bottom: 16px !important;
+}
+
+.dashboard-root .db-kpi-card {
+  min-height: 104px;
+  padding: 16px 18px !important;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-root .db-kpi-card:hover,
+.dashboard-root .db-map-card:hover,
+.dashboard-root .db-stat-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(40, 230, 255, 0.54) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 24px 60px rgba(0, 0, 0, 0.28),
+    0 0 36px rgba(40, 230, 255, 0.16);
+}
+
+.dashboard-root .db-kpi-icon {
+  width: 54px !important;
+  height: 54px !important;
+  border-radius: 8px !important;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(40, 230, 255, 0.25), transparent 58%),
+    rgba(40, 230, 255, 0.08) !important;
+  border: 1px solid rgba(40, 230, 255, 0.22);
+  box-shadow: inset 0 0 22px rgba(40, 230, 255, 0.08), 0 0 24px rgba(40, 230, 255, 0.12);
+}
+
+.dashboard-root .db-kpi-value,
+.dashboard-root .db-stat-value,
+.dashboard-root .db-map-card-wr {
+  color: #fff;
+  text-shadow: 0 0 16px currentColor;
+}
+
+.dashboard-root .db-top-row {
+  grid-template-columns: minmax(300px, 0.85fr) minmax(420px, 1.35fr) minmax(300px, 0.85fr) !important;
+  gap: 14px !important;
+}
+
+.dashboard-root .db-data-table {
+  border-collapse: separate !important;
+  border-spacing: 0 6px !important;
+}
+
+.dashboard-root .db-data-table th {
+  border-bottom: 0 !important;
+  color: rgba(178, 208, 235, 0.72) !important;
+}
+
+.dashboard-root .db-data-table td {
+  border-bottom: 0 !important;
+  background: rgba(6, 19, 54, 0.46);
+}
+
+.dashboard-root .db-data-table tbody tr td:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.dashboard-root .db-data-table tbody tr td:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.dashboard-root .db-data-table tbody tr:hover td {
+  background: rgba(40, 230, 255, 0.1) !important;
+}
+
+.dashboard-root .db-tag {
+  border-radius: 6px !important;
+  letter-spacing: 0.4px;
+}
+
+.dashboard-root .db-tag-win {
+  box-shadow: 0 0 14px rgba(0, 230, 118, 0.18);
+}
+
+.dashboard-root .db-tag-loss {
+  box-shadow: 0 0 14px rgba(255, 23, 68, 0.18);
+}
+
+.dashboard-root .db-map-card-img {
+  height: 92px !important;
+  object-fit: cover !important;
+  filter: saturate(1.12) contrast(1.05);
+}
+
+.dashboard-root .db-map-card-bar,
+.dashboard-root .db-inv-bar-wrap {
+  height: 5px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-root .recharts-wrapper text {
+  font-family: 'Microsoft YaHei', sans-serif !important;
+}
+
+@keyframes urHeroScan {
+  0%, 100% { background-position: 0 0, 0 0, 120% 0; }
+  50% { background-position: 12px 0, 0 12px, -40% 0; }
+}
+
+@keyframes urHeroLine {
+  0%, 100% { opacity: 0.35; transform: scaleX(0.74); }
+  50% { opacity: 1; transform: scaleX(1); }
+}
+
+@keyframes urLogoFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8px) scale(1.035); }
+}
+
+@keyframes urPanelIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes urPanelGlint {
+  0%, 44% { transform: translateX(-120%); opacity: 0; }
+  54% { opacity: 1; }
+  72%, 100% { transform: translateX(120%); opacity: 0; }
+}
+
+@media (max-width: 1180px) {
+  .dashboard-root .ur-hero {
+    grid-template-columns: 1fr !important;
+  }
+  .dashboard-root .ur-hero__visual {
+    min-height: 280px;
+  }
+  .dashboard-root .db-top-row,
+  .dashboard-root .db-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+  .dashboard-root .db-grid-7 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .dashboard-root {
+    padding: 12px;
+  }
+  .dashboard-root .ur-hero {
+    min-height: auto !important;
+  }
+  .dashboard-root .ur-hero__content {
+    padding: 42px 18px 24px !important;
+  }
+  .dashboard-root .ur-hero__visual,
+  .dashboard-root .ur-hero__hud--right {
+    display: none;
+  }
+  .dashboard-root .ur-hero__title {
+    gap: 8px;
+  }
+  .dashboard-root .ur-hero__title span {
+    font-size: 38px;
+  }
+  .dashboard-root .ur-hero__title em {
+    font-size: 28px;
+  }
+  .dashboard-root .ur-hero__sub {
+    font-size: 15px !important;
+  }
+  .dashboard-root .db-kpi-row {
+    grid-template-columns: 1fr !important;
+  }
+  .dashboard-root .db-grid-7 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-root .ur-hero::before,
+  .dashboard-root .ur-hero::after,
+  .dashboard-root .ur-hero__visual::before,
+  .dashboard-root .ur-hero__visual::after,
+  .dashboard-root .ur-hero__visual img,
+  .dashboard-root .ur-hero__ring,
+  .dashboard-root .db-panel,
+  .dashboard-root .db-kpi-card,
+  .dashboard-root .db-map-card,
+  .dashboard-root .db-stat-card {
+    animation: none !important;
+  }
+}

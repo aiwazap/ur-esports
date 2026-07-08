@@ -9,6 +9,19 @@ const fs = require('fs');
 // Shared date range cache across dashboard / match-records calls
 const dateCache = { start: null, end: null, ts: 0 };
 
+// 确保 player_stats 有 assists / hs_pct 列（旧库可能没有，按需安全补列；只跑一次）
+let _psColsEnsured = false;
+async function ensurePlayerStatsCols() {
+  if (_psColsEnsured) return;
+  try {
+    const [cols] = await db.query(`PRAGMA table_info(player_stats)`);
+    const names = new Set((cols || []).map(c => c.name));
+    if (!names.has('assists')) await db.query(`ALTER TABLE player_stats ADD COLUMN assists INTEGER DEFAULT 0`);
+    if (!names.has('hs_pct'))  await db.query(`ALTER TABLE player_stats ADD COLUMN hs_pct INTEGER DEFAULT 0`);
+    _psColsEnsured = true;
+  } catch (e) { console.error('[ensurePlayerStatsCols]', e.message); }
+}
+
 // 保留原始文件扩展名，否则 openpyxl 无法识别 .xlsx 格式
 const uploadStorage = multer.diskStorage({
   destination: 'uploads/tmp/',
@@ -55,6 +68,8 @@ async function getOrCreateSession(matchDate, opponent, eventName) {
   if (!opponent || opponent.toUpperCase() === 'OPPONENT' || opponent === '未知') {
     throw new Error(`无效对手名: "${opponent}"，请检查Excel Sheet名称是否已更新`);
   }
+  // 对手名标准化(防止 wydo/Wydo、THE QUBE/The Cube 等分裂成多条赛次)
+  opponent = normOpponent(opponent);
   // Clean up any stale OPPONENT/未知 sessions on same date
   await db.query(
     'DELETE FROM training_rounds WHERE session_id IN (SELECT id FROM training_sessions WHERE match_date = ? AND (opponent = ? OR opponent = ?))',
@@ -70,7 +85,7 @@ async function getOrCreateSession(matchDate, opponent, eventName) {
   );
 
   const [existing] = await db.query(
-    'SELECT id FROM training_sessions WHERE match_date = ? AND opponent = ?',
+    'SELECT id FROM training_sessions WHERE match_date = ? AND lower(opponent) = lower(?)',
     [matchDate, opponent]
   );
   if (existing.length) return existing[0].id;
@@ -368,11 +383,21 @@ router.get('/tactics', auth, async (req, res) => {
 router.get('/report/:sessionId', auth, async (req, res) => {
   const { sessionId } = req.params;
   try {
+    await ensurePlayerStatsCols();
     // 1. 赛次基本信息
-    const [[session]] = await db.query(
-      'SELECT * FROM training_sessions WHERE id = ?', [sessionId]
-    );
-    if (!session) return res.status(404).json({ error: '赛次不存在' });
+    let session;
+    if (typeof sessionId === 'string' && sessionId.includes('|')) {
+      const idx = sessionId.indexOf('|');
+      const datePart = sessionId.slice(0, idx);
+      const oppPart = sessionId.slice(idx + 1);
+      session = { id: sessionId, match_date: datePart, opponent: oppPart, event_name: null, notes: null };
+    } else {
+      const [[s]] = await db.query(
+        'SELECT * FROM training_sessions WHERE id = ?', [sessionId]
+      );
+      if (!s) return res.status(404).json({ error: '赛次不存在' });
+      session = s;
+    }
 
     // 2. 简报条目（关联战术详情）
     const [briefing] = await db.query(`
@@ -447,7 +472,89 @@ router.get('/report/:sessionId', auth, async (req, res) => {
       };
     });
 
+    // 真实比分：从 matches 表按 对手+日期 匹配（弹窗显示真实比分，不依赖坏的 round_result）
+    let realScores = [], urPlayers = [], oppPlayers = [];
+    try {
+      const sessDate = (session.match_date || '').slice(0, 10);
+      if (sessDate && session.opponent) {
+        const [matchRows] = await db.query(
+          `SELECT id, map_name, our_score, their_score, ct_score, t_score, opponent_players
+           FROM matches
+           WHERE date(match_date) = date(?) AND lower(trim(opponent)) = lower(trim(?))
+           ORDER BY id`,
+          [sessDate, session.opponent]
+        );
+        // 真实比分 + 半场CT/T(手动录入，没填则为 null）
+        realScores = matchRows
+          .filter(s => s.our_score != null && s.their_score != null)
+          .map(s => ({
+            id: s.id,
+            map: s.map_name,
+            our: s.our_score,
+            their: s.their_score,
+            ct: s.ct_score,
+            t: s.t_score,
+            result: s.our_score > s.their_score ? 'win' : s.our_score < s.their_score ? 'loss' : 'draw',
+          }));
+        // 对手选手（合并各图按 name 汇总，过滤教练 kills=0&deaths=0）
+        const oppMap = {};
+        for (const m of matchRows) {
+          let arr = [];
+          try { arr = JSON.parse(m.opponent_players || '[]'); } catch {}
+          for (const p of (arr || [])) {
+            if (!p || !p.name) continue;
+            const k = p.kills || 0, d = p.deaths || 0;
+            if (k === 0 && d === 0) continue;
+            const o = oppMap[p.name] || (oppMap[p.name] = { name: p.name, kills: 0, deaths: 0, assists: 0, adr: 0, hs: 0, n: 0 });
+            o.kills += k; o.deaths += d; o.assists += (p.assists || 0);
+            o.adr += (p.adr || 0); o.hs += (p.hsPct ?? p.hsPercent ?? p.hs ?? 0); o.n++;
+          }
+        }
+        // Rating 估算（JSON 无 HLTV rating，按 K/D 估算，UR 与对手同一口径）
+        const ratingOf = (k, d) => parseFloat((0.5 + (d > 0 ? k / d : k) * 0.5).toFixed(2));
+        oppPlayers = Object.values(oppMap).map(o => ({
+          name: o.name,
+          kills: o.kills, deaths: o.deaths, assists: o.assists,
+          kd: `${o.kills}-${o.deaths}`,
+          rating: ratingOf(o.kills, o.deaths),
+          adr: o.n ? Math.round(o.adr / o.n) : 0,
+          hs: o.n ? Math.round(o.hs / o.n) : 0,
+        })).sort((a, b) => b.rating - a.rating);
+        // UR 选手（从 player_stats 按本场次的 match 汇总；过滤教练/领队 kills=0&deaths=0）
+        const matchIds = matchRows.map(m => m.id);
+        if (matchIds.length) {
+          const ph = matchIds.map(() => '?').join(',');
+          const [psRows] = await db.query(
+            `SELECT p.nickname, p.in_game_role,
+                    SUM(ps.kills) kills, SUM(ps.deaths) deaths, SUM(ps.assists) assists,
+                    ROUND(AVG(CASE WHEN ps.adr    > 0 THEN ps.adr    END), 1) adr,
+                    ROUND(AVG(CASE WHEN ps.hs_pct > 0 THEN ps.hs_pct END))     hs
+             FROM player_stats ps
+             JOIN players p ON p.id = ps.player_id
+             WHERE ps.match_id IN (${ph})
+             GROUP BY p.id`,
+            matchIds
+          );
+          urPlayers = psRows
+            .filter(r => !((r.kills || 0) === 0 && (r.deaths || 0) === 0))
+            .map(r => ({
+              name: r.nickname,
+              role: r.in_game_role || '',
+              kills: r.kills || 0, deaths: r.deaths || 0, assists: r.assists || 0,
+              kd: `${r.kills}-${r.deaths}`,
+              rating: ratingOf(r.kills || 0, r.deaths || 0),
+              adr: r.adr || 0,
+              hs: r.hs || 0,
+            }))
+            .sort((a, b) => b.rating - a.rating);
+        }
+      }
+    } catch (e) { console.error('[report] 查比分/选手失败:', e.message); }
+
     res.json({
+      real_scores: realScores,
+      players: urPlayers,
+      oppPlayers: oppPlayers,
       session: {
         id: session.id,
         match_date: session.match_date,
@@ -1122,6 +1229,38 @@ router.get('/dashboard', auth, async (req, res) => {
       })
     );
 
+    // ── 比赛记录: 改以 matches 表为主(与近期赛事/地图胜率一致),不再依赖旧表 training_sessions ──
+    // 问题数(issue_rounds)从新表 round_errors 按"日期+对手"统计
+    const [errByDateOpp] = await db.query(`
+      SELECT l.log_date AS d, LOWER(l.opponent) AS opp, COUNT(*) AS issue_cnt
+      FROM round_errors re
+      JOIN training_log_rounds r ON r.id = re.round_id
+      JOIN training_logs_v2 l ON l.id = r.log_id
+      WHERE l.log_date >= '${startDate}' AND l.log_date <= '${endDate}'
+        AND re.category != '教练点赞'
+      GROUP BY l.log_date, LOWER(l.opponent)
+    `);
+    const issueByKey = {};
+    for (const e of errByDateOpp) issueByKey[(e.d||'') + '|' + (e.opp||'')] = e.issue_cnt;
+
+    // ── 教练点评总结: 每场(日期+对手)聚合 training_log_rounds 的逐回合教练点评 ──
+    // 关联路径与 issueByKey 一致(log_id → training_logs_v2 的 log_date+opponent), key = 日期|对手(小写)
+    const [coachRows] = await db.query(`
+      SELECT l.log_date AS d, LOWER(l.opponent) AS opp,
+             r.map_name AS map_name, r.round_number AS rnd, r.coach_comment AS note
+      FROM training_log_rounds r
+      JOIN training_logs_v2 l ON l.id = r.log_id
+      WHERE l.log_date >= '${startDate}' AND l.log_date <= '${endDate}'
+        AND r.coach_comment IS NOT NULL AND TRIM(r.coach_comment) != ''
+      ORDER BY l.log_date, r.map_name, CAST(REPLACE(r.round_number,'R','') AS INTEGER), r.round_number
+    `);
+    const coachByKey = {};
+    for (const c of coachRows) {
+      const k = (c.d||'') + '|' + (c.opp||'');
+      if (!coachByKey[k]) coachByKey[k] = [];
+      coachByKey[k].push({ map: c.map_name || '', round: c.rnd || '', note: String(c.note).trim() });
+    }
+
     // Fetch all matches for date range and aggregate by date+opponent
     const [allMatches] = await db.query(`
       SELECT match_date, opponent, map_name, result, our_score, their_score, bo_format
@@ -1133,13 +1272,12 @@ router.get('/dashboard', auth, async (req, res) => {
     `);
 
     // Group matches by date+opponent (case-insensitive)
-    // Only count matches that have a corresponding training session (三表联动校验)
+    // 比赛记录以 matches 表为准, 不再用旧表 training_sessions 过滤(否则新比赛因旧表无记录被漏掉)
     const matchesByKey = {};
     const filteredMatches = [];
     for (const m of allMatches) {
       const dateKey = (m.match_date || '').split(' ')[0];
       const key = dateKey + '|' + (m.opponent || '').toLowerCase();
-      if (!validSessionKeys.has(key)) continue; // 跳过无训练日志对应的比赛记录
       filteredMatches.push(m);
       if (!matchesByKey[key]) matchesByKey[key] = [];
       matchesByKey[key].push(m);
@@ -1150,22 +1288,28 @@ router.get('/dashboard', auth, async (req, res) => {
     const validatedMapLosses = filteredMatches.filter(x => x.result === 'loss').length;
     const validatedMapDraws = filteredMatches.filter(x => x.result === 'draw').length;
 
-    // Enrich matchSummary with aggregated match results
-    const enrichedMatchSummary = matchSummary.map(m => {
-      const dateStr = (m.match_date || '').split('T')[0];
+    // ── 比赛记录列表: 直接从 matches 表按"日期+对手"聚合(以matches为准) ──
+    const matchGroups = {};   // key -> { match_date, opponent, maps:[] }
+    for (const m of filteredMatches) {
+      const dateStr = (m.match_date || '').split('T')[0].split(' ')[0];
       const key = dateStr + '|' + (m.opponent || '').toLowerCase();
-      const dateMatches = matchesByKey[key] || [];
+      if (!matchGroups[key]) matchGroups[key] = { match_date: dateStr, opponent: m.opponent, maps: [] };
+      matchGroups[key].maps.push(m);
+    }
+    const enrichedMatchSummary = Object.entries(matchGroups).map(([key, g]) => {
+      const dateMatches = g.maps;
       const totalMaps = dateMatches.length;
       const mapWins = dateMatches.filter(x => x.result === 'win').length;
       const mapLosses = dateMatches.filter(x => x.result === 'loss').length;
       const mapDraws = dateMatches.filter(x => x.result === 'draw').length;
-
+      // 总回合 = 各地图 our_score+their_score 之和; 问题数从新表round_errors取
+      const rounds = dateMatches.reduce((s,x)=> s + (Number(x.our_score)||0) + (Number(x.their_score)||0), 0);
       return {
-        id: m.id,
-        match_date: m.match_date,
-        opponent: m.opponent,
-        rounds: m.rounds,
-        issue_rounds: m.issue_rounds,
+        id: key,                          // 用 date|opponent 作为行key
+        match_date: g.match_date,
+        opponent: g.opponent,
+        rounds,
+        issue_rounds: issueByKey[key] || 0,
         total_maps: totalMaps,
         map_wins: mapWins,
         map_losses: mapLosses,
@@ -1176,8 +1320,9 @@ router.get('/dashboard', auth, async (req, res) => {
           our_score: x.our_score,
           their_score: x.their_score,
         })),
+        coach_notes: coachByKey[key] || [],   // 该场逐回合教练点评(教练点评总结)
       };
-    });
+    }).sort((a,b)=> (b.match_date||'').localeCompare(a.match_date||''));   // 按日期倒序
 
     // ── Per-player stats ──
     const [allRounds] = await db.query(`
@@ -1303,9 +1448,8 @@ router.get('/dashboard', auth, async (req, res) => {
 
     // ── Build response ──
     // 胜负统计：三表联动校验后使用 validated values（仅统计有训练日志的 match 数据）
-    const totalMatches = overview.total_matches || 0;
-    const totalRounds = overview.total_rounds || 0;
-    const mapWins = validatedMapWins;
+    const totalMatches = Object.keys(matchGroups).length;
+    const totalRounds = filteredMatches.reduce((s,x)=> s + (Number(x.our_score)||0) + (Number(x.their_score)||0), 0);    const mapWins = validatedMapWins;
     const mapLosses = validatedMapLosses;
     const mapDraws = validatedMapDraws;
 
@@ -1678,12 +1822,57 @@ router.put('/rounds/:id/players', adminAuth, async (req, res) => {
   }
 });
 
+// ========== PUT /match/:id/halfscore — 手动录入/修改某场的 CT/T 半场得分 ==========
+router.put('/match/:id/halfscore', auth, async (req, res) => {
+  const { id } = req.params;
+  const { ct_score, t_score } = req.body;
+  const toIntOrNull = (v) => {
+    if (v === '' || v === null || v === undefined) return null;
+    const n = parseInt(v, 10);
+    return isNaN(n) ? null : n;
+  };
+  const ct = toIntOrNull(ct_score);
+  const t  = toIntOrNull(t_score);
+  if ((ct != null && ct < 0) || (t != null && t < 0)) {
+    return res.status(400).json({ error: 'CT/T 得分必须是非负整数' });
+  }
+  try {
+    const [[m]] = await db.query('SELECT id FROM matches WHERE id = ?', [id]);
+    if (!m) return res.status(404).json({ error: '比赛不存在' });
+    await db.query('UPDATE matches SET ct_score = ?, t_score = ? WHERE id = ?', [ct, t, id]);
+    res.json({ ok: true, id: Number(id), ct_score: ct, t_score: t });
+  } catch (e) {
+    console.error('[halfscore] 保存失败:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
 
 // ==============================================================
 // POST /import-match-json — 导入比赛 JSON 数据（多地图自动识别）
 // ==============================================================
 const jsonUpload = multer({ storage: uploadStorage });
+// ── 对手名标准化(与历史数据保持一致, 防止大小写/拼写差异造成重复)──
+const OPPONENT_NORM = {
+  'tyloo': 'TYLOO', 'the cube': 'The Cube', 'the qube': 'The Cube',
+  'thecube': 'The Cube', 'theqube': 'The Cube',
+  'mongolz.a': 'Mongolz.A', 'mongolza': 'Mongolz.A',
+  'nexvoid': 'NEXVOID', 'nextvoid': 'NEXVOID',
+  'tengri': 'Tengri', 'tenjri': 'Tengri',
+  'wydo': 'Wydo', 'dy2k': 'Dy2k', 'modun': 'Modun',
+  'rdc': 'RDC', 'relove deep cross': 'RDC',
+  '100ra': '100RA', 'zevs': 'ZEVS', 'nas': 'Nas',
+  'oasis gaming': 'Oasis Gaming',
+  'ex-nemesis': 'ex-Nemesis', 'exnemesis': 'ex-Nemesis',
+  'unitronics': 'Unitronics',
+};
+function normOpponent(name) {
+  if (!name) return name;
+  const t = String(name).trim();
+  return OPPONENT_NORM[t.toLowerCase()] || t;
+}
+
 router.post('/import-match-json', auth, jsonUpload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: '请上传 JSON 文件' });
@@ -1702,7 +1891,11 @@ router.post('/import-match-json', auth, jsonUpload.single('file'), async (req, r
     const startTime = match.startTime ? match.startTime.split('T')[0] : new Date().toISOString().split('T')[0];
     const homeScore = match.home?.score || 0;
     const awayScore = match.away?.score || 0;
-    const result = homeScore > awayScore ? 'win' : (homeScore < awayScore ? 'loss' : 'draw');
+    // 我方坐 home 还是 away 由 userSide 决定，不能默认 home=我方（否则我方在 away 时比分/胜负会全部存反）
+    const userSide = (match.userSide === 'away') ? 'away' : 'home';
+    const ourScore = userSide === 'away' ? awayScore : homeScore;
+    const theirScore = userSide === 'away' ? homeScore : awayScore;
+    const result = ourScore > theirScore ? 'win' : (ourScore < theirScore ? 'loss' : 'draw');
 
     // 对手名解析优先级：文件名提取 > 用户填写 > JSON 内容 > DB training_sessions
     // 文件名优先，避免残留的全局对手名污染本次导入
@@ -1726,24 +1919,40 @@ router.post('/import-match-json', auth, jsonUpload.single('file'), async (req, r
       if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
       return res.status(400).json({ error: '无法确定对手名称，请检查文件名格式或手动填写' });
     }
+    opponent = normOpponent(opponent);
+    const matchTime = match.startTime ? match.startTime.slice(11, 16) : null;
 
-    // Upsert match record
+    // 对手队员数据(进 opponent_players 列, 供比赛记录页展示)
+    let oppPlayersJson = null;
+    if (data.scoreboard && match.userSide && data.scoreboard.home && data.scoreboard.away) {
+      const oppSide = match.userSide === 'home' ? data.scoreboard.away : data.scoreboard.home;
+      if (Array.isArray(oppSide)) {
+        const oppPlayers = oppSide
+          .filter(p => p && (p.role === 'player' || (p.role === undefined && p.kills !== undefined)))
+          .map(p => ({ name: p.name, kills: p.kills||0, deaths: p.deaths||0, assists: p.assists||0,
+                       adr: p.adr||0, hs: p.headShotKills||0, hsPct: p.hsPercent||0, kd: p.kd||0 }));
+        if (oppPlayers.length) oppPlayersJson = JSON.stringify(oppPlayers);
+      }
+    }
+
+    // Upsert match record(宽松匹配: 忽略日期里的时间部分、忽略对手名/地图大小写, 防止重复)
     const [existing] = await db.query(
-      'SELECT id FROM matches WHERE match_date=? AND opponent=? AND map_name=? AND match_type=\'scrim\' ORDER BY id DESC LIMIT 1',
+      `SELECT id FROM matches WHERE substr(match_date,1,10)=? AND lower(opponent)=lower(?)
+       AND lower(ifnull(map_name,''))=lower(?) AND match_type='scrim' ORDER BY id DESC LIMIT 1`,
       [startTime, opponent, mapName]
     );
     let matchId;
     if (existing.length > 0) {
       matchId = existing[0].id;
       await db.query('DELETE FROM player_stats WHERE match_id=?', [matchId]);
-      await db.query('UPDATE matches SET our_score=?, their_score=?, notes=? WHERE id=?',
-        [homeScore, awayScore, JSON.stringify({ source: 'json_import', file: req.file.originalname }), matchId]
+      await db.query('UPDATE matches SET our_score=?, their_score=?, match_time=COALESCE(?, match_time), opponent_players=COALESCE(?, opponent_players), notes=? WHERE id=?',
+        [ourScore, theirScore, matchTime, oppPlayersJson, JSON.stringify({ source: 'json_import', file: req.file.originalname }), matchId]
       );
     } else {
       const [matchResult] = await db.query(
-        `INSERT INTO matches (match_date, opponent, map_name, our_score, their_score, match_type, notes)
-         VALUES (?, ?, ?, ?, ?, 'scrim', ?)`,
-        [startTime, opponent, mapName, homeScore, awayScore, JSON.stringify({ source: 'json_import', file: req.file.originalname })]
+        `INSERT INTO matches (match_date, match_time, opponent, map_name, our_score, their_score, match_type, notes, opponent_players)
+         VALUES (?, ?, ?, ?, ?, ?, 'scrim', ?, ?)`,
+        [startTime, matchTime, opponent, mapName, ourScore, theirScore, JSON.stringify({ source: 'json_import', file: req.file.originalname }), oppPlayersJson]
       );
       matchId = matchResult.insertId;
     }
@@ -1786,15 +1995,16 @@ router.post('/import-match-json', auth, jsonUpload.single('file'), async (req, r
 
     const candidates = getAllPlayerCandidates(data);
     let statsInserted = 0;
+    await ensurePlayerStatsCols();
     for (const p of candidates) {
       const steamId = getSteamId(p);
       if (!steamId) continue;
       const dbPlayer = steamMap[steamId];
       if (!dbPlayer) continue;
       await db.query(
-        `INSERT INTO player_stats (match_id, player_id, kills, deaths, adr)
-         VALUES (?, ?, ?, ?, ?)`,
-        [matchId, dbPlayer.id, p.kills || 0, p.deaths || 0, p.adr || 0]
+        `INSERT INTO player_stats (match_id, player_id, kills, deaths, adr, assists, hs_pct)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [matchId, dbPlayer.id, p.kills || 0, p.deaths || 0, p.adr || 0, p.assists || 0, p.hsPercent || 0]
       );
       statsInserted++;
     }
@@ -1859,7 +2069,11 @@ router.post('/import-match-json-batch', auth, jsonUpload.array('files', 50), asy
         : new Date().toISOString().split('T')[0];
       const homeScore = match.home?.score || 0;
       const awayScore = match.away?.score || 0;
-      const result = homeScore > awayScore ? 'win' : (homeScore < awayScore ? 'loss' : 'draw');
+      // 我方坐 home 还是 away 由 userSide 决定，不能默认 home=我方（否则我方在 away 时比分/胜负会全部存反）
+      const userSide = (match.userSide === 'away') ? 'away' : 'home';
+      const ourScore = userSide === 'away' ? awayScore : homeScore;
+      const theirScore = userSide === 'away' ? homeScore : awayScore;
+      const result = ourScore > theirScore ? 'win' : (ourScore < theirScore ? 'loss' : 'draw');
 
       // 对手名解析优先级：文件名提取 > 用户填写 > JSON 内容 > DB training_sessions
       // 文件名优先，避免上一次导入的 globalOpponent 残留污染本次导入
@@ -1880,10 +2094,26 @@ router.post('/import-match-json-batch', auth, jsonUpload.array('files', 50), asy
         if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
         continue;
       }
+      opponent = normOpponent(opponent);
+      const matchTime = match.startTime ? match.startTime.slice(11, 16) : null;
 
-      // Upsert: 按 (match_date, opponent, map_name) 去重
+      // 对手队员数据
+      let oppPlayersJson = null;
+      if (data.scoreboard && match.userSide && data.scoreboard.home && data.scoreboard.away) {
+        const oppSide = match.userSide === 'home' ? data.scoreboard.away : data.scoreboard.home;
+        if (Array.isArray(oppSide)) {
+          const oppPlayers = oppSide
+            .filter(p => p && (p.role === 'player' || (p.role === undefined && p.kills !== undefined)))
+            .map(p => ({ name: p.name, kills: p.kills||0, deaths: p.deaths||0, assists: p.assists||0,
+                         adr: p.adr||0, hs: p.headShotKills||0, hsPct: p.hsPercent||0, kd: p.kd||0 }));
+          if (oppPlayers.length) oppPlayersJson = JSON.stringify(oppPlayers);
+        }
+      }
+
+      // Upsert: 宽松匹配(忽略日期里的时间部分、忽略对手名/地图大小写), 防止重复
       const [existing] = await db.query(
-        'SELECT id FROM matches WHERE match_date=? AND opponent=? AND map_name=? AND match_type=\'scrim\' ORDER BY id DESC LIMIT 1',
+        `SELECT id FROM matches WHERE substr(match_date,1,10)=? AND lower(opponent)=lower(?)
+         AND lower(ifnull(map_name,''))=lower(?) AND match_type='scrim' ORDER BY id DESC LIMIT 1`,
         [startTime, opponent, mapName]
       );
       let matchId;
@@ -1893,14 +2123,14 @@ router.post('/import-match-json-batch', auth, jsonUpload.array('files', 50), asy
         await db.query('DELETE FROM player_stats WHERE match_id=?', [matchId]);
         // 更新比分
         await db.query(
-          'UPDATE matches SET our_score=?, their_score=?, notes=? WHERE id=?',
-          [homeScore, awayScore, JSON.stringify({ source: 'json_import_batch', file: file.originalname }), matchId]
+          'UPDATE matches SET our_score=?, their_score=?, match_time=COALESCE(?, match_time), opponent_players=COALESCE(?, opponent_players), notes=? WHERE id=?',
+          [ourScore, theirScore, matchTime, oppPlayersJson, JSON.stringify({ source: 'json_import_batch', file: file.originalname }), matchId]
         );
       } else {
         const [matchResult] = await db.query(
-          `INSERT INTO matches (match_date, opponent, map_name, our_score, their_score, match_type, notes)
-           VALUES (?, ?, ?, ?, ?, 'scrim', ?)`,
-          [startTime, opponent, mapName, homeScore, awayScore, JSON.stringify({ source: 'json_import_batch', file: file.originalname })]
+          `INSERT INTO matches (match_date, match_time, opponent, map_name, our_score, their_score, match_type, notes, opponent_players)
+           VALUES (?, ?, ?, ?, ?, ?, 'scrim', ?, ?)`,
+          [startTime, matchTime, opponent, mapName, ourScore, theirScore, JSON.stringify({ source: 'json_import_batch', file: file.originalname }), oppPlayersJson]
         );
         matchId = matchResult.insertId;
       }
@@ -1965,15 +2195,16 @@ router.post('/import-match-json-batch', auth, jsonUpload.array('files', 50), asy
         }
       }
 
+      await ensurePlayerStatsCols();
       for (const p of candidates) {
         const steamId = getSteamId(p);
         if (!steamId) continue;
         const dbPlayer = steamMap[steamId];
         if (!dbPlayer) continue; // 不是我们的队员，跳过
         await db.query(
-          `INSERT INTO player_stats (match_id, player_id, kills, deaths, adr)
-           VALUES (?, ?, ?, ?, ?)`,
-          [matchId, dbPlayer.id, p.kills || 0, p.deaths || 0, p.adr || 0]
+          `INSERT INTO player_stats (match_id, player_id, kills, deaths, adr, assists, hs_pct)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [matchId, dbPlayer.id, p.kills || 0, p.deaths || 0, p.adr || 0, p.assists || 0, p.hsPercent || 0]
         );
         statsInserted++;
       }
@@ -2005,4 +2236,369 @@ router.post('/import-match-json-batch', auth, jsonUpload.array('files', 50), asy
   }
 
   res.json({ results, total: results.length, successCount: results.filter(r => r.success).length });
+});
+
+// ==============================================================
+// POST /manual-match — 手动录入比赛数据（无 JSON / 无截图，纯表单）
+// 字段与 batch 导入完全对齐：player_stats 只写 kills/deaths/adr
+// ADR = 伤害 / 总回合(我方+对方比分)，对手名走 normOpponent 标准化
+// 校验：UR 必须满 5 名且各不相同，否则整场拒绝（不写半截脏数据）
+// ==============================================================
+router.post('/manual-match', auth, async (req, res) => {
+  try {
+    const { match_date, opponent, map_name, our_score, their_score, ur_players, opp_players } = req.body;
+
+    // —— 赛事类型：scrim(训练赛，默认) / official(正赛) ——
+    // 正赛时可携带 tournament_id / stage_id，关联到赛事系统
+    const matchType = (req.body.match_type === 'official') ? 'official' : 'scrim';
+    const tournamentId = (matchType === 'official' && req.body.tournament_id) ? Number(req.body.tournament_id) : null;
+    const stageId = (matchType === 'official' && req.body.stage_id) ? Number(req.body.stage_id) : null;
+    const mapOrder = (matchType === 'official' && req.body.map_order) ? Number(req.body.map_order) : null;
+    const pickType = (matchType === 'official' && req.body.pick_type) ? String(req.body.pick_type) : null;
+    const bpJson = (matchType === 'official' && req.body.bp_json) ? (typeof req.body.bp_json === 'string' ? req.body.bp_json : JSON.stringify(req.body.bp_json)) : null;
+
+    // —— 弃权标记：弃权场次不需要比分与选手数据，仅记胜负方 ——
+    const isWalkover = req.body.is_walkover === true || req.body.is_walkover === 1 || req.body.is_walkover === '1';
+
+    // —— 比赛信息校验 ——
+    if (!match_date) return res.status(400).json({ error: '请填写比赛日期' });
+    if (!opponent || !String(opponent).trim()) return res.status(400).json({ error: '请填写对手名称' });
+    if (!isWalkover && !map_name) return res.status(400).json({ error: '请选择地图' });
+
+    let ours, theirs, totalRounds;
+    let filled = [];
+    if (isWalkover) {
+      // 弃权：按胜负方记 1:0 / 0:1（用于 result 计算），免填比分与选手
+      const winner = (req.body.walkover_winner === 'them') ? 'them' : 'us';
+      ours = winner === 'us' ? 1 : 0;
+      theirs = winner === 'us' ? 0 : 1;
+      totalRounds = 1;
+    } else {
+      ours = parseInt(our_score, 10);
+      theirs = parseInt(their_score, 10);
+      if (Number.isNaN(ours) || Number.isNaN(theirs)) return res.status(400).json({ error: '请填写双方比分（数字）' });
+      totalRounds = ours + theirs;
+      if (totalRounds <= 0) return res.status(400).json({ error: '总回合数必须大于 0（比分填写有误）' });
+
+      // —— UR 选手校验：必须 5 名、各有选手、数据完整(击杀/死亡/ADR) ——
+      if (!Array.isArray(ur_players)) return res.status(400).json({ error: '选手数据格式错误' });
+      filled = ur_players.filter(p =>
+        p && p.player_id &&
+        p.kills !== '' && p.kills != null &&
+        p.deaths !== '' && p.deaths != null &&
+        p.adr !== '' && p.adr != null
+      );
+      if (filled.length < 5) {
+        return res.status(400).json({ error: `UR 选手数据不全（已填 ${filled.length}/5），整场不录入` });
+      }
+      const uniqueIds = new Set(filled.map(p => String(p.player_id)));
+      if (uniqueIds.size < 5) {
+        return res.status(400).json({ error: '存在重复选手，请确认 5 名选手各不相同' });
+      }
+    }
+
+    const opp = normOpponent(String(opponent).trim());
+
+    // ADR = 伤害 / 总回合
+    const adrOf = (dmg) => totalRounds > 0 ? parseFloat((Number(dmg || 0) / totalRounds).toFixed(1)) : 0;
+
+    // —— 对手数据（可选），格式与 batch 的 opponent_players 一致 ——
+    let oppPlayersJson = null;
+    if (Array.isArray(opp_players)) {
+      const cleaned = opp_players
+        .filter(p => p && p.name && String(p.name).trim())
+        .map(p => {
+          const k = Number(p.kills) || 0;
+          const d = Number(p.deaths) || 0;
+          return {
+            name: String(p.name).trim(),
+            kills: k, deaths: d, assists: Number(p.assists) || 0,
+            adr: parseFloat(p.adr) || 0,
+            rating: parseFloat(p.rating) || 0,
+            hs: 0, hsPct: 0,
+            kd: d > 0 ? parseFloat((k / d).toFixed(2)) : k
+          };
+        });
+      if (cleaned.length) oppPlayersJson = JSON.stringify(cleaned);
+    }
+
+    // —— Upsert 去重键：日期 + 对手名 + 地图 + 双方比分（不再按比赛类型查重）——
+    // 四者全同 → 同一场，删旧写新只留一条；地图不同 → 各自保留（BO3 同比分多图不会误删）
+    const [existing] = await db.query(
+      `SELECT id FROM matches WHERE substr(match_date,1,10)=? AND lower(opponent)=lower(?)
+       AND lower(ifnull(map_name,''))=lower(?) AND our_score=? AND their_score=? ORDER BY id DESC LIMIT 1`,
+      [match_date, opp, map_name || '', ours, theirs]
+    );
+    let matchId;
+    let mode;
+    if (existing.length > 0) {
+      matchId = existing[0].id;
+      await db.query('DELETE FROM player_stats WHERE match_id=?', [matchId]);
+      await db.query(
+        'UPDATE matches SET our_score=?, their_score=?, match_type=?, tournament_id=?, stage_id=?, map_order=?, pick_type=?, bp_json=COALESCE(?, bp_json), opponent_players=COALESCE(?, opponent_players), is_walkover=? WHERE id=?',
+        [ours, theirs, matchType, tournamentId, stageId, mapOrder, pickType, bpJson, oppPlayersJson, isWalkover ? 1 : 0, matchId]
+      );
+      mode = 'updated';
+    } else {
+      const [r] = await db.query(
+        `INSERT INTO matches (match_date, opponent, map_name, our_score, their_score, match_type, division, tournament_id, stage_id, map_order, pick_type, bp_json, opponent_players, is_walkover)
+         VALUES (?, ?, ?, ?, ?, ?, 'cs2', ?, ?, ?, ?, ?, ?, ?)`,
+        [match_date, opp, map_name || '', ours, theirs, matchType, tournamentId, stageId, mapOrder, pickType, bpJson, oppPlayersJson, isWalkover ? 1 : 0]
+      );
+      matchId = r.insertId;
+      mode = 'inserted';
+    }
+
+    // —— 写 UR 选手数据：击杀/死亡/助攻/ADR/Rating(均为用户直接填写值) ——
+    for (const p of filled) {
+      await db.query(
+        `INSERT INTO player_stats (match_id, player_id, kills, deaths, assists, adr, rating) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [matchId, p.player_id,
+         Number(p.kills) || 0, Number(p.deaths) || 0, Number(p.assists) || 0,
+         parseFloat(p.adr) || 0, p.rating != null && p.rating !== '' ? parseFloat(p.rating) : null]
+      );
+    }
+
+    // —— 单败赛制自动推进：该场正赛 + 属某单败阶段 + 非弃权 + 分出胜负 ——
+    //    我方负 → 赛事之旅结束；我方胜 → 当前阶段推进到下一阶段(stage_order+1)，无下一阶段则暂标记结束(夺冠/出线细化后期完善)
+    try {
+      if (matchType === 'official' && stageId && !isWalkover && Number(ours) !== Number(theirs)) {
+        const [strow] = await db.query('SELECT bracket_type, tournament_id, stage_name, stage_order FROM tournament_stages WHERE id=?', [stageId]);
+        if (strow.length && (strow[0].bracket_type || 'single') === 'single' && strow[0].tournament_id) {
+          const tId = strow[0].tournament_id;
+          if (Number(theirs) > Number(ours)) {
+            // 输 → 赛事结束，名次记为止步阶段
+            await db.query(
+              "UPDATE tournaments SET is_finished=1, status='已结束', current_stage_id=?, placement=COALESCE(NULLIF(placement,''), ?) WHERE id=?",
+              [stageId, strow[0].stage_name || null, tId]
+            );
+          } else {
+            // 赢 → 找下一阶段(同赛事 stage_order 更大的最近一个)
+            const [nextRows] = await db.query(
+              'SELECT id, stage_name FROM tournament_stages WHERE tournament_id=? AND stage_order > ? ORDER BY stage_order ASC, id ASC LIMIT 1',
+              [tId, strow[0].stage_order]
+            );
+            if (nextRows.length) {
+              // 有下一阶段 → 把当前阶段推进过去
+              await db.query('UPDATE tournaments SET current_stage_id=? WHERE id=?', [nextRows[0].id, tId]);
+            } else {
+              // 没有下一阶段(赢了最后一阶段) → 暂标记结束(夺冠/出线逻辑后期完善)
+              await db.query(
+                "UPDATE tournaments SET is_finished=1, status='已结束', current_stage_id=? WHERE id=?",
+                [stageId, tId]
+              );
+            }
+          }
+        }
+      }
+    } catch (autoEndErr) { /* 自动推进失败不影响录入本身 */ }
+
+    res.json({
+      success: true,
+      match_id: matchId,
+      mode,
+      match_type: matchType,
+      message: isWalkover
+        ? `已${mode === 'updated' ? '更新' : '录入'}${matchType === 'official' ? '【正赛】' : '【训练赛】'}：${opp} · 弃权${ours > theirs ? '胜' : '负'}`
+        : `已${mode === 'updated' ? '更新' : '录入'}${matchType === 'official' ? '【正赛】' : '【训练赛】'}：${opp} · ${map_name} · ${ours}:${theirs} · 5 名选手`,
+    });
+  } catch (e) {
+    res.status(500).json({ error: '录入失败: ' + e.message });
+  }
+});
+
+// ==============================================================
+// GET /manual-match/:id — 取单场完整数据（供编辑回填表单）
+//   返回基本字段 + ur_players(含 player_id) + opp_players
+// ==============================================================
+router.get('/manual-match/:id', auth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ error: '无效的比赛 ID' });
+    const [[m]] = await db.query(
+      `SELECT id, substr(match_date,1,10) AS match_date, opponent, map_name,
+              our_score, their_score, match_type, tournament_id, stage_id,
+              opponent_players, is_walkover, bp_json
+       FROM matches WHERE id=? AND division='cs2'`, [id]
+    );
+    if (!m) return res.status(404).json({ error: '比赛不存在' });
+    const [stats] = await db.query(
+      `SELECT player_id, kills, deaths, assists, adr, rating
+       FROM player_stats WHERE match_id=?`, [id]
+    );
+    let opp = [];
+    try { opp = m.opponent_players ? JSON.parse(m.opponent_players) : []; } catch { opp = []; }
+    res.json({
+      id: m.id,
+      match_date: m.match_date,
+      opponent: m.opponent,
+      map_name: m.map_name || '',
+      our_score: m.our_score,
+      their_score: m.their_score,
+      match_type: m.match_type || 'scrim',
+      tournament_id: m.tournament_id,
+      stage_id: m.stage_id,
+      is_walkover: !!m.is_walkover,
+      bp_json: m.bp_json || null,
+      ur_players: (stats || []).map(s => ({
+        player_id: String(s.player_id),
+        kills: s.kills, deaths: s.deaths, assists: s.assists,
+        adr: s.adr, rating: (s.rating == null ? '' : s.rating),
+      })),
+      opp_players: (opp || []).map(p => ({
+        name: p.name || '',
+        kills: p.kills ?? '', deaths: p.deaths ?? '', assists: p.assists ?? '',
+        adr: p.adr ?? '', rating: p.rating ?? '',
+      })),
+    });
+  } catch (e) {
+    res.status(500).json({ error: '获取失败: ' + e.message });
+  }
+});
+
+// ==============================================================
+// PUT /manual-match/:id — 更新整场（编辑保存，按 id 定位，不走去重）
+//   校验与录入一致：非弃权场 UR 必须满 5 名且各不相同
+// ==============================================================
+router.put('/manual-match/:id', auth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ error: '无效的比赛 ID' });
+    const [[exist]] = await db.query("SELECT id FROM matches WHERE id=? AND division='cs2'", [id]);
+    if (!exist) return res.status(404).json({ error: '比赛不存在' });
+
+    const { match_date, opponent, map_name, our_score, their_score, ur_players, opp_players } = req.body;
+    const matchType = (req.body.match_type === 'official') ? 'official' : 'scrim';
+    const tournamentId = (matchType === 'official' && req.body.tournament_id) ? Number(req.body.tournament_id) : null;
+    const stageId = (matchType === 'official' && req.body.stage_id) ? Number(req.body.stage_id) : null;
+    const bpJson = (matchType === 'official' && req.body.bp_json) ? (typeof req.body.bp_json === 'string' ? req.body.bp_json : JSON.stringify(req.body.bp_json)) : null;
+    const isWalkover = req.body.is_walkover === true || req.body.is_walkover === 1 || req.body.is_walkover === '1';
+
+    if (!match_date) return res.status(400).json({ error: '请填写比赛日期' });
+    if (!opponent || !String(opponent).trim()) return res.status(400).json({ error: '请填写对手名称' });
+    if (!isWalkover && !map_name) return res.status(400).json({ error: '请选择地图' });
+
+    let ours, theirs, totalRounds, filled = [];
+    if (isWalkover) {
+      const winner = (req.body.walkover_winner === 'them') ? 'them' : 'us';
+      ours = winner === 'us' ? 1 : 0;
+      theirs = winner === 'us' ? 0 : 1;
+      totalRounds = 1;
+    } else {
+      ours = parseInt(our_score, 10);
+      theirs = parseInt(their_score, 10);
+      if (Number.isNaN(ours) || Number.isNaN(theirs)) return res.status(400).json({ error: '请填写双方比分（数字）' });
+      totalRounds = ours + theirs;
+      if (totalRounds <= 0) return res.status(400).json({ error: '总回合数必须大于 0（比分填写有误）' });
+      if (!Array.isArray(ur_players)) return res.status(400).json({ error: '选手数据格式错误' });
+      filled = ur_players.filter(p =>
+        p && p.player_id &&
+        p.kills !== '' && p.kills != null &&
+        p.deaths !== '' && p.deaths != null &&
+        p.adr !== '' && p.adr != null
+      );
+      if (filled.length < 5) return res.status(400).json({ error: `UR 选手数据不全（已填 ${filled.length}/5），整场不保存` });
+      if (new Set(filled.map(p => String(p.player_id))).size < 5) return res.status(400).json({ error: '存在重复选手，请确认 5 名选手各不相同' });
+    }
+
+    const opp = normOpponent(String(opponent).trim());
+
+    let oppPlayersJson = null;
+    if (Array.isArray(opp_players)) {
+      const cleaned = opp_players
+        .filter(p => p && p.name && String(p.name).trim())
+        .map(p => {
+          const k = Number(p.kills) || 0;
+          const d = Number(p.deaths) || 0;
+          return {
+            name: String(p.name).trim(),
+            kills: k, deaths: d, assists: Number(p.assists) || 0,
+            adr: parseFloat(p.adr) || 0,
+            rating: parseFloat(p.rating) || 0,
+            hs: 0, hsPct: 0,
+            kd: d > 0 ? parseFloat((k / d).toFixed(2)) : k,
+          };
+        });
+      if (cleaned.length) oppPlayersJson = JSON.stringify(cleaned);
+    }
+
+    await db.query(
+      `UPDATE matches SET match_date=?, opponent=?, map_name=?, our_score=?, their_score=?,
+              match_type=?, tournament_id=?, stage_id=?, bp_json=COALESCE(?, bp_json),
+              opponent_players=COALESCE(?, opponent_players), is_walkover=? WHERE id=?`,
+      [match_date, opp, map_name || '', ours, theirs, matchType, tournamentId, stageId, bpJson, oppPlayersJson, isWalkover ? 1 : 0, id]
+    );
+
+    // 重写 UR 选手数据（先清后插，不合并）
+    await db.query('DELETE FROM player_stats WHERE match_id=?', [id]);
+    for (const p of filled) {
+      await db.query(
+        `INSERT INTO player_stats (match_id, player_id, kills, deaths, assists, adr, rating) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [id, p.player_id,
+         Number(p.kills) || 0, Number(p.deaths) || 0, Number(p.assists) || 0,
+         parseFloat(p.adr) || 0, p.rating != null && p.rating !== '' ? parseFloat(p.rating) : null]
+      );
+    }
+
+    // —— 单败赛制自动推进：该场正赛 + 属某单败阶段 + 非弃权 + 分出胜负 ——
+    //    我方负 → 赛事之旅结束；我方胜 → 当前阶段推进到下一阶段(stage_order+1)，无下一阶段则暂标记结束(夺冠/出线细化后期完善)
+    try {
+      if (matchType === 'official' && stageId && !isWalkover && Number(ours) !== Number(theirs)) {
+        const [strow] = await db.query('SELECT bracket_type, tournament_id, stage_name, stage_order FROM tournament_stages WHERE id=?', [stageId]);
+        if (strow.length && (strow[0].bracket_type || 'single') === 'single' && strow[0].tournament_id) {
+          const tId = strow[0].tournament_id;
+          if (Number(theirs) > Number(ours)) {
+            // 输 → 赛事结束，名次记为止步阶段
+            await db.query(
+              "UPDATE tournaments SET is_finished=1, status='已结束', current_stage_id=?, placement=COALESCE(NULLIF(placement,''), ?) WHERE id=?",
+              [stageId, strow[0].stage_name || null, tId]
+            );
+          } else {
+            // 赢 → 找下一阶段(同赛事 stage_order 更大的最近一个)
+            const [nextRows] = await db.query(
+              'SELECT id, stage_name FROM tournament_stages WHERE tournament_id=? AND stage_order > ? ORDER BY stage_order ASC, id ASC LIMIT 1',
+              [tId, strow[0].stage_order]
+            );
+            if (nextRows.length) {
+              // 有下一阶段 → 把当前阶段推进过去
+              await db.query('UPDATE tournaments SET current_stage_id=? WHERE id=?', [nextRows[0].id, tId]);
+            } else {
+              // 没有下一阶段(赢了最后一阶段) → 暂标记结束(夺冠/出线逻辑后期完善)
+              await db.query(
+                "UPDATE tournaments SET is_finished=1, status='已结束', current_stage_id=? WHERE id=?",
+                [stageId, tId]
+              );
+            }
+          }
+        }
+      }
+    } catch (autoEndErr) { /* 自动推进失败不影响录入本身 */ }
+
+    res.json({
+      success: true,
+      match_id: id,
+      message: isWalkover
+        ? `已更新${matchType === 'official' ? '【正赛】' : '【训练赛】'}：${opp} · 弃权${ours > theirs ? '胜' : '负'}`
+        : `已更新${matchType === 'official' ? '【正赛】' : '【训练赛】'}：${opp} · ${map_name} · ${ours}:${theirs}`,
+    });
+  } catch (e) {
+    res.status(500).json({ error: '更新失败: ' + e.message });
+  }
+});
+
+// ==============================================================
+// DELETE /manual-match/:id — 删除整场（连带删除该场选手数据，不留孤儿）
+// ==============================================================
+router.delete('/manual-match/:id', auth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ error: '无效的比赛 ID' });
+    const [[m]] = await db.query("SELECT id, opponent, map_name FROM matches WHERE id=? AND division='cs2'", [id]);
+    if (!m) return res.status(404).json({ error: '比赛不存在' });
+    await db.query('DELETE FROM player_stats WHERE match_id=?', [id]);
+    await db.query('DELETE FROM matches WHERE id=?', [id]);
+    res.json({ success: true, message: `已删除：${m.opponent || ''}${m.map_name ? ' · ' + m.map_name : ''}` });
+  } catch (e) {
+    res.status(500).json({ error: '删除失败: ' + e.message });
+  }
 });

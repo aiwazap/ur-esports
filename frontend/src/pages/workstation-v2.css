@@ -1,0 +1,101 @@
+/* 工作站 v2 · workstation-v2.css（ws2- 前缀，design token 与全站一致） */
+.ws2-duty {
+  border: 1px solid rgba(255, 215, 106, .45); border-radius: 14px; margin-bottom: 18px;
+  background: radial-gradient(600px 160px at 10% 0%, rgba(120, 90, 20, .25), transparent 70%),
+              linear-gradient(180deg, rgba(40, 32, 12, .8), rgba(10, 14, 36, .9));
+  box-shadow: 0 0 22px rgba(255, 215, 106, .12);
+}
+.ws2-duty-head { display: flex; align-items: center; justify-content: space-between; padding: 13px 18px; cursor: pointer; user-select: none; }
+.ws2-duty-title { font-size: 15px; font-weight: 800; color: #ffd76a; display: flex; align-items: center; gap: 10px; }
+.ws2-duty-lock { font-size: 11px; font-weight: 600; color: #b39544; }
+.ws2-duty-toggle { font-size: 12px; color: #b39544; }
+.ws2-duty-body { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 0 18px 14px; position: relative; }
+.ws2-duty-role { font-size: 12px; font-weight: 800; color: #ffd76a; margin-bottom: 7px; }
+.ws2-duty-role-leader { color: #6ee7b7; }
+.ws2-duty-item {
+  font-size: 12px; color: #e6dcc0; padding: 5px 10px; margin-bottom: 5px;
+  border-left: 2px solid rgba(255, 215, 106, .5); background: rgba(255, 215, 106, .05); border-radius: 0 6px 6px 0;
+}
+.ws2-duty-col:last-of-type .ws2-duty-item { border-left-color: rgba(110, 231, 183, .5); background: rgba(52, 211, 153, .05); color: #cfe6da; }
+.ws2-duty-fullbtn {
+  position: absolute; right: 18px; bottom: 14px; font-size: 11px; font-weight: 700; color: #ffd76a;
+  border: 1px solid rgba(255, 215, 106, .4); border-radius: 6px; padding: 4px 10px; cursor: pointer; background: rgba(255, 215, 106, .07);
+}
+.ws2-duty-fullbtn:hover { color: #fff3cf; }
+.ws2-duty-iframe { padding: 0 18px 16px; }
+
+.ws2-layout { display: grid; grid-template-columns: 250px 1fr; gap: 18px; align-items: start; }
+.ws2-nav {
+  position: sticky; top: 84px;
+  border: 1px solid rgba(80, 120, 255, .30); border-radius: 14px; padding: 14px 12px;
+  background: linear-gradient(180deg, rgba(13, 22, 60, .85), rgba(8, 13, 38, .85));
+}
+.ws2-nav-group { margin-bottom: 14px; }
+.ws2-nav-group:last-child { margin-bottom: 0; }
+.ws2-nav-gname { font-size: 11px; letter-spacing: 2px; font-weight: 800; color: #5f74b3; padding: 0 8px 8px; }
+.ws2-nav-item {
+  position: relative; display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 9px; cursor: pointer; margin-bottom: 4px;
+  font-size: 13px; font-weight: 600; color: #9db0dd; transition: background .15s ease, color .15s ease;
+}
+.ws2-nav-item:hover { background: rgba(24, 38, 96, .55); color: #ffffff; }
+.ws2-nav-item img { width: 22px; height: 22px; object-fit: cover; border-radius: 5px; mix-blend-mode: screen; }
+.ws2-nav-on { background: rgba(24, 38, 96, .8); color: #ffffff; }
+.ws2-nav-on::before {
+  content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 2px;
+  background: linear-gradient(180deg, #3b82f6, #22d3ee); box-shadow: 0 0 10px rgba(56, 189, 248, .8);
+}
+.ws2-main { min-width: 0; }
+.ws2-main div:empty { display: none; }          /* r52 标签隐藏后的空容器（错位分隔线）不再占位 */
+.ws2-main > div { margin-top: 0; }              /* 内容区与左导航顶部对齐 */
+
+.ws2-duty-frame { width: 100%; height: calc(100vh - 200px); border: none; border-radius: 12px; background: #0a0a0a; display: block; }
+
+.wsd-loading { padding: 40px 0; text-align: center; color: #8fa5d8; font-size: 13px; }
+.wsd-board { border: 1px solid rgba(80, 120, 255, .3); border-radius: 14px; padding: 14px 16px; background: linear-gradient(180deg, rgba(13, 22, 60, .85), rgba(8, 13, 38, .85)); }
+.wsd-summary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.wsd-rolebadge { font-size: 11px; font-weight: 800; letter-spacing: 2px; color: #ffd76a; border: 1px solid rgba(255, 215, 106, .5); border-radius: 6px; padding: 3px 10px; background: rgba(255, 215, 106, .07); }
+.wsd-owner { font-size: 12px; font-weight: 700; color: #e9efff; }
+.wsd-cnt { font-size: 11px; font-weight: 800; border-radius: 6px; padding: 3px 9px; }
+.wsd-cnt-p0 { color: #fff; background: #dc2626; }
+.wsd-cnt-p1 { color: #fbbf24; border: 1px solid rgba(251, 191, 36, .55); }
+.wsd-cnt-p2 { color: #9db0dd; border: 1px solid rgba(114, 136, 189, .5); }
+.wsd-updated { font-size: 11px; color: #7288bd; }
+.wsd-flex { flex: 1; }
+.wsd-btn { font-size: 12px; font-weight: 700; color: #7ea4ff; border: 1px solid rgba(90, 130, 255, .4); border-radius: 7px; padding: 5px 14px; cursor: pointer; }
+.wsd-btn:hover { color: #fff; }
+.wsd-btn-main { color: #04122c; background: linear-gradient(90deg, #3b82f6, #22d3ee); border-color: transparent; font-weight: 800; }
+.wsd-lock { font-size: 11px; color: #9db0dd; border: 1px dashed rgba(114, 136, 189, .5); border-radius: 6px; padding: 4px 10px; }
+.wsd-table { display: flex; flex-direction: column; gap: 5px; }
+.wsd-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) 190px 84px auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 9px; border: 1px solid rgba(114, 136, 189, .28); background: rgba(12, 18, 46, .5); }
+.wsd-head { border: none; background: transparent; font-size: 11px; font-weight: 700; color: #7ea4ff; padding: 2px 10px; }
+.wsd-p0 { border-color: rgba(248, 113, 113, .5); background: rgba(80, 18, 26, .28); }
+.wsd-p1 { border-color: rgba(251, 191, 36, .45); }
+.wsd-pri { font-size: 11px; font-weight: 800; border-radius: 6px; padding: 3px 10px; display: inline-block; }
+.wsd-pri-p0 { color: #fff; background: #dc2626; }
+.wsd-pri-p1 { color: #fbbf24; border: 1px solid rgba(251, 191, 36, .6); }
+.wsd-pri-p2 { color: #9db0dd; border: 1px solid rgba(114, 136, 189, .55); }
+.wsd-item { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.wsd-item b { font-size: 13px; font-weight: 700; }
+.wsd-item i { font-style: normal; font-size: 11px; color: #8fa5d8; line-height: 1.5; }
+.wsd-scwrap { display: flex; gap: 5px; flex-wrap: wrap; }
+.wsd-sc { font-size: 10px; font-weight: 700; border-radius: 5px; padding: 2px 8px; white-space: nowrap; }
+.wsd-sc-train { color: #34d399; border: 1px solid rgba(52, 211, 153, .5); background: rgba(52, 211, 153, .08); }
+.wsd-sc-event { color: #f87171; border: 1px solid rgba(248, 113, 113, .5); background: rgba(248, 113, 113, .08); }
+.wsd-sc-meeting { color: #ffd76a; border: 1px solid rgba(255, 215, 106, .5); background: rgba(255, 215, 106, .08); }
+.wsd-sc-solo { color: #c084fc; border: 1px solid rgba(168, 85, 247, .5); background: rgba(168, 85, 247, .08); }
+.wsd-sc-coop { color: #22d3ee; border: 1px solid rgba(34, 211, 238, .5); background: rgba(34, 211, 238, .08); }
+.wsd-freq { font-size: 12px; color: #9db0dd; }
+.wsd-del { font-size: 12px; font-weight: 700; color: #f87171; cursor: pointer; padding: 2px 8px; }
+.wsd-in { background: rgba(12, 20, 54, .9); border: 1px solid rgba(90, 130, 255, .3); border-radius: 6px; color: #e9efff; font-size: 12px; padding: 5px 7px; width: 100%; min-width: 0; }
+.wsd-in-desc { margin-top: 4px; }
+.wsd-legend { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(114, 136, 189, .3); }
+.wsd-sub { margin-top: 18px; }
+
+@media (max-width: 1100px) {
+  .ws2-layout { grid-template-columns: 1fr; }
+  .ws2-nav { position: static; display: flex; flex-wrap: wrap; gap: 6px; }
+  .ws2-nav-group { display: flex; gap: 6px; margin: 0; }
+  .ws2-nav-gname { display: none; }
+  .ws2-duty-body { grid-template-columns: 1fr; }
+}

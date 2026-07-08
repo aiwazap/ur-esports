@@ -1,0 +1,129 @@
+/* 赛训团队 v3 · members-v3.css（mb3- 前缀，design token 与全站一致） */
+.mb3-root {
+  max-width: 1492px; margin: 0 auto; padding: 0 28px 40px;
+  background: linear-gradient(180deg, #050a1d 0%, #060b24 40%, #04081a 100%);
+  color: #e9efff; border-radius: 14px;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+}
+.mb3-loading { padding: 90px 0; text-align: center; color: #8fa5d8; font-size: 15px; }
+.mb3-head { display: flex; align-items: flex-end; justify-content: space-between; padding-top: 26px; }
+.mb3-eyebrow { font-size: 11px; letter-spacing: 3px; color: #5f74b3; font-weight: 700; }
+.mb3-title { font-size: 30px; font-weight: 800; margin-top: 6px; }
+.mb3-tabs { display: flex; gap: 8px; }
+.mb3-tab { padding: 9px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; color: #9db0dd; border: 1px solid rgba(90, 130, 255, .25); background: rgba(18, 28, 72, .6); }
+.mb3-tab:hover { color: #fff; }
+.mb3-tab-on { color: #04122c; font-weight: 800; background: linear-gradient(90deg, #3b82f6, #22d3ee); border-color: transparent; box-shadow: 0 0 18px rgba(59, 130, 246, .4); }
+
+.mb3-sec { margin-top: 26px; }
+.mb3-sec-title { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; margin-bottom: 14px; }
+.mb3-tick { width: 4px; height: 17px; border-radius: 2px; background: linear-gradient(180deg, #38bdf8, #7c3aed); }
+.mb3-dim { font-size: 12px; font-weight: 400; color: #7288bd; }
+.mb3-empty { padding: 28px 0; text-align: center; font-size: 13px; color: #7288bd; border: 1px dashed rgba(80, 120, 255, .22); border-radius: 10px; background: rgba(14, 23, 62, .35); }
+.mb3-img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.mb3-noimg { display: flex; align-items: center; justify-content: center; background: rgba(14, 23, 62, .8); }
+.mb3-noimg img { width: 55%; height: 55%; object-fit: contain; filter: invert(1); opacity: .8; }
+
+/* 第一排：赛训团队（居中 228×288） */
+.mb3-staff-row { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+.mb3-staff-card {
+  width: 228px; height: 288px; border-radius: 14px; overflow: hidden; cursor: pointer; position: relative;
+  border: 1px solid rgba(255, 215, 106, .35); background: linear-gradient(180deg, rgba(30, 24, 8, .7), rgba(8, 13, 38, .95));
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.mb3-staff-card:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(255, 215, 106, .18); }
+.mb3-staff-photo { height: 210px; overflow: hidden; }
+.mb3-staff-meta { padding: 8px 12px 0; position: relative; }
+.mb3-staff-tag { position: absolute; top: 10px; left: 10px; z-index: 2; font-size: 10px; font-weight: 800; letter-spacing: 2px; color: #ffd76a; border: 1px solid rgba(255, 215, 106, .5); background: rgba(10, 8, 2, .75); border-radius: 5px; padding: 3px 9px; }
+.mb3-staff-name { font-size: 17px; font-weight: 800; }
+.mb3-staff-sub { font-size: 11px; color: #8fa5d8; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mb3-staff-en { color: #7dd3fc; font-weight: 800; letter-spacing: 1.5px; font-style: normal; }
+
+/* 第二排：服役（高 320） */
+.mb3-roster-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+.mb3-roster-card {
+  height: 320px; border-radius: 14px; overflow: hidden; cursor: pointer; position: relative;
+  border: 1px solid rgba(80, 120, 255, .35); background: linear-gradient(180deg, rgba(13, 22, 60, .85), rgba(8, 13, 38, .95));
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.mb3-roster-card:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(56, 130, 255, .22); }
+.mb3-roster-trial { border-color: rgba(255, 215, 106, .5); }
+.mb3-trial-badge { position: absolute; top: 10px; right: 10px; z-index: 2; font-size: 10px; font-weight: 800; color: #ffd76a; border: 1px solid rgba(255, 215, 106, .55); background: rgba(10, 8, 2, .7); border-radius: 5px; padding: 2px 8px; }
+.mb3-inline { position: static; margin-left: 8px; }
+.mb3-bench-badge { position: absolute; top: 10px; left: 10px; z-index: 2; font-size: 10px; font-weight: 700; color: #8fa5d8; border: 1px solid rgba(114, 136, 189, .5); background: rgba(8, 13, 38, .7); border-radius: 5px; padding: 2px 8px; }
+.mb3-roster-photo { height: 248px; overflow: hidden; }
+.mb3-roster-meta { padding: 8px 12px; }
+.mb3-roster-name { font-size: 16px; font-weight: 800; }
+.mb3-roster-sub { font-size: 11px; color: #8fa5d8; margin-top: 3px; }
+.mb3-vacancy { border-style: dashed; border-color: rgba(114, 136, 189, .45); background: rgba(10, 16, 44, .4); cursor: default; }
+.mb3-vacancy:hover { transform: none; box-shadow: none; }
+.mb3-vacancy-body { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+.mb3-vacancy-q { width: 56px; height: 56px; border-radius: 50%; border: 1px dashed rgba(114, 136, 189, .6); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; color: #5f74b3; }
+.mb3-vacancy-text { font-size: 12px; color: #7288bd; text-align: center; line-height: 1.7; }
+
+/* 第三排：历史（下放小卡降饱和 + 离队胶囊流） */
+.mb3-demoted-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.mb3-demoted-card {
+  width: 200px; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; cursor: pointer;
+  border: 1px solid rgba(114, 136, 189, .3); border-radius: 10px; background: rgba(12, 18, 46, .6);
+}
+.mb3-demoted-card:hover { border-color: rgba(140, 160, 220, .5); }
+.mb3-demoted-photo { width: 44px; height: 44px; border-radius: 8px; overflow: hidden; flex: none; filter: saturate(.35); }
+.mb3-demoted-name { font-size: 13px; font-weight: 700; color: #aebbe4; }
+.mb3-demoted-sub { font-size: 10px; color: #7288bd; margin-top: 2px; }
+.mb3-former-flow { display: flex; flex-wrap: wrap; gap: 8px; }
+.mb3-former-chip {
+  font-size: 12px; color: #8fa5d8; border: 1px solid rgba(114, 136, 189, .3); background: rgba(12, 18, 46, .55);
+  border-radius: 999px; padding: 5px 14px; cursor: pointer;
+}
+.mb3-former-chip:hover { color: #dbe4ff; border-color: rgba(140, 160, 220, .55); }
+.mb3-left-badge { margin-left: 8px; font-size: 10px; font-weight: 700; color: #8fa5d8; border: 1px solid rgba(114, 136, 189, .5); border-radius: 5px; padding: 1px 7px; }
+
+/* 档案页 */
+.mb3-profile { margin-top: 24px; }
+.mb3-pro-grid { display: grid; grid-template-columns: 320px 1fr; gap: 22px; align-items: start; }
+.mb3-pro-photo { height: 420px; border-radius: 14px; overflow: hidden; border: 1px solid rgba(80, 120, 255, .35); background: rgba(10, 16, 44, .6); }
+.mb3-pro-fields { border: 1px solid rgba(80, 120, 255, .3); border-radius: 14px; padding: 18px 20px; background: linear-gradient(180deg, rgba(13, 22, 60, .85), rgba(8, 13, 38, .85)); }
+.mb3-pro-head { display: flex; align-items: flex-start; justify-content: space-between; }
+.mb3-pro-name { font-size: 24px; font-weight: 800; }
+.mb3-pro-real { font-size: 14px; font-weight: 400; color: #8fa5d8; }
+.mb3-pro-role { font-size: 13px; color: #7ea4ff; margin-top: 5px; display: flex; align-items: center; }
+.mb3-editbtn { font-size: 12px; font-weight: 700; color: #fff; background: linear-gradient(90deg, #2563eb, #7c3aed); border-radius: 7px; padding: 7px 16px; cursor: pointer; }
+.mb3-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; margin-top: 16px; }
+.mb3-field { display: flex; flex-direction: column; gap: 3px; padding: 8px 10px; border-radius: 8px; background: rgba(20, 32, 80, .4); }
+.mb3-field span { font-size: 10px; letter-spacing: 1px; color: #7288bd; font-weight: 700; }
+.mb3-field b { font-size: 13px; font-weight: 600; color: #e9efff; word-break: break-all; }
+.mb3-field-wide { grid-column: 1 / -1; }
+.mb3-link { color: #22d3ee; text-decoration: none; }
+.mb3-contract { display: flex; align-items: center; gap: 14px; margin-top: 16px; padding: 12px 14px; border: 1px dashed rgba(255, 215, 106, .4); border-radius: 10px; background: rgba(255, 215, 106, .05); }
+.mb3-contract-label { font-size: 12px; font-weight: 800; color: #ffd76a; }
+.mb3-contract-view { font-size: 12px; font-weight: 700; color: #22d3ee; text-decoration: none; }
+.mb3-contract-up { font-size: 12px; font-weight: 700; color: #04122c; background: linear-gradient(90deg, #fbbf24, #ffd76a); border-radius: 7px; padding: 6px 14px; }
+.mb3-switch-flow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.mb3-switch-chip { font-size: 12px; color: #9db0dd; border: 1px solid rgba(90, 130, 255, .3); background: rgba(12, 20, 54, .6); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.mb3-switch-chip:hover { color: #fff; }
+.mb3-switch-on { color: #04122c; font-weight: 800; background: linear-gradient(90deg, #3b82f6, #22d3ee); border-color: transparent; }
+
+.mb3-tab-add { color: #04122c; font-weight: 800; background: linear-gradient(90deg, #fbbf24, #ffd76a); border-color: transparent; }
+.mb3-switch-groups { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.mb3-switch-group { display: flex; align-items: flex-start; gap: 12px; }
+.mb3-switch-gname { flex: none; font-size: 11px; font-weight: 800; letter-spacing: 1px; color: #7ea4ff; padding: 7px 0; width: 64px; }
+.mb3-switch-group .mb3-switch-flow { margin-top: 0; }
+.mb3-mask { position: fixed; inset: 0; z-index: 200; background: rgba(3, 6, 18, .72); display: flex; align-items: center; justify-content: center; }
+.mb3-modal { width: 520px; max-width: 94vw; border: 1px solid rgba(90, 130, 255, .4); border-radius: 14px; background: linear-gradient(180deg, rgba(13, 22, 60, .97), rgba(8, 13, 38, .97)); padding: 16px 18px; box-shadow: 0 0 40px rgba(40, 70, 200, .45); }
+.mb3-modal-head { display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+.mb3-modal-close { cursor: pointer; color: #8fa5d8; padding: 2px 8px; }
+.mb3-modal-close:hover { color: #fff; }
+.mb3-form { display: flex; flex-direction: column; gap: 10px; }
+.mb3-form label { display: block; font-size: 11px; font-weight: 700; color: #7ea4ff; margin-bottom: 4px; }
+.mb3-form input, .mb3-form select { width: 100%; background: rgba(12, 20, 54, .9); border: 1px solid rgba(90, 130, 255, .3); border-radius: 8px; color: #e9efff; font-size: 13px; padding: 9px 12px; outline: none; }
+.mb3-form input:focus, .mb3-form select:focus { border-color: rgba(56, 189, 248, .6); }
+.mb3-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mb3-form-err { font-size: 12px; color: #f87171; }
+.mb3-form-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+.mb3-btn-ghost { font-size: 12px; font-weight: 700; color: #9db0dd; border: 1px solid rgba(114, 136, 189, .4); border-radius: 8px; padding: 8px 18px; cursor: pointer; }
+.mb3-btn-main { font-size: 12px; font-weight: 800; color: #04122c; background: linear-gradient(90deg, #3b82f6, #22d3ee); border-radius: 8px; padding: 8px 22px; cursor: pointer; }
+
+@media (max-width: 1100px) {
+  .mb3-pro-grid { grid-template-columns: 1fr; }
+  .mb3-pro-photo { height: 340px; }
+}

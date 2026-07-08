@@ -1,0 +1,20 @@
+/* 赛训团队 v4 · hover 态（其余为内联样式，照原型精确实现） */
+.rv4-staff-card { transition: border-color .2s ease, box-shadow .2s ease; }
+.rv4-staff-card:hover { border-color: rgba(125,211,252,.7) !important; }
+.rv4-active-card { transition: border-color .2s ease; }
+.rv4-active-card:hover { border-color: rgba(216,150,255,.7) !important; }
+.rv4-gold-card { transition: box-shadow .2s ease; }
+.rv4-gold-card:hover { box-shadow: 0 0 0 1px rgba(251,191,36,.55), 0 18px 44px rgba(251,146,60,.5) !important; }
+.rv4-trial-card { transition: box-shadow .2s ease; }
+.rv4-trial-card:hover { box-shadow: 0 0 0 1px rgba(34,211,238,.55), 0 18px 44px rgba(34,211,238,.5) !important; }
+.rv4-benched-card { transition: border-color .2s ease; }
+.rv4-benched-card:hover { border-color: rgba(255,214,106,.5) !important; }
+.rv4-tl-row:hover { background: rgba(90,130,255,.08); }
+
+
+
+/* 队员档案 v5 · 按钮 hover 态 */
+.rv5-edit-btn { transition: box-shadow .2s ease, filter .2s ease; }
+.rv5-edit-btn:hover { box-shadow: 0 8px 24px rgba(59,130,246,.5) !important; filter: brightness(1.05); }
+.rv5-sub-btn { transition: border-color .2s ease, color .2s ease; }
+.rv5-sub-btn:hover { border-color: rgba(56,189,248,.55) !important; }

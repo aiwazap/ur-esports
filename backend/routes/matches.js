@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const db = require('../config/db');
-const { auth, adminAuth } = require('../middleware/auth');
+const { auth, adminAuth, staffAuth } = require('../middleware/auth');
 const multer = require('multer');
 const XLSX = require('xlsx');
 const path = require('path');
@@ -24,7 +24,7 @@ router.get('/grouped', auth, async (req, res) => {
     "m.division = 'cs2'",
     "m.opponent NOT IN ('match_data', 'OPPONENT', '___')",
     "m.match_date IS NOT NULL AND m.match_date != '' AND length(m.match_date) >= 8",
-    "m.map_name IS NOT NULL AND m.map_name != ''"
+    "((m.map_name IS NOT NULL AND m.map_name != '') OR m.is_walkover = 1)"
   ];
   const params = [];
 
@@ -63,10 +63,19 @@ router.get('/grouped', auth, async (req, res) => {
     const [rows] = await db.query(`
       SELECT m.id, m.match_date, m.opponent, m.map_name, m.our_score, m.their_score,
              m.t_score, m.ct_score, m.pistol_rounds, m.result, m.notes, m.match_type,
-             m.bo_format
+             m.bo_format, m.tournament_id, m.stage_id, m.opponent_players, m.is_walkover, m.map_order,
+             t.name AS tournament_name, t.bo_format AS tournament_bo,
+             t.status AS tournament_status, t.is_finished AS tournament_is_finished,
+             t.placement AS tournament_placement, t.start_date AS tournament_start_date,
+             t.end_date AS tournament_end_date, t.has_vrs AS tournament_has_vrs,
+             cs.stage_name AS tournament_current_stage_name,
+             ts.stage_name AS stage_name
       FROM matches m
+      LEFT JOIN tournaments t ON t.id = m.tournament_id
+      LEFT JOIN tournament_stages ts ON ts.id = m.stage_id
+      LEFT JOIN tournament_stages cs ON cs.id = t.current_stage_id
       WHERE ${baseWhere.join(' AND ')}
-      ORDER BY m.match_date DESC, m.opponent, m.map_name
+      ORDER BY m.match_date DESC, m.opponent, COALESCE(m.map_order, 999999), m.id
     `, params);
 
     // 按 日期+对手 分组
@@ -80,13 +89,22 @@ router.get('/grouped', auth, async (req, res) => {
           current.bo = current.bo_format || detectBoFormat(current.maps.length);
           groups.push(current);
         }
-        current = { match_date: dateStr, opponent: r.opponent, key, maps: [], match_type: r.match_type, bo_format: r.bo_format };
+        current = { match_date: dateStr, opponent: r.opponent, key, maps: [], match_type: r.match_type, bo_format: r.bo_format,
+                    tournament_id: r.tournament_id, tournament_name: r.tournament_name,
+                    tournament_bo: r.tournament_bo, stage_name: r.stage_name,
+                    tournament_status: r.tournament_status, tournament_is_finished: r.tournament_is_finished,
+                    tournament_placement: r.tournament_placement, tournament_start_date: r.tournament_start_date,
+                    tournament_end_date: r.tournament_end_date, tournament_has_vrs: r.tournament_has_vrs,
+                    tournament_current_stage_name: r.tournament_current_stage_name };
       }
       current.maps.push({
         id: r.id, map_name: r.map_name, our_score: r.our_score, their_score: r.their_score,
         t_score: r.t_score || 0, ct_score: r.ct_score || 0,
-        pistol_rounds: r.pistol_rounds || '', result: r.result, notes: r.notes
+        pistol_rounds: r.pistol_rounds || '', result: r.result, notes: r.notes,
+        opponent_players: r.opponent_players || null, is_walkover: r.is_walkover || 0,
+        map_order: r.map_order != null ? r.map_order : null
       });
+      if (current._maxId == null || r.id > current._maxId) current._maxId = r.id;
     }
     if (current) {
       current.bo = current.bo_format || detectBoFormat(current.maps.length);
@@ -100,7 +118,7 @@ router.get('/grouped', auth, async (req, res) => {
         const placeholders = allMatchIds.map(() => '?').join(',');
         const [playerRows] = await db.query(`
           SELECT ps.match_id, p.nickname, p.in_game_role,
-                 ps.kills, ps.deaths, ROUND(ps.rating, 2) as rating,
+                 ps.kills, ps.deaths, ps.assists, ROUND(ps.rating, 2) as rating,
                  ROUND(ps.adr, 1) as adr, ROUND(ps.kast, 1) as kast,
                  ps.hs
           FROM player_stats ps
@@ -116,6 +134,9 @@ router.get('/grouped', auth, async (req, res) => {
             name: pr.nickname,
             role: pr.in_game_role || '',
             rating: pr.rating,
+            kills: pr.kills,
+            deaths: pr.deaths,
+            assists: pr.assists || 0,
             kd: `${pr.kills}-${pr.deaths}`,
             adr: pr.adr,
             kast: pr.kast,
@@ -177,7 +198,7 @@ router.get('/maps', auth, async (req, res) => {
 });
 
 // 更新单场比赛（半场数据 + 手枪局）
-router.put('/:id', adminAuth, async (req, res) => {
+router.put('/:id', staffAuth, async (req, res) => {
   const { t_score, ct_score, pistol_rounds } = req.body;
   try {
     await db.query(

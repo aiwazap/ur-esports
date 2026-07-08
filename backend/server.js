@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 
 app.use(cors());
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -17,9 +18,11 @@ const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
 app.use('/api/', limiter);
 
 // Routes
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/players', require('./routes/players'));
 app.use('/api/matches', require('./routes/matches'));
+app.use('/api/tournaments', require('./routes/tournaments'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/training', require('./routes/training'));
@@ -29,8 +32,9 @@ app.use('/api/peripherals', require('./routes/peripherals'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/training-plans', require('./routes/training-plans'));
 app.use('/api/opponent-intel', require('./routes/opponent-intel'));
+app.use('/api/import-json', require('./routes/import-json'));
 app.use('/api/trial', require('./routes/trial'));
-// app.use('/api/hltv-sync', require('./routes/hltv-sync'));  // TODO: VRS auto-sync feature
+
 
 // ============ Internal: tencent_sync trigger (localhost only) ============
 const XLSX = require('xlsx');
@@ -196,6 +200,7 @@ app.post('/api/internal/sync-tencent', async (req, res) => {
 
   // Trigger real-time sync from Tencent Docs API
   const liveScript = path.join(__dirname, 'scripts', 'sync_tencent_api.py');
+  const dbPath = process.env.DB_PATH || path.join(__dirname, 'data', 'ur_esports.db');
   const pythonExe = process.platform === 'win32'
     ? path.join(__dirname, 'venv', 'Scripts', 'python.exe')
     : 'python3';
@@ -225,6 +230,13 @@ app.get('/api/special-events', (req, res) => {
 });
 
 // Serve frontend
+app.use('/api', (req, res) => {
+  res.status(404).json({
+    error: 'API endpoint not found',
+    path: req.originalUrl,
+  });
+});
+
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
