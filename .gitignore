@@ -50,3 +50,7 @@ __pycache__/
 # Sync cache
 tencent_sync/
 backend/tencent_sync/
+
+# 备份中转文件
+*.bak
+*.bak_*
