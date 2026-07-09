@@ -1,10 +1,18 @@
 const router = require('express').Router();
 const db = require('../config/db');
 const { auth, adminAuth } = require('../middleware/auth');
+// [安全] PII 收窄: 非管理员隐藏敏感字段
+const PII_ADMIN_ROLES = ["admin","管理员","coach","team_lead","教练","领队","manager","ceo","经理"];
+const PII_FIELDS = ["id_card","phone","id_pw","id_5e","id_faceit_sea","id_faceit_eu","steam_id64","contract_url"];
+function stripPII(row, user){ if(!row) return row; if(user && PII_ADMIN_ROLES.includes(user.role)) return row; const r={...row}; for(const f of PII_FIELDS) delete r[f]; return r; }
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
+// [安全] 上传扩展名白名单, 阻断 html/svg/js 等可执行文件
+const IMG_EXT = ['.png','.jpg','.jpeg','.gif','.webp'];
+const DOC_EXT = ['.pdf'].concat(IMG_EXT);
+function extFilter(allow){ return (req,file,cb)=>{ const ext=(path.extname(file.originalname||'')).toLowerCase(); if(allow.includes(ext)) cb(null,true); else cb(new Error('不允许的文件类型: '+ext)); }; }
 
 // 保留原始文件扩展名
 const uploadStorage = multer.diskStorage({
@@ -43,7 +51,7 @@ router.get('/', auth, async (req, res) => {
        CASE team_type WHEN 'former' THEN NULL ELSE join_date END ASC,
        real_name ASC`
     );
-    res.json(rows);
+    res.json(rows.map(r => stripPII(r, req.user)));
   } catch (e) {
     console.error('GET /players error:', e.message);
     res.status(500).json({ error: '获取失败: ' + e.message });
@@ -85,7 +93,7 @@ router.get('/:id', auth, async (req, res) => {
       WHERE ps.player_id = ? AND m.match_type = 'scrim'
       ORDER BY m.match_date DESC LIMIT 6`, [req.params.id]);
 
-    res.json({ ...player[0], official_matches: official, recent_scrims: scrim });
+    res.json({ ...stripPII(player[0], req.user), official_matches: official, recent_scrims: scrim });
   } catch (e) {
     console.error('GET /players/:id error:', e.message);
     res.status(500).json({ error: '获取失败: ' + e.message });
@@ -310,6 +318,8 @@ router.delete('/:id', adminAuth, async (req, res) => {
 
 // POST /players/:id/avatar — 上传头像
 const avatarUpload = multer({
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: extFilter(IMG_EXT),
   storage: multer.diskStorage({
     destination: path.join(__dirname, '..', 'uploads', 'avatars'),
     filename: (req, file, cb) => {
@@ -331,6 +341,8 @@ router.post('/:id/avatar', auth, avatarUpload.single('file'), async (req, res) =
 
 // POST /players/:id/contract — 上传合同（r52，含试训队员；PDF/图片）
 const contractUpload = multer({
+  limits: { fileSize: 120 * 1024 * 1024 },
+  fileFilter: extFilter(DOC_EXT),
   storage: multer.diskStorage({
     destination: path.join(__dirname, '..', 'uploads', 'contracts'),
     filename: (req, file, cb) => {
@@ -339,7 +351,7 @@ const contractUpload = multer({
     },
   }),
 });
-router.post('/:id/contract', auth, contractUpload.single('file'), async (req, res) => {
+router.post('/:id/contract', adminAuth, contractUpload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: '请上传合同文件' });
     const url = `/uploads/contracts/${req.file.filename}`;

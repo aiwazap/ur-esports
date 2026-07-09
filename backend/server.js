@@ -5,10 +5,12 @@ const cors = require('cors');
 const fs = require('fs');
 const { execFile } = require('child_process');
 const rateLimit = require('express-rate-limit');
+const { staffAuth } = require('./middleware/auth');
 
 const app = express();
 
-app.use(cors());
+const ALLOWED_ORIGINS = ['https://ur-esports.cn','https://www.ur-esports.cn','http://124.220.64.8:3000','http://124.220.64.8:3001'];
+app.use(cors({ origin: function(origin, cb){ if(!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true); return cb(new Error('CORS blocked')); } }));
 app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -16,6 +18,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
 app.use('/api/', limiter);
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { error: '登录尝试过于频繁，请15分钟后再试' } });
+app.use('/api/auth/login', loginLimiter);
 
 // Routes
 
@@ -33,7 +37,7 @@ app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/training-plans', require('./routes/training-plans'));
 app.use('/api/opponent-intel', require('./routes/opponent-intel'));
 app.use('/api/import-json', require('./routes/import-json'));
-app.use('/api/trial', require('./routes/trial'));
+app.use('/api/trial', staffAuth, require('./routes/trial'));
 
 
 // ============ Internal: tencent_sync trigger (localhost only) ============

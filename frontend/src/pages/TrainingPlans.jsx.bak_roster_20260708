@@ -575,7 +575,6 @@ function LogTab({ canEdit }) {
   const [logSearch, setLogSearch] = useState('');
   const [allTactics, setAllTactics] = useState([]);
   const [errorTypes, setErrorTypes] = useState([]);
-  const [roster, setRoster] = useState([]);   // 动态服役队员名单（替代硬编码 PLAYERS，排除下放）
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isCoach = user.role === 'coach';
   const isTeamLead = user.role === 'team_lead';
@@ -613,21 +612,6 @@ function LogTab({ canEdit }) {
     loadLogs();
     api.get('/training-plans/tactics').then(r => setAllTactics(r.data)).catch(() => {});
     api.get('/training-plans/error-types?active=1').then(r => setErrorTypes(r.data)).catch(() => {});
-    api.get('/players').then(({ data }) => {
-      // 与「赛训团队」服役栏完全一致：roster 中 starter/bench/未标者，外援/试训优先，最多5；有空缺则主教练顶上（暂代）
-      const all = data || [];
-      const isImp = (pl) => String(pl.role || '').includes('外援') || String(pl.in_game_role || '').includes('外援');
-      const isTri = (pl) => String(pl.role || '').includes('试训') || String(pl.in_game_role || '').includes('试训') || String(pl.roster_status || '') === 'trial';
-      const rosterAll = all.filter(pl => pl.team_type === 'roster');
-      const startersBench = rosterAll.filter(pl => !pl.roster_status || pl.roster_status === 'starter' || pl.roster_status === 'bench');
-      const specialCount = startersBench.filter(pl => isImp(pl) || isTri(pl)).length;
-      const ntQuota = Math.max(0, 5 - specialCount);
-      let ntSeen = 0;
-      const servingShown = startersBench.filter(pl => { if (isImp(pl) || isTri(pl)) return true; ntSeen += 1; return ntSeen <= ntQuota; }).slice(0, 5);
-      const vacancy = Math.max(0, 5 - servingShown.length);
-      const standin = vacancy > 0 ? all.filter(pl => pl.team_type === 'staff' && /教练|coach/i.test(String(pl.in_game_role || pl.role || ''))) : [];
-      setRoster([...servingShown, ...standin].map(pl => pl.nickname));
-    }).catch(() => {});
   }, []);
 
   const loadLogs = async () => {
@@ -998,7 +982,7 @@ function LogTab({ canEdit }) {
                       {canEditFd ? (
                         <select value={r.fd_player || ''} onChange={e => updateRound(gi, 'fd_player', e.target.value)} style={selSt}>
                           <option value="">-</option>
-                          {(r.fd_player && !roster.includes(r.fd_player) ? [r.fd_player, ...roster] : roster).map(p => <option key={p} value={p}>{p}</option>)}
+                          {PLAYERS.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
                       ) : (
                         <span className="text-gray-300 text-xs">{r.fd_player || '-'}</span>
@@ -1080,7 +1064,6 @@ function LogTab({ canEdit }) {
         <ErrorEditModal
           round={logDetail.rounds[errModal.roundIdx]}
           errorTypes={errorTypes}
-          roster={roster}
           onClose={() => setErrModal(null)}
           onSave={(errors) => { setRoundErrors(errModal.roundIdx, errors); setErrModal(null); }}
         />
@@ -1095,7 +1078,7 @@ function LogTab({ canEdit }) {
 }
 
 // ── 结构化失误编辑弹窗（路线甲核心）────────────────────────
-function ErrorEditModal({ round, errorTypes, roster = [], onClose, onSave }) {
+function ErrorEditModal({ round, errorTypes, onClose, onSave }) {
   const [errors, setErrors] = useState(() => (round.errors || []).map(e => ({ ...e })));
   // 失误大类（去重 category）
   const categories = [...new Set(errorTypes.map(t => t.category))];
@@ -1139,14 +1122,14 @@ function ErrorEditModal({ round, errorTypes, roster = [], onClose, onSave }) {
                     <select value={e.responsible||''} onChange={ev=>upd(i,'responsible',ev.target.value)}
                       className="bg-ur-bg border border-ur-border rounded px-2 py-1 text-white text-xs outline-none focus:border-ur-accent/40 w-24">
                       <option value="">选择</option>
-                      {(e.responsible && e.responsible !== '全队' && !roster.includes(e.responsible) ? [e.responsible, ...roster] : roster).map(p=><option key={p} value={p}>{p}</option>)}
+                      {PLAYERS.map(p=><option key={p} value={p}>{p}</option>)}
                       <option value="全队">全队</option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-1 flex-1 min-w-[160px]">
                     <label className="text-[11px] text-gray-500">连带责任人（可多选）</label>
                     <div className="flex flex-wrap gap-1">
-                      {[...new Set([...roster, ...coList])].filter(p=>p!==e.responsible).map(p=>(
+                      {PLAYERS.filter(p=>p!==e.responsible).map(p=>(
                         <button key={p} onClick={()=>toggleCo(i,p)}
                           className={`px-2 py-0.5 rounded text-[11px] border transition-colors ${
                             coList.includes(p) ? 'bg-ur-accent/20 text-ur-accent border-ur-accent/40' : 'bg-ur-bg text-gray-500 border-ur-border hover:text-gray-300'
@@ -1682,5 +1665,3 @@ function TacticEditModal({ tactic, players = [], onClose, onSaved }) {
     </div>
   );
 }
-
-

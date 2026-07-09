@@ -614,19 +614,11 @@ function LogTab({ canEdit }) {
     api.get('/training-plans/tactics').then(r => setAllTactics(r.data)).catch(() => {});
     api.get('/training-plans/error-types?active=1').then(r => setErrorTypes(r.data)).catch(() => {});
     api.get('/players').then(({ data }) => {
-      // 与「赛训团队」服役栏完全一致：roster 中 starter/bench/未标者，外援/试训优先，最多5；有空缺则主教练顶上（暂代）
-      const all = data || [];
-      const isImp = (pl) => String(pl.role || '').includes('外援') || String(pl.in_game_role || '').includes('外援');
-      const isTri = (pl) => String(pl.role || '').includes('试训') || String(pl.in_game_role || '').includes('试训') || String(pl.roster_status || '') === 'trial';
-      const rosterAll = all.filter(pl => pl.team_type === 'roster');
-      const startersBench = rosterAll.filter(pl => !pl.roster_status || pl.roster_status === 'starter' || pl.roster_status === 'bench');
-      const specialCount = startersBench.filter(pl => isImp(pl) || isTri(pl)).length;
-      const ntQuota = Math.max(0, 5 - specialCount);
-      let ntSeen = 0;
-      const servingShown = startersBench.filter(pl => { if (isImp(pl) || isTri(pl)) return true; ntSeen += 1; return ntSeen <= ntQuota; }).slice(0, 5);
-      const vacancy = Math.max(0, 5 - servingShown.length);
-      const standin = vacancy > 0 ? all.filter(pl => pl.team_type === 'staff' && /教练|coach/i.test(String(pl.in_game_role || pl.role || ''))) : [];
-      setRoster([...servingShown, ...standin].map(pl => pl.nickname));
+      const list = (data || [])
+        .filter(pl => pl.team_type === 'roster' && pl.roster_status !== 'demoted' && pl.status !== 'left')
+        .sort((x, y) => (x.sort_order ?? 999) - (y.sort_order ?? 999) || x.id - y.id)
+        .map(pl => pl.nickname);
+      setRoster(list);
     }).catch(() => {});
   }, []);
 

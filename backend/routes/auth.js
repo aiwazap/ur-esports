@@ -9,6 +9,7 @@ const db = require('../config/db');
 // identity: 'player' → 直接生效可登录
 // identity: 'coach'/'team_lead' → pending，需管理员审核分配角色
 router.post('/register', async (req, res) => {
+  return res.status(403).json({ error: '公开注册已关闭，请联系管理员开通账号' });
   const { username, password, identity } = req.body;
   if (!username || !password)
     return res.status(400).json({ error: '请输入用户名和密码' });
