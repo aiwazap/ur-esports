@@ -1,10 +1,28 @@
 const router = require('express').Router();
 const db = require('../config/db');
-const { auth, adminAuth } = require('../middleware/auth');
+const { auth, adminAuth, strictAdminAuth } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+
+// codex made：私有页面只保存在后端目录，响应前将动画依赖内联。
+// 未登录或非 admin 用户会在读取任何页面内容前被拒绝。
+router.get('/codex-made', strictAdminAuth, (req, res) => {
+  try {
+    const privateDir = path.join(__dirname, '..', 'private', 'codex-made');
+    let html = fs.readFileSync(path.join(privateDir, 'index.html'), 'utf8');
+    const gsap = fs.readFileSync(path.join(privateDir, 'vendor', 'gsap.min.js'), 'utf8');
+    const scrollTrigger = fs.readFileSync(path.join(privateDir, 'vendor', 'ScrollTrigger.min.js'), 'utf8');
+    html = html
+      .replace('<script src="./vendor/gsap.min.js"></script>', `<script>${gsap}</script>`)
+      .replace('<script src="./vendor/ScrollTrigger.min.js"></script>', `<script>${scrollTrigger}</script>`);
+    res.set('Cache-Control', 'no-store, private');
+    res.json({ html });
+  } catch (error) {
+    res.status(500).json({ error: 'codex made 页面读取失败' });
+  }
+});
 
 // 编辑权限：管理层(admin) + 领队(team_lead) 可编辑即将开始赛事
 const editorAuth = (req, res, next) => {

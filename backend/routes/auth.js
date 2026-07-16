@@ -84,4 +84,10 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// 【2026-07-15 已移除游客登录】
+// 原 POST /guest 会给任何匿名请求签发只读令牌，等同于对全世界敞开只读入口。
+// 华哥要求网站转为「仅 admin 与郑蔼平可访问」，故删除该接口。
+// 历史 guest 令牌（12 小时有效期内）的拒绝在 middleware/auth.js 统一处理——
+// 那里是所有受保护接口的必经关卡，放这里只能拦住 /api/auth/* 会漏。
+
 module.exports = router;

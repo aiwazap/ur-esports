@@ -9,7 +9,18 @@ const { staffAuth } = require('./middleware/auth');
 
 const app = express();
 
-const ALLOWED_ORIGINS = ['https://ur-esports.cn','https://www.ur-esports.cn','http://124.220.64.8:3000','http://124.220.64.8:3001'];
+const ALLOWED_ORIGINS = [
+  'https://ur-esports.cn',
+  'https://www.ur-esports.cn',
+  'http://124.220.64.8:3000',
+  'http://124.220.64.8:3001',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:3011',
+  'http://localhost:3011',
+];
 app.use(cors({ origin: function(origin, cb){ if(!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true); return cb(new Error('CORS blocked')); } }));
 app.set('trust proxy', 1);
 app.use(express.json());
@@ -35,7 +46,12 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/peripherals', require('./routes/peripherals'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/training-plans', require('./routes/training-plans'));
+app.use('/api/faceit-sea', require('./routes/faceit-sea'));
 app.use('/api/opponent-intel', require('./routes/opponent-intel'));
+// 私有档案页：/vault（导航入口）与 .env 的 VAULT_PATH（不可猜别名）两个入口，同一套口令
+app.use('/vault', require('./routes/vault'));
+if (process.env.VAULT_PATH) app.use('/' + process.env.VAULT_PATH, require('./routes/vault'));
+
 app.use('/api/import-json', require('./routes/import-json'));
 app.use('/api/trial', staffAuth, require('./routes/trial'));
 

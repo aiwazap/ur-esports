@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useLang } from '../i18n';
 import ParticleBackground from './ParticleBackground';
-import { Activity, Bell, Briefcase, Database, Home, LogOut, Search, Shield, UserCog, Users } from 'lucide-react';
+import { Activity, Bell, Briefcase, Database, FileLock2, Home, LogOut, ScrollText, Search, Shield, Target, UserCog, Users } from 'lucide-react';
 
 const NAV_ITEMS = [
   { to: '/overview',        icon: Home,      key: 'nav.overview' },
@@ -9,17 +9,28 @@ const NAV_ITEMS = [
   { to: '/matches',         icon: Database,  key: 'nav.matches' },
   { to: '/training-report', icon: Activity,  key: 'nav.analytics' },
   { to: '/workstation',     icon: Briefcase, key: 'nav.workstation' },
+  { to: '/faceit-sea',      icon: Target,    key: 'nav.faceitSea' },
   { to: '/admin',           icon: Shield,    key: 'nav.admin' },
+  // 仅 admin 可见；后端另有强制鉴权，前端隐藏只是第一层
+  { to: '/codex-made',      icon: FileLock2, label: 'codex made',  adminOnly: true },
+  { to: '/vault',           icon: ScrollText, label: '任职记录',    adminOnly: true, external: true }, // 后端口令页
 ];
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
 }
 
+// 游客不可见的模块（后端另有只读强制，此处仅为界面隐藏）
+const GUEST_HIDDEN = ['/admin', '/workstation', '/training-report'];
+
 export default function Layout() {
   const { t, lang, setLang } = useLang();
   const navigate = useNavigate();
   const user = getUser();
+  const isGuest = user.role === 'guest';
+  const navItems = NAV_ITEMS
+    .filter(i => !i.adminOnly || user.role === 'admin')
+    .filter(i => !(isGuest && GUEST_HIDDEN.includes(i.to)));
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -47,9 +58,17 @@ export default function Layout() {
             </div>
           </div>
 
-          <nav className="ur-nav hidden md:flex items-center">
-            {NAV_ITEMS.map(item => {
+          <nav className={'ur-nav hidden md:flex items-center' + (navItems.length >= 8 ? ' is-dense' : '')}>
+            {navItems.map(item => {
               const Icon = item.icon;
+              const text = item.label || t(item.key);
+              // external：由后端直接渲染的页面（非 SPA 路由），走整页跳转
+              if (item.external) return (
+                <a key={item.to} href={item.to} target="_blank" rel="noreferrer" className="ur-nav__item">
+                  <Icon size={15} strokeWidth={1.8} />
+                  {text}
+                </a>
+              );
               return (
               <NavLink
                 key={item.to}
@@ -59,7 +78,7 @@ export default function Layout() {
                 }
               >
                 <Icon size={15} strokeWidth={1.8} />
-                {t(item.key)}
+                {text}
               </NavLink>
             );})}
           </nav>
@@ -105,7 +124,7 @@ export default function Layout() {
         </div>
 
         <div className="ur-mobile-nav md:hidden fixed bottom-0 left-0 right-0 z-40 px-4 py-2 flex justify-around">
-          {NAV_ITEMS.slice(0, 5).map(item => {
+          {navItems.slice(0, 5).map(item => {
             const Icon = item.icon;
             return (
             <NavLink

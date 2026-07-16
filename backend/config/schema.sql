@@ -173,6 +173,80 @@ CREATE TABLE IF NOT EXISTS system_config (
   updated_at TEXT DEFAULT (datetime('now','localtime'))
 );
 
+-- FACEIT SEA task board
+CREATE TABLE IF NOT EXISTS faceit_sea_config (
+  config_key TEXT PRIMARY KEY NOT NULL,
+  config_value TEXT,
+  updated_at TEXT DEFAULT (datetime('now','localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS faceit_players (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  player_name TEXT NOT NULL,
+  faceit_nickname TEXT NOT NULL UNIQUE,
+  faceit_player_id TEXT,
+  role TEXT,
+  is_active INTEGER DEFAULT 1,
+  current_elo INTEGER DEFAULT 0,
+  last_synced_at TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now','localtime')),
+  updated_at TEXT DEFAULT (datetime('now','localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS faceit_matches (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  faceit_match_id TEXT NOT NULL UNIQUE,
+  match_room_url TEXT,
+  started_at TEXT,
+  match_date TEXT,
+  map TEXT,
+  region TEXT DEFAULT 'SEA',
+  queue_type TEXT DEFAULT 'FACEIT SEA',
+  team_score INTEGER DEFAULT 0,
+  opponent_score INTEGER DEFAULT 0,
+  result TEXT CHECK(result IN ('win','loss','draw')) DEFAULT 'win',
+  is_full_stack INTEGER DEFAULT 0,
+  stack_type TEXT DEFAULT 'solo' CHECK(stack_type IN ('full_stack','partial','solo','unknown')),
+  data_source TEXT DEFAULT 'manual',
+  created_at TEXT DEFAULT (datetime('now','localtime')),
+  updated_at TEXT DEFAULT (datetime('now','localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS faceit_match_players (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  faceit_match_id TEXT NOT NULL,
+  faceit_player_id TEXT,
+  faceit_nickname TEXT NOT NULL,
+  team_id TEXT DEFAULT 'UR',
+  kills INTEGER DEFAULT 0,
+  deaths INTEGER DEFAULT 0,
+  assists INTEGER DEFAULT 0,
+  rating REAL DEFAULT 0,
+  adr REAL DEFAULT 0,
+  elo_before INTEGER,
+  elo_after INTEGER,
+  elo_delta INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now','localtime')),
+  UNIQUE(faceit_match_id, faceit_nickname)
+);
+
+CREATE TABLE IF NOT EXISTS faceit_daily_tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  task_date TEXT NOT NULL UNIQUE,
+  target_elo INTEGER DEFAULT 3200,
+  current_best_elo INTEGER DEFAULT 0,
+  best_player_id INTEGER,
+  remaining_elo INTEGER DEFAULT 0,
+  avg_elo_per_win REAL DEFAULT 25,
+  required_net_wins INTEGER DEFAULT 0,
+  remaining_days INTEGER DEFAULT 0,
+  required_daily_net_wins INTEGER DEFAULT 0,
+  today_net_wins INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'not_started',
+  generated_at TEXT DEFAULT (datetime('now','localtime'))
+);
+
 -- peripherals
 CREATE TABLE IF NOT EXISTS peripherals (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -621,6 +695,80 @@ VALUES ('admin', '$2b$10$jEozMwz6YJuJhdbeYhFjBerviWLzPNpDwuZDNOzDmPf7uGzeNvcM2',
 -- 系统配置初始值
 INSERT OR IGNORE INTO system_config (config_key, config_value, description) VALUES ('founded_date', '2025-03-27', '分部成立日期');
 INSERT OR IGNORE INTO system_config (config_key, config_value, description) VALUES ('vrs_rank', '43', 'VRS Asia 排名');
+
+INSERT OR IGNORE INTO faceit_sea_config (config_key, config_value) VALUES ('team_name', 'UR FACEIT SEA');
+INSERT OR IGNORE INTO faceit_sea_config (config_key, config_value) VALUES ('target_elo', '3200');
+INSERT OR IGNORE INTO faceit_sea_config (config_key, config_value) VALUES ('deadline', '2026-07-31');
+INSERT OR IGNORE INTO faceit_sea_config (config_key, config_value) VALUES ('avg_elo_per_win', '25');
+INSERT OR IGNORE INTO faceit_sea_config (config_key, config_value) VALUES ('sample_size', '10');
+INSERT OR IGNORE INTO faceit_sea_config (config_key, config_value) VALUES ('daily_start_time', '19:00');
+INSERT OR IGNORE INTO faceit_sea_config (config_key, config_value) VALUES ('settlement_time', '00:30');
+INSERT OR IGNORE INTO faceit_sea_config (config_key, config_value) VALUES ('reminders_enabled', '1');
+
+INSERT INTO faceit_players (player_name, faceit_nickname, faceit_player_id, role, is_active, current_elo, sort_order)
+VALUES ('4ever', 'L1XYyy', 'sample:L1XYyy', 'Rifle', 1, 2403, 1)
+ON CONFLICT(faceit_nickname) DO UPDATE SET
+  player_name = excluded.player_name,
+  role = excluded.role,
+  is_active = 1,
+  current_elo = CASE
+    WHEN faceit_players.faceit_player_id IS NULL
+      OR faceit_players.faceit_player_id LIKE 'sample:%'
+      OR faceit_players.last_synced_at IS NULL
+    THEN excluded.current_elo
+    ELSE faceit_players.current_elo
+  END,
+  sort_order = excluded.sort_order,
+  updated_at = datetime('now','localtime');
+
+INSERT INTO faceit_players (player_name, faceit_nickname, faceit_player_id, role, is_active, current_elo, sort_order)
+VALUES ('glong', 'NDWSS', 'sample:NDWSS', 'Rifle', 1, 2452, 2)
+ON CONFLICT(faceit_nickname) DO UPDATE SET
+  player_name = excluded.player_name,
+  role = excluded.role,
+  is_active = 1,
+  current_elo = CASE
+    WHEN faceit_players.faceit_player_id IS NULL
+      OR faceit_players.faceit_player_id LIKE 'sample:%'
+      OR faceit_players.last_synced_at IS NULL
+    THEN excluded.current_elo
+    ELSE faceit_players.current_elo
+  END,
+  sort_order = excluded.sort_order,
+  updated_at = datetime('now','localtime');
+
+INSERT INTO faceit_players (player_name, faceit_nickname, faceit_player_id, role, is_active, current_elo, sort_order)
+VALUES ('melody', 'Me1odyovo', 'sample:Me1odyovo', 'Rifle', 1, 1910, 3)
+ON CONFLICT(faceit_nickname) DO UPDATE SET
+  player_name = excluded.player_name,
+  role = excluded.role,
+  is_active = 1,
+  current_elo = CASE
+    WHEN faceit_players.faceit_player_id IS NULL
+      OR faceit_players.faceit_player_id LIKE 'sample:%'
+      OR faceit_players.last_synced_at IS NULL
+    THEN excluded.current_elo
+    ELSE faceit_players.current_elo
+  END,
+  sort_order = excluded.sort_order,
+  updated_at = datetime('now','localtime');
+
+INSERT OR IGNORE INTO faceit_players (player_name, faceit_nickname, faceit_player_id, role, is_active, current_elo, sort_order)
+VALUES ('HZ / Coach', 'HZZZZZ', 'sample:HZZZZZ', 'Coach', 0, 0, 90);
+UPDATE faceit_players
+   SET is_active = 0,
+       role = 'Coach',
+       sort_order = 90,
+       updated_at = datetime('now','localtime')
+ WHERE lower(faceit_nickname) = 'hzzzzz'
+    OR lower(player_name) IN ('hz', 'hz / coach')
+    OR lower(role) IN ('coach', '教练');
+UPDATE faceit_players
+   SET is_active = 0,
+       sort_order = 99,
+       updated_at = datetime('now','localtime')
+ WHERE faceit_nickname = '-maider666'
+    OR lower(player_name) LIKE '%azura%';
 COMMIT;
 
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '', updated_at TEXT DEFAULT (datetime('now','localtime')));

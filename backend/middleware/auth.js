@@ -1,14 +1,20 @@
 const jwt = require("jsonwebtoken");
 
+// 【2026-07-15】游客访问已整体关闭（华哥要求：仅 admin 与郑蔼平可访问）。
+// auth 是所有受保护接口的必经之路（adminAuth/strictAdminAuth/staffAuth 等内部都会调用它），
+// 在此直接拒绝一切 guest 令牌——包括关闭前已签发、仍在 12 小时有效期内的历史令牌。
 const auth = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ error: "未授权" });
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
-    next();
   } catch {
-    res.status(401).json({ error: "Token无效" });
+    return res.status(401).json({ error: "Token无效" });
   }
+  if (req.user.role === "guest") {
+    return res.status(403).json({ error: "游客访问已关闭，请使用账号登录" });
+  }
+  next();
 };
 
 // 管理员权限（已开放给教练/领队，与 admin 全站同权）
@@ -17,6 +23,14 @@ const adminAuth = (req, res, next) => {
     const allowed = ["admin", "管理员", "coach", "team_lead", "教练", "领队"];
     if (allowed.includes(req.user.role)) return next();
     return res.status(403).json({ error: "需要管理员权限" });
+  });
+};
+
+// 严格管理员权限：仅 role=admin，不能被教练/领队的后台同权规则放宽。
+const strictAdminAuth = (req, res, next) => {
+  auth(req, res, () => {
+    if (req.user?.role === "admin") return next();
+    return res.status(403).json({ error: "仅 Admin 可访问" });
   });
 };
 
@@ -47,4 +61,4 @@ const leadAuth = (req, res, next) => {
   });
 };
 
-module.exports = { auth, adminAuth, staffAuth, coachAuth, leadAuth };
+module.exports = { auth, adminAuth, strictAdminAuth, staffAuth, coachAuth, leadAuth };

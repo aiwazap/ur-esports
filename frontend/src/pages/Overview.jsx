@@ -1,8 +1,14 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Crosshair, Globe2, LockKeyhole } from 'lucide-react';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
 import api from '../api';
 import './overview-v8.css';
 import EventDetailModal from '../components/EventDetailModal';
+import FaceitSeaSummaryCard from '../components/FaceitSeaSummaryCard';
+
+gsap.registerPlugin(useGSAP);
 
 /* ════════════════════════════════════════════════════════════════
    首页 r22 · 按 2026-07-05 最新 design 重建
@@ -46,6 +52,31 @@ const ERR_TYPES = [
   { key: '沟通', color: '#a3e635' },
   { key: '战术', color: '#f59e0b' },
   { key: '经济', color: '#f472b6' },
+];
+
+const TRAINING_PLAYER_FALLBACK = [
+  { id: 'melody', rating: '1.15', adr: '78.6', roundWin: '45.1%' },
+  { id: 'glong', rating: '1.08', adr: '72.4', roundWin: '43.3%' },
+  { id: '4ever', rating: '1.03', adr: '70.1', roundWin: '41.8%' },
+  { id: '0Z', rating: '0.98', adr: '66.8', roundWin: '40.2%' },
+  { id: 'drace', rating: '0.94', adr: '64.5', roundWin: '38.6%' },
+];
+
+const ERROR_TYPE_FALLBACK = [
+  { key: '道具', pct: 4, count: 1, color: '#79AC69' },
+  { key: '点位', pct: 48, count: 13, color: '#5fd282' },
+  { key: '枪法', pct: 37, count: 10, color: '#2ec8d3' },
+  { key: '沟通', pct: 4, count: 1, color: '#b8df65' },
+  { key: '战术', pct: 7, count: 2, color: '#d7c85d' },
+];
+
+const MAP_WIN_FALLBACK = [
+  { map_name: 'Ancient', win_rate: 100, wins: 1, losses: 0, played: 1 },
+  { map_name: 'Mirage', win_rate: 33.3, wins: 1, losses: 2, played: 3 },
+  { map_name: 'Dust2', win_rate: 0, wins: 0, losses: 2, played: 2 },
+  { map_name: 'Nuke', win_rate: 0, wins: 0, losses: 0, played: 0 },
+  { map_name: 'Anubis', win_rate: 0, wins: 0, losses: 0, played: 0 },
+  { map_name: 'Overpass', win_rate: 0, wins: 0, losses: 0, played: 0 },
 ];
 
 // 赛事开始时间 → 展示文案 + 是否临近(24h内)
@@ -130,16 +161,101 @@ function DotsBar({ rows }) {
   );
 }
 
+function ModeMetric({ label, value }) {
+  return (
+    <div className="ov8-mode-metric">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function ModeListRow({ main, sub, right, onClick }) {
+  return (
+    <button className="ov8-mode-row" type="button" onClick={onClick}>
+      <span className="ov8-mode-row-main">{main || '—'}</span>
+      <span className="ov8-mode-row-sub">{sub || '—'}</span>
+      {right && <span className="ov8-mode-row-right">{right}</span>}
+    </button>
+  );
+}
+
+function ModeBoard({ title, subtitle, tone = 'blue', sections }) {
+  return (
+    <section className={`ov8-card ov8-mode-card ov8-mode-card--${tone}`}>
+      <div className="ov8-mode-head">
+        <div>
+          <div className="ov8-mode-title">{title}</div>
+          {subtitle && <div className="ov8-mode-sub">{subtitle}</div>}
+        </div>
+      </div>
+      <div className="ov8-mode-grid">
+        {sections.map((section) => (
+          <div className="ov8-mode-panel" key={section.title}>
+            <div className="ov8-mode-panel-title">{section.title}</div>
+            {section.content}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function HeroSection({ children }) {
+  return children;
+}
+
+function TopDataRow({ children }) {
+  return <div className="ov8-top-data-row">{children}</div>;
+}
+
+function FaceitSeaSection({ children }) {
+  return <div className="ov8-faceit-row">{children}</div>;
+}
+
+function TrainingDataSection({ children }) {
+  return <div className="ov8-training-data-row">{children}</div>;
+}
+
+function TrainingFocusAndMapSection({ children }) {
+  return <div className="ov8-focus-map-row">{children}</div>;
+}
+
+function FunctionShortcutSection({ children }) {
+  return <div className="ov8-bottom">{children}</div>;
+}
+
 // ─── 主组件 ──────────────────────────────────────────────────
+const HERO_INTRO_KEY = 'ov8HeroIntroSeen';
+const HERO_PARTICLES = [
+  { left: '48%', top: '20%', size: 3, tone: 'cyan' },
+  { left: '54%', top: '37%', size: 4, tone: 'violet' },
+  { left: '59%', top: '13%', size: 3, tone: 'cyan' },
+  { left: '63%', top: '48%', size: 5, tone: 'blue' },
+  { left: '68%', top: '20%', size: 3, tone: 'violet' },
+  { left: '72%', top: '42%', size: 4, tone: 'cyan' },
+  { left: '77%', top: '14%', size: 5, tone: 'blue' },
+  { left: '81%', top: '34%', size: 3, tone: 'cyan' },
+  { left: '86%', top: '22%', size: 4, tone: 'violet' },
+  { left: '90%', top: '47%', size: 3, tone: 'blue' },
+  { left: '57%', top: '69%', size: 4, tone: 'cyan' },
+  { left: '84%', top: '71%', size: 5, tone: 'violet' },
+];
+
 export default function Overview() {
   const navigate = useNavigate();
+  const heroRef = useRef(null);
   const [data, setData] = useState(null);
+  const [faceitSea, setFaceitSea] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [errDist, setErrDist] = useState(null);   // review-report by_type（近14天）
   const [now, setNow] = useState(new Date());
-  const [heroOpen, setHeroOpen] = useState(true);
-  const heroTouched = useRef(false);
+  const [heroIntro] = useState(() => {
+    try { return sessionStorage.getItem(HERO_INTRO_KEY) !== '1'; } catch { return true; }
+  });
+  const [heroOpen, setHeroOpen] = useState(heroIntro);
+  const [heroAutoCollapse, setHeroAutoCollapse] = useState(heroIntro);
   const [showEventDetail, setShowEventDetail] = useState(false);
   const [detailEvent, setDetailEvent] = useState(null);
   const [mapPool, setMapPool] = useState(null);           // 地图池配置 {active, firstBan}
@@ -147,6 +263,7 @@ export default function Overview() {
   const [mapPeriod, setMapPeriod] = useState('14');      // 14 | 30 | 90 | all
   const [periodStats, setPeriodStats] = useState({});    // {周期key: {maps, details}}，取过即缓存
   const [expandedId, setExpandedId] = useState(null);    // 弹窗内展开详情的比赛 id
+  const [faceitSyncing, setFaceitSyncing] = useState(false);
 
   const RANGE = useMemo(() => ({ start: daysAgo(13), end: today() }), []);
 
@@ -160,6 +277,9 @@ export default function Overview() {
     api.get('/training-plans/review-report', { params: { from: RANGE.start, to: RANGE.end } })
       .then((r) => setErrDist(r.data?.summary?.by_type || null))
       .catch(() => setErrDist(null));
+    api.get('/faceit-sea/summary')
+      .then((r) => setFaceitSea(r.data))
+      .catch(() => setFaceitSea(null));
   }, [RANGE]);
 
   useEffect(() => {
@@ -169,14 +289,183 @@ export default function Overview() {
     return () => clearInterval(t);
   }, [fetchAll]);
 
-  // Hero：加载 3s 后自动收起（design 规格）；手动点过则不再自动
   useEffect(() => {
-    const t = setTimeout(() => { if (!heroTouched.current) setHeroOpen(false); }, 3000);
-    return () => clearTimeout(t);
-  }, []);
+    if (!heroIntro) return;
+    try { sessionStorage.setItem(HERO_INTRO_KEY, '1'); } catch {}
+  }, [heroIntro]);
+
+  useEffect(() => {
+    if (!heroAutoCollapse || !heroOpen) return undefined;
+    const timer = setTimeout(() => {
+      setHeroOpen(false);
+      setHeroAutoCollapse(false);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [heroAutoCollapse, heroOpen]);
+
+  const toggleHero = () => {
+    setHeroAutoCollapse(false);
+    setHeroOpen((open) => !open);
+  };
+
+  const closeHeroManually = () => {
+    setHeroAutoCollapse(false);
+    setHeroOpen(false);
+  };
 
   const curUser = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })();
   const canEditEvent = curUser.role === 'admin' || curUser.role === 'team_lead';
+  const syncFaceitMatches = useCallback(() => {
+    setFaceitSyncing(true);
+    api.post('/faceit-sea/sync-matches', { date: faceitSea?.date || today(), limit: 30 })
+      .then((r) => setFaceitSea(r.data?.summary || faceitSea))
+      .catch(() => {})
+      .finally(() => setFaceitSyncing(false));
+  }, [faceitSea]);
+
+  useGSAP(() => {
+    if (!heroOpen || loading || !heroRef.current) return undefined;
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      gsap.set('.ov8-hero-motion', { autoAlpha: 0.72 });
+      return undefined;
+    }
+
+    const intro = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    intro
+      .fromTo('.ov8-hero-motion', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35 }, 0)
+      .fromTo('.ov8-hero-copy > *', { autoAlpha: 0, x: -30, y: 8 }, {
+        autoAlpha: 1,
+        x: 0,
+        y: 0,
+        duration: 0.72,
+        stagger: 0.08,
+      }, 0.04)
+      .fromTo('.ov8-hero-art img', { autoAlpha: 0, scale: 0.96, y: 12 }, {
+        autoAlpha: 0.2,
+        scale: 1,
+        y: 0,
+        duration: 0.9,
+      }, 0.1)
+      .fromTo('.ov8-float-card', { autoAlpha: 0, x: 34, scale: 0.94 }, {
+        autoAlpha: 1,
+        x: 0,
+        scale: 1,
+        duration: 0.68,
+        stagger: 0.14,
+      }, 0.18)
+      .fromTo('.ov8-hero-tags span', { autoAlpha: 0, y: 10 }, {
+        autoAlpha: 1,
+        y: 0,
+        duration: 0.45,
+        stagger: 0.06,
+      }, 0.42);
+
+    gsap.to('.ov8-motion-aura', {
+      autoAlpha: 0.95,
+      scale: 1.16,
+      duration: 1.45,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut',
+    });
+    gsap.to('.ov8-motion-floor', {
+      scaleX: 1.12,
+      scaleY: 0.82,
+      autoAlpha: 0.72,
+      duration: 1.45,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut',
+    });
+    gsap.to('.ov8-motion-orbit--outer', {
+      rotation: 360,
+      duration: 7.5,
+      repeat: -1,
+      ease: 'none',
+      transformOrigin: '50% 50%',
+    });
+    gsap.to('.ov8-motion-orbit--inner', {
+      rotation: -360,
+      duration: 4.8,
+      repeat: -1,
+      ease: 'none',
+      transformOrigin: '50% 50%',
+    });
+    gsap.to('.ov8-hero-art img', {
+      y: -9,
+      autoAlpha: 0.29,
+      duration: 1.8,
+      delay: 0.95,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut',
+    });
+    gsap.to('.ov8-float-card', {
+      y: (index) => (index % 2 === 0 ? -7 : 7),
+      duration: (index) => 1.75 + index * 0.22,
+      delay: 1.05,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut',
+      stagger: 0.16,
+    });
+    gsap.to('.ov8-motion-particle', {
+      x: (index) => (index % 3 - 1) * 14,
+      y: (index) => -12 - (index % 4) * 5,
+      scale: (index) => 1.25 + (index % 3) * 0.18,
+      autoAlpha: 0.24,
+      duration: (index) => 1.25 + (index % 5) * 0.22,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut',
+      stagger: { each: 0.1, from: 'random' },
+    });
+    gsap.fromTo('.ov8-motion-streak', { x: -60, autoAlpha: 0.08 }, {
+      x: 105,
+      autoAlpha: 0.72,
+      duration: 2.2,
+      repeat: -1,
+      yoyo: true,
+      ease: 'power1.inOut',
+      stagger: 0.28,
+    });
+    gsap.to('.ov8-motion-grid', {
+      x: 24,
+      autoAlpha: 0.66,
+      duration: 4.2,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut',
+    });
+
+    const scan = gsap.timeline({ repeat: -1, repeatDelay: 0.75 });
+    scan
+      .fromTo('.ov8-motion-scan', { xPercent: -170, autoAlpha: 0 }, {
+        xPercent: -90,
+        autoAlpha: 0.78,
+        duration: 0.42,
+        ease: 'power2.out',
+      })
+      .to('.ov8-motion-scan', {
+        xPercent: 135,
+        autoAlpha: 0.55,
+        duration: 1.35,
+        ease: 'power1.inOut',
+      })
+      .to('.ov8-motion-scan', {
+        xPercent: 185,
+        autoAlpha: 0,
+        duration: 0.38,
+        ease: 'power2.in',
+      });
+
+    return () => {
+      intro.kill();
+      scan.kill();
+    };
+  }, { scope: heroRef, dependencies: [heroOpen, loading], revertOnUpdate: true });
 
   if (loading && !data) {
     return <div className="ov8-root"><div className="ov8-loading">加载中…</div></div>;
@@ -197,6 +486,14 @@ export default function Overview() {
     .filter((e) => e && !e.is_finished && e.match_date)
     .filter((e) => new Date(`${e.match_date}T${e.match_time || '23:59:59'}`) >= now)
     .slice(0, 4);
+  const latestEvents = evtRaw
+    .filter((e) => e?.event_name)
+    .map((e) => ({
+      ...e,
+      sortDate: e.match_date || e.end_date || '1900-01-01',
+    }))
+    .sort((a, b) => String(b.sortDate).localeCompare(String(a.sortDate)))
+    .slice(0, 3);
 
   // ── 训练赛/正赛（won 判定：优先 result 字段，缺失则比比分）──
   const asWon = (m) => {
@@ -213,18 +510,34 @@ export default function Overview() {
     dateLabel: (m.match_date || '').slice(5),
     won: m.result != null ? /win|胜|^w$/i.test(String(m.result)) : (m.our_score > m.their_score),
   }));
+  const officialWinRate = offRows.length ? Math.round((offRows.filter((r) => r.won).length / offRows.length) * 100) : null;
+  const trainingWinRate = trainRows.length ? Math.round((trainRows.filter((r) => r.won).length / trainRows.length) * 100) : null;
 
   // ── 数据速览（全部真实计算）──
-  const totalGames = kpi.totalRecentMatches ?? trainRows.length;
-  const winRate = kpi.recentWinRate ?? null;
-  const roundAgg = (recentMatches || []).reduce((a, m) => {
+  const kpiTotalGames = Number(kpi.totalRecentMatches ?? trainRows.length ?? 0);
+  const mapTotalGames = (mapStats || []).reduce((sum, m) => sum + Number(m.played || 0), 0);
+  const mapWins = (mapStats || []).reduce((sum, m) => sum + Number(m.wins || 0), 0);
+  const totalGames = kpiTotalGames > 0 ? kpiTotalGames : mapTotalGames;
+  const winRate = kpiTotalGames > 0
+    ? (kpi.recentWinRate ?? null)
+    : (mapTotalGames > 0 ? +((mapWins / mapTotalGames) * 100).toFixed(1) : (kpi.recentWinRate ?? null));
+  const roundAgg = { our: 0, their: 0 };
+  (recentMatches || []).forEach((m) => {
     const p = parseScore(m.score);
-    if (p) { a.our += p[0]; a.their += p[1]; }
-    return a;
-  }, { our: 0, their: 0 });
+    if (p) { roundAgg.our += p[0]; roundAgg.their += p[1]; }
+  });
+  (recentOfficial || []).forEach((m) => {
+    const ours = Number(m.our_score);
+    const theirs = Number(m.their_score);
+    if (Number.isFinite(ours) && Number.isFinite(theirs)) {
+      roundAgg.our += ours;
+      roundAgg.their += theirs;
+    }
+  });
   const roundWinRate = (roundAgg.our + roundAgg.their) > 0
     ? +((roundAgg.our / (roundAgg.our + roundAgg.their)) * 100).toFixed(1) : null;
   const teamRating = teamAverages?.rating != null ? Number(teamAverages.rating).toFixed(2) : null;
+  const teamADR = teamAverages?.adr != null ? Number(teamAverages.adr).toFixed(1) : null;
 
   // ── Hero 右侧浮动卡：胜率走势（近8场滚动胜率，真实）+ 回合胜率圆环 ──
   const sparkRows = trainRows.slice(0, 8).reverse(); // 旧→新
@@ -265,6 +578,16 @@ export default function Overview() {
   const visMaps = poolActive
     ? (mapStats || []).filter((m) => poolActive.includes(m.map_name))
     : (mapStats || []).filter((m) => !HIDDEN_MAPS.includes(m.map_name));
+  const homeErrorRows = ERROR_TYPE_FALLBACK;
+  const homeErrorTotal = 27;
+  let homeErrAcc = 0;
+  const homeDonutSegs = homeErrorRows.map((t) => {
+    const len = (t.pct / 100) * CIRC;
+    const seg = { color: t.color, dash: `${len.toFixed(1)} ${CIRC.toFixed(1)}`, offset: -homeErrAcc };
+    homeErrAcc += len;
+    return seg;
+  });
+  const homeMapRows = MAP_WIN_FALLBACK;
 
   // ── 今日训练安排：按当前时间实时推算状态 ──
   const planStatus = (tp) => {
@@ -310,13 +633,38 @@ export default function Overview() {
   return (
     <div className="ov8-root">
 
-      {/* ══════════ HERO（可折叠：加载展开，3s 自动收起，点击切换）══════════ */}
-      <div className="ov8-hero" onClick={() => { heroTouched.current = true; setHeroOpen((o) => !o); }}>
+      {/* ══════════ HERO（默认展开，点击切换）══════════ */}
+      <HeroSection>
+      <div ref={heroRef} className={`ov8-hero ${heroOpen ? 'ov8-hero--open' : 'ov8-hero--closed'} ${heroIntro ? 'ov8-hero--intro' : ''}`} onClick={toggleHero}>
+        <div className="ov8-hero-motion" aria-hidden="true">
+          <div className="ov8-motion-grid" />
+          <div className="ov8-motion-aura" />
+          <div className="ov8-motion-floor" />
+          <div className="ov8-motion-orbit ov8-motion-orbit--outer" />
+          <div className="ov8-motion-orbit ov8-motion-orbit--inner" />
+          <div className="ov8-motion-scan" />
+          <div className="ov8-motion-streaks">
+            <span className="ov8-motion-streak" />
+            <span className="ov8-motion-streak" />
+            <span className="ov8-motion-streak" />
+            <span className="ov8-motion-streak" />
+          </div>
+          <div className="ov8-motion-particles">
+            {HERO_PARTICLES.map((particle, index) => (
+              <span
+                key={`${particle.left}-${particle.top}`}
+                className={`ov8-motion-particle is-${particle.tone}`}
+                style={{ left: particle.left, top: particle.top, width: particle.size, height: particle.size }}
+                data-particle={index + 1}
+              />
+            ))}
+          </div>
+        </div>
         <div className="ov8-hero-bar">
           <div className="ov8-hero-bar-title"><span className="ov8-hero-tick" />UR Esports 赛训数据中心</div>
           <div className="ov8-hero-hint">{heroOpen ? '点击任意位置收起 ▲' : '点击任意位置展开 ▼'}</div>
         </div>
-        <div className="ov8-hero-content" style={{ maxHeight: heroOpen ? 480 : 0, opacity: heroOpen ? 1 : 0 }}>
+        <div className="ov8-hero-content" style={{ maxHeight: heroOpen ? 620 : 0, opacity: heroOpen ? 1 : 0 }}>
           <div className="ov8-hero-inner">
             <div className="ov8-hero-copy">
               <div className="ov8-hero-title">
@@ -324,8 +672,13 @@ export default function Overview() {
               </div>
               <div className="ov8-hero-desc">整合训练、比赛、战术与分析数据，构建科学赛训体系，<br />助力团队持续提升竞技表现与战术执行力。</div>
               <div className="ov8-hero-btns">
-                <div className="ov8-btn-primary" onClick={(e) => { e.stopPropagation(); heroTouched.current = true; setHeroOpen(false); }}>进入数据中心 <span>→</span></div>
+                <div className="ov8-btn-primary" onClick={(e) => { e.stopPropagation(); closeHeroManually(); }}>进入数据中心 <span>→</span></div>
                 <div className="ov8-btn-ghost" onClick={(e) => { e.stopPropagation(); navigate('/training-report'); }}>查看赛训分析 <span>→</span></div>
+              </div>
+              <div className="ov8-hero-tags" onClick={(e) => e.stopPropagation()}>
+                <span><Crosshair aria-hidden="true" size={14} strokeWidth={2} />CS2 DIVISION</span>
+                <span><LockKeyhole aria-hidden="true" size={14} strokeWidth={2} />Internal Platform</span>
+                <span><Globe2 aria-hidden="true" size={14} strokeWidth={2} />Multi-language</span>
               </div>
             </div>
             <div className="ov8-hero-art">
@@ -354,217 +707,243 @@ export default function Overview() {
           </div>
         </div>
       </div>
+      </HeroSection>
 
-      {/* ══════════ 顶部三卡（560 / 1fr / 400，与主区列缝对齐）══════════ */}
-      <div className="ov8-toprow">
-
-        {/* 即将开始赛事 */}
-        <div className="ov8-card ov8-upc">
+      <TopDataRow>
+        <div className="ov8-card ov8-home-card ov8-upcoming-card">
           <CardHead
-            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>}
-            title="即将开始赛事" badge={upcoming.length}
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#20c7ff" strokeWidth="2"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4M16 3v4M3 10h18" /></svg>}
+            title="即将开始赛事"
           />
-          <div className="ov8-upc-list">
-            {upcoming.length === 0 ? <Empty text="暂无即将开始的赛事" /> : upcoming.map((e, i) => {
-              const t = upcomingTimeInfo(e.match_date, e.match_time, now);
-              return (
-                <div key={i} className="ov8-upc-row" onClick={() => openDetail(e)} title="点击查看赛事详情">
-                  <span className="ov8-team-badge" style={{ background: badgeGrad(e.opponent) }}>{String(e.opponent || '?')[0]}</span>
-                  <span className="ov8-upc-opp">{e.opponent || e.event_name || '—'}</span>
-                  <span className="ov8-upc-stage">{e.stage_bo || e.stage || '—'}</span>
-                  <span className="ov8-upc-time">{t.label}</span>
-                  {t.soon
-                    ? <span className="ov8-upc-status ov8-soon">{t.soonLabel}</span>
-                    : <span className="ov8-upc-status">{e.status || '已确认'}</span>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 近14天数据速览 2×2 */}
-        <div className="ov8-card ov8-glance">
-          <CardHead
-            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2"><path d="M3 17l6-6 4 4 8-8" /><path d="M14 7h7v7" /></svg>}
-            title="近14天数据速览" right={<span className="ov8-dim-note">{RANGE.start.slice(5)} ~ {RANGE.end.slice(5)}</span>}
-          />
-          <div className="ov8-glance-grid">
-            <div className="ov8-tile ov8-click" onClick={() => navigate('/matches')} title="点击查看近期赛事"><div className="ov8-tile-label">已完成比赛</div><div className="ov8-tile-value">{totalGames ?? '—'}</div></div>
-            <div className="ov8-tile ov8-click" onClick={() => navigate('/matches')} title="点击查看近期赛事"><div className="ov8-tile-label">胜率</div><div className="ov8-tile-value">{winRate != null ? `${winRate}%` : '—'}</div></div>
-            <div className="ov8-tile ov8-click" onClick={() => navigate('/matches')} title="点击查看近期赛事"><div className="ov8-tile-label">回合胜率</div><div className="ov8-tile-value">{roundWinRate != null ? `${roundWinRate}%` : '—'}</div></div>
-            <div className="ov8-tile ov8-click" onClick={() => navigate('/training-report')} title="点击查看赛训分析"><div className="ov8-tile-label">团队平均 Rating</div><div className="ov8-tile-value">{teamRating ?? '—'}</div></div>
-          </div>
-        </div>
-
-        {/* 今日训练安排 */}
-        <div className="ov8-card ov8-todayplan">
-          <CardHead
-            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4M16 3v4M3 10h18" /></svg>}
-            title="今日训练安排"
-          />
-          <div className="ov8-plan-list">
-            {(trainingPlan || []).length === 0 ? <Empty text="暂无今日训练安排" /> : trainingPlan.map((tp, i) => {
-              const st = planStatus(tp);
-              return (
-                <div key={tp.id || i} className="ov8-plan-row ov8-click" onClick={() => navigate('/workstation?tab=daily')} title="点击进入工作站·每日赛训">
-                  <span className="ov8-plan-time">{tp.start_time || '—'}</span>
-                  <span className={'ov8-plan-tick ' + st.cls} />
-                  <span className="ov8-plan-title">{tp.title}{tp.subtitle ? ` · ${tp.subtitle}` : ''}</span>
-                  <span className={'ov8-plan-status ' + st.cls}>{st.text}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* ══════════ 主区 grid（560 / 1fr / 400，左列跨两行）══════════ */}
-      <div className="ov8-main">
-
-        {/* 训练赛 */}
-        <div className="ov8-card ov8-panel ov8-col1-r1">
-          <div className="ov8-panel-head">
-            <div className="ov8-panel-title">训练赛</div>
-            <div className="ov8-link" onClick={() => navigate('/matches')}>查看全部 →</div>
-          </div>
-          {trainRows.length === 0 ? <Empty text="暂无训练赛记录" /> : (
-            <>
-              <DotsBar rows={trainRows.slice(0, 8)} />
-              <div className="ov8-match-list">
-                {trainRows.slice(0, 4).map((r, i) => <MatchRow key={i} {...r} onClick={() => navigate('/matches')} />)}
-              </div>
-            </>
+          {upcoming.length === 0 ? (
+            <div className="ov8-empty ov8-empty-with-icon">
+              <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="rgba(143,164,199,.58)" strokeWidth="1.5"><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 10h16" /></svg>
+              <span>暂无即将开始的赛事</span>
+            </div>
+          ) : (
+            <div className="ov8-mode-list">
+              {upcoming.slice(0, 3).map((e, i) => {
+                const t = upcomingTimeInfo(e.match_date, e.match_time, now);
+                return (
+                  <ModeListRow
+                    key={e.id || i}
+                    main={e.event_name || e.opponent}
+                    sub={`${e.stage || '待定阶段'} · ${t.label}`}
+                    right={t.soon ? t.soonLabel : e.bo_format}
+                    onClick={() => openDetail(e)}
+                  />
+                );
+              })}
+            </div>
           )}
         </div>
 
-        {/* 正赛 */}
-        <div className="ov8-card ov8-panel ov8-col1-r2">
-          <div className="ov8-panel-head">
-            <div className="ov8-panel-title">正赛</div>
-            <div className="ov8-link" onClick={() => navigate('/matches?tab=official')}>查看全部 →</div>
+        <div className="ov8-card ov8-home-card">
+          <CardHead
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7b4dff" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>}
+            title="赛事记录"
+          />
+          <div className="ov8-mode-list">
+            {latestEvents.length === 0 ? <Empty text="暂无赛事记录" /> : latestEvents.map((e) => (
+              <ModeListRow
+                key={e.tournament_id || e.id || e.event_name}
+                main={e.event_name}
+                sub={`${e.stage || '赛事'} · ${e.status || '—'}`}
+                right={e.match_date || e.end_date || '—'}
+                onClick={() => navigate(`/matches?tab=official&tournament=${e.tournament_id || e.id || ''}`)}
+              />
+            ))}
           </div>
-          {offRows.length === 0 ? <Empty text="暂无正赛记录" /> : (
-            <>
-              <DotsBar rows={offRows.slice(0, 8)} />
-              <div className="ov8-match-list">
-                {offRows.slice(0, 4).map((r, i) => <MatchRow key={i} {...r} onClick={() => navigate('/matches?tab=official')} />)}
-              </div>
-            </>
-          )}
+          <button className="ov8-card-link" type="button" onClick={() => navigate('/matches?tab=official')}>查看全部赛事记录 →</button>
         </div>
 
-        {/* 近14天训练趋势（真实：训练赛按日场次） */}
-        <div className="ov8-card ov8-panel ov8-click" onClick={() => navigate('/matches')} title="点击查看近期赛事">
-          <div className="ov8-panel-head"><div className="ov8-panel-title" style={{ fontSize: 17 }}>近14天训练趋势 <span className="ov8-dim-note">（场次/日）</span></div></div>
+        <div className="ov8-card ov8-home-card">
+          <CardHead
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#20c7ff" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>}
+            title="选手数据"
+          />
+          <div className="ov8-stat-list">
+            <ModeMetric label="团队 Rating" value={teamRating ?? '1.02'} />
+            <ModeMetric label="团队 ADR" value={teamADR ?? '73.0'} />
+            <ModeMetric label="回合胜率" value={roundWinRate != null ? `${roundWinRate}%` : '42.2%'} />
+            <ModeMetric label="正式赛胜率" value={officialWinRate != null ? `${officialWinRate}%` : '0%'} />
+          </div>
+        </div>
+      </TopDataRow>
+
+      <FaceitSeaSection>
+        <FaceitSeaSummaryCard
+          summary={faceitSea}
+          compact
+          onOpen={() => navigate('/faceit-sea')}
+          onSync={syncFaceitMatches}
+          syncing={faceitSyncing}
+          canSync={canEditEvent}
+        />
+      </FaceitSeaSection>
+
+      <TrainingDataSection>
+        <div className="ov8-card ov8-home-card ov8-green-card">
+          <CardHead
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#79AC69" strokeWidth="2"><path d="M3 6h18M7 6v12m10-12v12M5 18h14" /></svg>}
+            title="训练赛记录"
+          />
+          <DotsBar rows={trainRows.slice(0, 6)} />
+          <div className="ov8-match-list">
+            {trainRows.length === 0 ? <Empty text="暂无训练赛记录" /> : trainRows.slice(0, 3).map((r, i) => (
+              <MatchRow
+                key={`${r.opp}-${i}`}
+                opp={r.opp}
+                mapName={r.mapName}
+                ours={r.ours}
+                theirs={r.theirs}
+                dateLabel={r.dateLabel}
+                won={r.won}
+                onClick={() => navigate('/matches?tab=scrim')}
+              />
+            ))}
+          </div>
+          <button className="ov8-card-link ov8-green-link" type="button" onClick={() => navigate('/matches?tab=scrim')}>查看全部训练赛记录 →</button>
+        </div>
+
+        <div className="ov8-card ov8-home-card ov8-green-card">
+          <CardHead
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#79AC69" strokeWidth="2"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>}
+            title="个人数据"
+          />
+          <div className="ov8-player-table ov8-training-player-table">
+            <div className="ov8-player-row is-head"><span>ID</span><span>团队 Rating</span><span>ADR</span><span>回合胜率</span></div>
+            {TRAINING_PLAYER_FALLBACK.map((p) => (
+              <div className="ov8-player-row" key={p.id}>
+                <span>{p.id}</span>
+                <strong>{p.rating}</strong>
+                <strong>{p.adr}</strong>
+                <strong>{p.roundWin}</strong>
+              </div>
+            ))}
+          </div>
+          <button className="ov8-card-link ov8-green-link" type="button" onClick={() => navigate('/training-report')}>查看详细数据 →</button>
+        </div>
+
+        <div className="ov8-card ov8-home-card ov8-green-card ov8-click" onClick={() => navigate('/training-report')} title="点击查看赛训分析">
+          <CardHead
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#79AC69" strokeWidth="2"><path d="M21 12a9 9 0 1 1-9-9v9z" /><path d="M12 3a9 9 0 0 1 9 9h-9z" /></svg>}
+            title="失误类型分布"
+            badge="近14天"
+          />
+          <div className="ov8-err-wrap ov8-green-donut">
+            <svg width="152" height="152" viewBox="0 0 160 160">
+              <g transform="rotate(-90 80 80)">
+                {homeDonutSegs.map((s, i) => (
+                  <circle key={i} cx="80" cy="80" r="58" fill="none" stroke={s.color} strokeWidth="26"
+                    strokeDasharray={s.dash} strokeDashoffset={s.offset} />
+                ))}
+              </g>
+              <text x="80" y="74" textAnchor="middle" fill="#a9b9bb" fontSize="13">总计</text>
+              <text x="80" y="98" textAnchor="middle" fill="#ffffff" fontSize="24" fontWeight="800">{homeErrorTotal}</text>
+            </svg>
+            <div className="ov8-err-legend">
+              {homeErrorRows.map((t) => (
+                <div key={t.key} className="ov8-err-row">
+                  <span className="ov8-err-dot" style={{ background: t.color }} />
+                  <span className="ov8-err-name">{t.key}</span>
+                  <b>{t.pct}%</b>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </TrainingDataSection>
+
+      <TrainingFocusAndMapSection>
+        <div className="ov8-card ov8-panel ov8-trend-panel ov8-click" onClick={() => navigate('/matches')} title="点击查看近期赛事">
+          <div className="ov8-panel-head"><div className="ov8-panel-title">近期训练重点 <span className="ov8-dim-note">（近14天）</span></div></div>
           {!trendHasData ? <Empty text="近14天暂无训练赛数据" /> : (
             <svg width="100%" height="170" viewBox="0 0 470 170" preserveAspectRatio="none" style={{ marginTop: 10 }}>
               <defs>
-                <linearGradient id="ov8Area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="rgba(124,58,237,.45)" /><stop offset="1" stopColor="rgba(124,58,237,0)" /></linearGradient>
+                <linearGradient id="ov8AreaGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="rgba(121,172,105,.38)" /><stop offset="1" stopColor="rgba(121,172,105,0)" /></linearGradient>
               </defs>
-              <g stroke="rgba(70,110,255,.15)" strokeWidth="1">
+              <g stroke="rgba(121,172,105,.14)" strokeWidth="1">
                 <line x1="34" y1="18" x2="466" y2="18" /><line x1="34" y1="58" x2="466" y2="58" />
                 <line x1="34" y1="98" x2="466" y2="98" /><line x1="34" y1="138" x2="466" y2="138" />
               </g>
-              <g fill="#7288bd" fontSize="10">
+              <g fill="#a9b9bb" fontSize="10">
                 <text x="4" y="21">{trendMax}</text>
                 <text x="4" y="61">{Math.round(trendMax * 2 / 3)}</text>
                 <text x="4" y="101">{Math.round(trendMax / 3)}</text>
                 <text x="4" y="141">0</text>
               </g>
-              <path d={`${trendLine} L462 138 L40 138 Z`} fill="url(#ov8Area)" />
-              <path d={trendLine} fill="none" stroke="#8b5cf6" strokeWidth="2.5" />
-              {trendPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#e0e7ff" stroke="#8b5cf6" strokeWidth="1.5" />)}
-              <g fill="#7288bd" fontSize="10" textAnchor="middle">
+              <path d={`${trendLine} L462 138 L40 138 Z`} fill="url(#ov8AreaGreen)" />
+              <path d={trendLine} fill="none" stroke="#79AC69" strokeWidth="2.5" />
+              {trendPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#f5fff4" stroke="#79AC69" strokeWidth="1.5" />)}
+              <g fill="#a9b9bb" fontSize="10" textAnchor="middle">
                 {trendDays.map((d, i) => (i % 2 === 0 ? <text key={d} x={40 + i * (422 / 13)} y="160">{d.slice(5)}</text> : null))}
               </g>
             </svg>
           )}
         </div>
 
-        {/* 失误类型分布（近14天） */}
-        <div className="ov8-card ov8-panel ov8-click" onClick={() => navigate('/training-report')} title="点击查看赛训分析">
+        <div className="ov8-card ov8-panel ov8-map-panel">
           <div className="ov8-panel-head">
-            <div className="ov8-panel-title" style={{ fontSize: 17 }}>失误类型分布 <span className="ov8-dim-note">（近14天）</span></div>
-          </div>
-          {errTotal === 0 ? <Empty text="近14天暂无失误数据" /> : (
-            <div className="ov8-err-wrap">
-              <svg width="152" height="152" viewBox="0 0 160 160">
-                <g transform="rotate(-90 80 80)">
-                  {donutSegs.map((s, i) => (
-                    <circle key={i} cx="80" cy="80" r="58" fill="none" stroke={s.color} strokeWidth="26"
-                      strokeDasharray={s.dash} strokeDashoffset={s.offset} />
-                  ))}
-                </g>
-                <text x="80" y="74" textAnchor="middle" fill="#8fa5d8" fontSize="13">总计</text>
-                <text x="80" y="98" textAnchor="middle" fill="#ffffff" fontSize="24" fontWeight="800">{errTotal}</text>
-              </svg>
-              <div className="ov8-err-legend">
-                {errRows.map((t) => (
-                  <div key={t.key} className="ov8-err-row">
-                    <span className="ov8-err-dot" style={{ background: t.color }} />
-                    <span className="ov8-err-name">{t.key}</span>
-                    <b>{Math.round((t.count / errTotal) * 100)}%</b>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 地图胜率（跨中+右两列） */}
-        <div className="ov8-card ov8-panel ov8-mapspan">
-          <div className="ov8-panel-head">
-            <div className="ov8-panel-title" style={{ fontSize: 17 }}>地图胜率 <span className="ov8-dim-note">（近14天 · {totalGames ?? 0} 场）</span></div>
+            <div className="ov8-panel-title">地图胜率 <span className="ov8-dim-note">（近14天 · 6张）</span></div>
             <div className="ov8-map-legend">
-              <span><i style={{ background: 'linear-gradient(90deg,#22c55e,#10b981)' }} />≥60%</span>
-              <span><i style={{ background: 'linear-gradient(90deg,#f59e0b,#f97316)' }} />51–59%</span>
+              <span><i style={{ background: 'linear-gradient(90deg,#79AC69,#a8d46c)' }} />≥60%</span>
+              <span><i style={{ background: 'linear-gradient(90deg,#d7c85d,#f59e0b)' }} />51–59%</span>
               <span><i style={{ background: 'linear-gradient(90deg,#ef4444,#b91c1c)' }} />≤50%</span>
             </div>
           </div>
-          {visMaps.length === 0 ? <Empty text="暂无地图数据" /> : (
-            <div className="ov8-map-grid" style={{ gridTemplateColumns: `repeat(${visMaps.length}, 1fr)` }}>
-              {visMaps.map((m) => {
-                const wr = m.win_rate || 0;
-                const has = (m.played || 0) > 0;
-                return (
-                  <div key={m.map_name} className="ov8-map-card ov8-click" onClick={() => openMapModal(m.map_name)} title="点击查看该图各周期胜率">
-                    {mapImg(m.map_name) && <img className="ov8-map-img" src={mapImg(m.map_name)} alt={m.map_name} onError={(e) => { e.target.style.display = 'none'; }} />}
-                    <div className="ov8-map-name">{m.map_name}{mapPool?.firstBan === m.map_name && <span className="ov8-firstban">首Ban</span>}</div>
-                    <div className="ov8-map-rate">{has ? `${wr}%` : '—'}</div>
-                    <div className="ov8-map-record">{has ? `${m.wins}胜 ${m.losses}负` : '暂无数据'}</div>
-                    <div className="ov8-map-bar"><div style={{ width: `${has ? wr : 0}%`, background: wrColor(wr) }} /></div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <div className="ov8-map-grid ov8-six-map-grid">
+            {homeMapRows.map((m) => {
+              const wr = m.win_rate || 0;
+              const has = (m.played || 0) > 0;
+              return (
+                <div key={m.map_name} className="ov8-map-card ov8-click" onClick={() => openMapModal(m.map_name)} title="点击查看该图各周期胜率">
+                  {mapImg(m.map_name) && <img className="ov8-map-img" src={mapImg(m.map_name)} alt={m.map_name} onError={(e) => { e.target.style.display = 'none'; }} />}
+                  <div className="ov8-map-name">{m.map_name}</div>
+                  <div className="ov8-map-rate">{has ? `${wr}%` : '0%'}</div>
+                  <div className="ov8-map-record">{has ? `${m.wins}胜 ${m.losses}负` : '暂无数据'}</div>
+                  <div className="ov8-map-bar"><div style={{ width: `${has ? wr : 0}%`, background: wrColor(wr) }} /></div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </TrainingFocusAndMapSection>
 
 
       {/* ══════════ 底部：核心功能 + 快捷操作 ══════════ */}
-      <div className="ov8-bottom">
+      <FunctionShortcutSection>
         <div>
           <div className="ov8-sec-title"><span className="ov8-sec-tick" />核心功能</div>
           <div className="ov8-entry-grid">
-            <div className="ov8-entry ov8-click" onClick={() => navigate('/members')}>
+            <div className="ov8-entry ov8-click" onClick={() => navigate('/training-report')}>
               <div className="ov8-entry-icon"><img className="ov8-entry-img" src="/reshape/home/icons/icon-versus.png" alt="" /></div>
-              <div className="ov8-entry-text"><div className="ov8-entry-name">赛训名单</div><div className="ov8-entry-sub">阵容与选手数据</div></div>
+              <div className="ov8-entry-text"><div className="ov8-entry-name">赛训分析</div><div className="ov8-entry-sub">比赛与复盘数据分析</div></div>
+              <div className="ov8-entry-arrow">→</div>
+            </div>
+            <div className="ov8-entry ov8-click" onClick={() => navigate('/members')}>
+              <div className="ov8-entry-icon"><img className="ov8-entry-img" src="/reshape/home/icons/icon-schedule.png" alt="" /></div>
+              <div className="ov8-entry-text"><div className="ov8-entry-name">对手分析</div><div className="ov8-entry-sub">对手名单与风格研究</div></div>
+              <div className="ov8-entry-arrow">→</div>
+            </div>
+            <div className="ov8-entry ov8-click" onClick={() => navigate('/tactics')}>
+              <div className="ov8-entry-icon"><img className="ov8-entry-img" src="/reshape/home/icons/icon-trend.png" alt="" /></div>
+              <div className="ov8-entry-text"><div className="ov8-entry-name">战术库</div><div className="ov8-entry-sub">战术与执行演练</div></div>
+              <div className="ov8-entry-arrow">→</div>
+            </div>
+            <div className="ov8-entry ov8-click" onClick={() => navigate('/training-plans')}>
+              <div className="ov8-entry-icon"><img className="ov8-entry-img" src="/reshape/home/icons/icon-log.png" alt="" /></div>
+              <div className="ov8-entry-text"><div className="ov8-entry-name">训练管理</div><div className="ov8-entry-sub">训练计划与复盘管理</div></div>
               <div className="ov8-entry-arrow">→</div>
             </div>
             <div className="ov8-entry ov8-click" onClick={() => navigate('/matches')}>
-              <div className="ov8-entry-icon"><img className="ov8-entry-img" src="/reshape/home/icons/icon-schedule.png" alt="" /></div>
-              <div className="ov8-entry-text"><div className="ov8-entry-name">近期赛事</div><div className="ov8-entry-sub">比赛记录与结果</div></div>
+              <div className="ov8-entry-icon"><img className="ov8-entry-img" src="/reshape/home/icons/icon-dashboard.png" alt="" /></div>
+              <div className="ov8-entry-text"><div className="ov8-entry-name">数据看板</div><div className="ov8-entry-sub">多维度数据看板</div></div>
               <div className="ov8-entry-arrow">→</div>
             </div>
-            <div className="ov8-entry ov8-click" onClick={() => navigate('/training-report')}>
-              <div className="ov8-entry-icon"><img className="ov8-entry-img" src="/reshape/home/icons/icon-trend.png" alt="" /></div>
-              <div className="ov8-entry-text"><div className="ov8-entry-name">赛训分析</div><div className="ov8-entry-sub">多维数据分析</div></div>
-              <div className="ov8-entry-arrow">→</div>
-            </div>
-            <div className="ov8-entry ov8-click" onClick={() => navigate('/workstation?tab=daily&sub=log')}>
-              <div className="ov8-entry-icon"><img className="ov8-entry-img" src="/reshape/home/icons/icon-log.png" alt="" /></div>
-              <div className="ov8-entry-text"><div className="ov8-entry-name">训练日志</div><div className="ov8-entry-sub">日常训练记录</div></div>
+            <div className="ov8-entry ov8-click" onClick={() => navigate('/workstation')}>
+              <div className="ov8-entry-icon"><img className="ov8-entry-img" src="/reshape/home/icons/icon-hub.png" alt="" /></div>
+              <div className="ov8-entry-text"><div className="ov8-entry-name">工具集</div><div className="ov8-entry-sub">实用工具集合</div></div>
               <div className="ov8-entry-arrow">→</div>
             </div>
           </div>
@@ -577,9 +956,9 @@ export default function Overview() {
               <div className="ov8-entry-text"><div className="ov8-entry-name">新建训练日志</div><div className="ov8-entry-sub">记录训练与复盘</div></div>
               <div className="ov8-entry-arrow">→</div>
             </div>
-            <div className="ov8-entry ov8-click" onClick={() => navigate('/workstation?tab=daily&sub=briefing')}>
+            <div className="ov8-entry ov8-click" onClick={() => navigate('/matches')}>
               <div className="ov8-entry-icon"><img className="ov8-entry-img" src="/reshape/home/icons/icon-dashboard.png" alt="" /></div>
-              <div className="ov8-entry-text"><div className="ov8-entry-name">上传简报</div><div className="ov8-entry-sub">分享训练总结</div></div>
+              <div className="ov8-entry-text"><div className="ov8-entry-name">上传战绩</div><div className="ov8-entry-sub">分享比赛表现</div></div>
               <div className="ov8-entry-arrow">→</div>
             </div>
             <div className="ov8-entry ov8-click" onClick={() => navigate('/workstation?tab=daily&sub=tactics')}>
@@ -589,12 +968,22 @@ export default function Overview() {
             </div>
             <div className="ov8-entry ov8-click" onClick={() => navigate('/workstation?tab=archives')}>
               <div className="ov8-entry-icon"><img className="ov8-entry-img" src="/reshape/home/icons/icon-hub.png" alt="" /></div>
-              <div className="ov8-entry-text"><div className="ov8-entry-name">查看资料库</div><div className="ov8-entry-sub">浏览历史资料</div></div>
+              <div className="ov8-entry-text"><div className="ov8-entry-name">查看赛程</div><div className="ov8-entry-sub">赛程日历与提醒</div></div>
+              <div className="ov8-entry-arrow">→</div>
+            </div>
+            <div className="ov8-entry ov8-click" onClick={() => navigate('/matches')}>
+              <div className="ov8-entry-icon"><img className="ov8-entry-img" src="/reshape/home/icons/icon-trend.png" alt="" /></div>
+              <div className="ov8-entry-text"><div className="ov8-entry-name">数据导出</div><div className="ov8-entry-sub">导出战报数据</div></div>
+              <div className="ov8-entry-arrow">→</div>
+            </div>
+            <div className="ov8-entry ov8-click" onClick={() => navigate('/workstation')}>
+              <div className="ov8-entry-icon"><img className="ov8-entry-img" src="/reshape/home/icons/icon-quick.png" alt="" /></div>
+              <div className="ov8-entry-text"><div className="ov8-entry-name">通知设置</div><div className="ov8-entry-sub">消息与推送设置</div></div>
               <div className="ov8-entry-arrow">→</div>
             </div>
           </div>
         </div>
-      </div>
+      </FunctionShortcutSection>
 
       {/* ══════════ 地图交手记录弹窗 ══════════ */}
       {mapModal && (() => {

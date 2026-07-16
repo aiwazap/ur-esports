@@ -54,19 +54,224 @@
 
 /* ── HERO ─────────────────────────────────────────────────── */
 .ov8-hero {
-  cursor: pointer; position: relative;
-  background:
-    radial-gradient(900px 420px at 62% 30%, rgba(37, 60, 180, .38), transparent 70%),
-    radial-gradient(700px 300px at 15% 60%, rgba(30, 45, 140, .30), transparent 70%);
+  cursor: pointer; position: relative; overflow: hidden; isolation: isolate;
+  background: #061131;
   border-bottom: 1px solid rgba(70, 110, 255, .15);
+  transition: background .7s ease, box-shadow .7s ease;
 }
-.ov8-hero-bar { display: flex; align-items: center; justify-content: space-between; height: 46px; padding: 0 28px; }
+.ov8-hero::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  /* cover+右对齐:窄窗口裁掉左侧空景,不再拉伸变形;龙与Logo构图保持完整 */
+  background: url('/reshape/home/hero-wide.png') right center / cover no-repeat;
+  opacity: 1;
+  filter: saturate(1.04) contrast(1.02);
+  pointer-events: none;
+  transform: scale(1.01);
+  transform-origin: 58% 48%;
+  transition: opacity .7s ease, filter .7s ease, transform .8s cubic-bezier(.22, 1, .36, 1);
+}
+.ov8-hero::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(2, 7, 25, .22) 0%, rgba(2, 7, 25, .12) 32%, transparent 62%),
+    linear-gradient(180deg, rgba(1, 5, 20, .03), rgba(1, 5, 20, .16));
+  pointer-events: none;
+  transition: opacity .7s ease, background .7s ease;
+}
+.ov8-hero--open::before {
+  background-size: cover;
+  background-position: right center;
+}
+.ov8-hero--closed {
+  background:
+    radial-gradient(780px 90px at 68% 50%, rgba(37, 99, 235, .38), transparent 72%),
+    linear-gradient(90deg, #061131 0%, #071d58 54%, #04102f 100%);
+}
+.ov8-hero--closed::before {
+  background-size: 100% auto;
+  background-position: center 32%;
+  opacity: .76;
+  filter: saturate(1.1) contrast(1.08) brightness(.82);
+  transform: scale(1.055);
+}
+.ov8-hero--closed::after {
+  background:
+    linear-gradient(90deg, rgba(2, 7, 25, .78) 0%, rgba(3, 13, 47, .42) 40%, rgba(2, 8, 32, .58) 100%),
+    linear-gradient(180deg, rgba(35, 112, 255, .08), rgba(1, 5, 20, .32));
+  box-shadow:
+    inset 0 1px 0 rgba(71, 133, 255, .3),
+    inset 0 -1px 0 rgba(56, 189, 248, .18);
+}
+.ov8-hero-bar { position: relative; z-index: 3; display: flex; align-items: center; justify-content: space-between; height: 46px; padding: 0 28px; }
 .ov8-hero-bar-title { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: #aebbe4; }
 .ov8-hero-tick { width: 4px; height: 14px; border-radius: 2px; background: linear-gradient(180deg, #38bdf8, #7c3aed); }
 .ov8-hero-hint { font-size: 12px; color: #7288bd; }
-.ov8-hero-content { overflow: hidden; transition: max-height .65s ease, opacity .5s ease; }
+.ov8-hero-content {
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+  transform: translateY(0);
+  transition:
+    max-height .72s cubic-bezier(.22, 1, .36, 1),
+    opacity .42s ease,
+    transform .72s cubic-bezier(.22, 1, .36, 1);
+  will-change: max-height, opacity, transform;
+  background: transparent;
+  box-shadow:
+    inset 0 1px 0 rgba(56, 189, 248, .16),
+    inset 0 -1px 0 rgba(80, 120, 255, .18),
+    0 16px 46px rgba(3, 10, 32, .35);
+}
+.ov8-hero--closed .ov8-hero-content { transform: translateY(-12px); }
+.ov8-hero-motion {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  overflow: hidden;
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity .35s ease;
+  contain: paint;
+}
+.ov8-hero--closed .ov8-hero-motion { opacity: 0; }
+.ov8-motion-grid,
+.ov8-motion-aura,
+.ov8-motion-floor,
+.ov8-motion-orbit,
+.ov8-motion-scan,
+.ov8-motion-streaks,
+.ov8-motion-particles {
+  position: absolute;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.ov8-motion-grid {
+  inset: 5% -2% 2% 42%;
+  opacity: .34;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 54px, rgba(56, 189, 248, .12) 55px, transparent 56px),
+    repeating-linear-gradient(0deg, transparent 0 34px, rgba(124, 58, 237, .10) 35px, transparent 36px);
+  -webkit-mask-image: radial-gradient(ellipse at 58% 62%, #000 0 24%, rgba(0, 0, 0, .72) 46%, transparent 78%);
+  mask-image: radial-gradient(ellipse at 58% 62%, #000 0 24%, rgba(0, 0, 0, .72) 46%, transparent 78%);
+  transform: perspective(440px) rotateX(58deg) translateY(78px);
+  transform-origin: center bottom;
+}
+.ov8-motion-aura {
+  left: 55%;
+  top: 2%;
+  width: 38%;
+  height: 92%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 44% 50%, rgba(56, 229, 255, .32) 0 8%, rgba(64, 113, 255, .21) 24%, rgba(126, 42, 255, .12) 44%, transparent 70%),
+    radial-gradient(circle at 72% 46%, rgba(126, 42, 255, .28), transparent 48%);
+  filter: blur(9px) saturate(1.35);
+  mix-blend-mode: screen;
+  opacity: .52;
+  transform-origin: 52% 60%;
+}
+.ov8-motion-floor {
+  /* 对齐背景图中机甲龙地台(中心约 59%, 83%);原值是给旧 hero.png 图层定位的 */
+  left: 36%;
+  top: 70%;
+  width: 47%;
+  height: 25%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(56, 229, 255, .32) 0 8%, rgba(58, 112, 255, .19) 24%, rgba(126, 42, 255, .12) 43%, transparent 70%);
+  box-shadow: 0 0 24px rgba(56, 229, 255, .2), inset 0 0 20px rgba(124, 58, 237, .18);
+  filter: blur(1px);
+  mix-blend-mode: screen;
+  opacity: .46;
+  transform-origin: 50% 50%;
+}
+.ov8-motion-orbit {
+  border-radius: 50%;
+  background: conic-gradient(from 12deg,
+    transparent 0 7%, rgba(56, 229, 255, .95) 8% 12%, transparent 13% 31%,
+    rgba(124, 58, 237, .86) 32% 38%, transparent 39% 62%,
+    rgba(56, 189, 248, .88) 63% 70%, transparent 71% 91%, rgba(167, 139, 250, .76) 92% 96%, transparent 97%);
+  -webkit-mask-image: radial-gradient(closest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  mask-image: radial-gradient(closest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  filter: drop-shadow(0 0 7px rgba(56, 229, 255, .78));
+  mix-blend-mode: screen;
+}
+.ov8-motion-orbit--outer {
+  /* 同上:环绕背景图地台旋转 */
+  left: 39%;
+  top: 70%;
+  width: 40%;
+  height: 26%;
+  opacity: .9;
+}
+.ov8-motion-orbit--inner {
+  left: 46%;
+  top: 75%;
+  width: 26%;
+  height: 16%;
+  opacity: .72;
+  filter: drop-shadow(0 0 9px rgba(124, 58, 237, .82));
+}
+.ov8-motion-scan {
+  left: 50%;
+  top: -25%;
+  width: 12%;
+  height: 155%;
+  background: linear-gradient(90deg, transparent, rgba(129, 230, 255, .08) 20%, rgba(129, 230, 255, .48) 50%, rgba(124, 58, 237, .12) 75%, transparent);
+  filter: blur(8px);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transform: skewX(-16deg) rotate(6deg);
+}
+.ov8-motion-streaks { inset: 0; }
+.ov8-motion-streak {
+  position: absolute;
+  display: block;
+  width: 92px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(56, 229, 255, .92), transparent);
+  box-shadow: 0 0 9px rgba(56, 229, 255, .7);
+  transform: rotate(-4deg);
+}
+.ov8-motion-streak:nth-child(1) { left: 45%; top: 26%; width: 78px; }
+.ov8-motion-streak:nth-child(2) { left: 63%; top: 18%; width: 112px; }
+.ov8-motion-streak:nth-child(3) { left: 73%; top: 58%; width: 64px; }
+.ov8-motion-streak:nth-child(4) { left: 86%; top: 34%; width: 94px; }
+.ov8-motion-particles { inset: 0; }
+.ov8-motion-particle {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  background: #7de9ff;
+  box-shadow: 0 0 7px #38e5ff, 0 0 15px rgba(56, 229, 255, .72);
+  opacity: .92;
+}
+.ov8-motion-particle.is-violet {
+  background: #b89cff;
+  box-shadow: 0 0 7px #8b5cf6, 0 0 16px rgba(139, 92, 246, .78);
+}
+.ov8-motion-particle.is-blue {
+  background: #75a7ff;
+  box-shadow: 0 0 7px #2563eb, 0 0 15px rgba(37, 99, 235, .82);
+}
 .ov8-hero-inner { position: relative; padding: 8px 28px 26px; display: flex; align-items: flex-start; }
-.ov8-hero-copy { padding-left: 24px; padding-top: 26px; width: 600px; flex: none; position: relative; z-index: 2; }
+.ov8-hero-inner::before {
+  content: "";
+  position: absolute;
+  inset: 18px 80px 0 410px;
+  z-index: 0;
+  background: radial-gradient(480px 150px at 62% 90%, rgba(56, 189, 248, .14), transparent 72%);
+  filter: blur(9px);
+  opacity: .46;
+  pointer-events: none;
+}
+.ov8-hero-copy { padding-left: 24px; padding-top: 26px; width: 600px; flex: none; position: relative; z-index: 2; text-shadow: 0 2px 14px rgba(0, 0, 0, .56); }
 .ov8-hero-title { font-size: 50px; font-weight: 800; line-height: 1.15; letter-spacing: .5px; white-space: nowrap; }
 .ov8-hero-title > span:first-child { color: #ffffff; }
 .ov8-hero-grad {
@@ -76,6 +281,41 @@
 }
 .ov8-hero-desc { margin-top: 20px; font-size: 17px; line-height: 1.8; color: #aebbe4; }
 .ov8-hero-btns { display: flex; gap: 18px; margin-top: 30px; }
+.ov8-hero-glance {
+  width: min(600px, 100%);
+  margin-top: 22px;
+  border: 1px solid rgba(80, 120, 255, .28);
+  border-radius: 10px;
+  background: rgba(7, 13, 38, .52);
+  padding: 12px;
+  backdrop-filter: blur(2px);
+}
+.ov8-hero-glance-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+  color: #dce7ff;
+  font-size: 13px;
+  font-weight: 800;
+}
+.ov8-hero-glance-head em {
+  color: #8fa5d8;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+}
+.ov8-hero-glance .ov8-glance-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.ov8-hero-glance .ov8-tile {
+  min-height: 66px;
+  padding: 9px 10px;
+  background: rgba(20, 32, 80, .62);
+}
+.ov8-hero-glance .ov8-tile-value {
+  font-size: 22px;
+}
 .ov8-btn-primary {
   display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 28px;
   border-radius: 8px; background: linear-gradient(90deg, #2563eb, #7c3aed);
@@ -84,11 +324,43 @@
   transition: box-shadow .2s ease;
 }
 .ov8-btn-primary:hover { box-shadow: 0 0 32px rgba(110, 120, 255, .7); }
-.ov8-hero-art { flex: 1; position: relative; height: 330px; display: flex; justify-content: center; }
+.ov8-hero-art { flex: 1; position: relative; z-index: 2; height: 330px; display: flex; justify-content: center; }
+.ov8-hero-art::before {
+  content: none;
+  position: absolute;
+  inset: 30px 10px 0 90px;
+  background: radial-gradient(closest-side, rgba(56, 189, 248, .34), rgba(124, 58, 237, .16) 48%, transparent 78%);
+  filter: blur(22px);
+  opacity: .88;
+}
+.ov8-hero-art::after {
+  content: none;
+  position: absolute;
+  inset: -20px -34px -24px -60px;
+  background: none;
+  mix-blend-mode: screen;
+  opacity: 1;
+  filter: saturate(1.42) contrast(1.36) brightness(.86) drop-shadow(0 0 28px rgba(56, 189, 248, .28));
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.10) 10%, rgba(0,0,0,.55) 29%, rgba(0,0,0,.95) 50%, #000 70%, rgba(0,0,0,.60) 88%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.10) 10%, rgba(0,0,0,.55) 29%, rgba(0,0,0,.95) 50%, #000 70%, rgba(0,0,0,.60) 88%, transparent 100%);
+  pointer-events: none;
+}
 .ov8-hero-art img {
-  width: 525px; height: 330px; object-fit: cover;
-  -webkit-mask-image: radial-gradient(72% 72% at 50% 48%, #000 55%, transparent 98%);
-  mask-image: radial-gradient(72% 72% at 50% 48%, #000 55%, transparent 98%);
+  /* hero-wide.png 背景已含龙+Logo,此旧素材叠加会产生错位残影,故隐藏 */
+  display: none;
+  position: relative;
+  z-index: 1;
+  width: 610px;
+  height: 330px;
+  object-fit: contain;
+  object-position: center;
+  opacity: .14;
+  mix-blend-mode: screen;
+  filter: saturate(1.55) contrast(1.2) brightness(1.15) drop-shadow(0 0 16px rgba(56, 229, 255, .5));
+  -webkit-mask-image: radial-gradient(ellipse at 48% 54%, #000 0 38%, rgba(0, 0, 0, .82) 58%, transparent 88%);
+  mask-image: radial-gradient(ellipse at 48% 54%, #000 0 38%, rgba(0, 0, 0, .82) 58%, transparent 88%);
+  transform-origin: 50% 68%;
+  will-change: transform, opacity;
 }
 .ov8-hero-floats { width: 170px; flex: none; position: relative; z-index: 3; padding-top: 10px; display: flex; flex-direction: column; gap: 18px; }
 .ov8-float-card {
@@ -102,23 +374,159 @@
 .ov8-float-none { margin-top: 10px; font-size: 11px; color: #7288bd; }
 .ov8-gauge { display: flex; align-items: center; justify-content: center; margin-top: 8px; }
 
+/* ── 三大模式看板 ─────────────────────────────────────────── */
+.ov8-mode-stack {
+  display: grid;
+  gap: 18px;
+  padding: 18px 28px 0;
+}
+.ov8-mode-card {
+  min-height: 236px;
+  padding: 15px 16px 16px;
+}
+.ov8-mode-card--official {
+  border-color: rgba(96, 165, 250, .34);
+}
+.ov8-mode-card--training {
+  border-color: rgba(52, 211, 153, .30);
+}
+.ov8-mode-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ov8-mode-title {
+  color: #f4f7ff;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+.ov8-mode-sub {
+  margin-top: 5px;
+  color: #8fa5d8;
+  font-size: 13px;
+}
+.ov8-mode-grid {
+  display: grid;
+  grid-template-columns: minmax(350px, 390px) minmax(350px, 390px) minmax(390px, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+.ov8-mode-panel {
+  min-width: 0;
+  min-height: 166px;
+  border: 1px solid rgba(80, 120, 255, .18);
+  border-radius: 10px;
+  background: rgba(6, 10, 24, .62);
+  padding: 13px 14px;
+}
+.ov8-mode-panel-title {
+  margin-bottom: 10px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 900;
+}
+.ov8-mode-list {
+  display: grid;
+  gap: 7px;
+}
+.ov8-mode-list .ov8-empty {
+  min-height: 104px;
+}
+.ov8-mode-row {
+  min-width: 0;
+  width: 100%;
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.25fr) minmax(66px, .5fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(80, 120, 255, .14);
+  border-radius: 6px;
+  background: rgba(20, 32, 80, .48);
+  color: inherit;
+  padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+.ov8-mode-row:hover {
+  border-color: rgba(120, 160, 255, .42);
+  background: rgba(24, 38, 96, .64);
+}
+.ov8-mode-row-main,
+.ov8-mode-row-sub,
+.ov8-mode-row-right {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov8-mode-row-main {
+  color: #f4f7ff;
+  font-size: 13px;
+  font-weight: 850;
+}
+.ov8-mode-row-sub {
+  color: #9fb0dc;
+  font-size: 12px;
+}
+.ov8-mode-row-right {
+  color: #c7d4f5;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+}
+.ov8-mode-metrics {
+  display: grid;
+  gap: 8px;
+}
+.ov8-mode-metric {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: 7px;
+  background: rgba(20, 32, 80, .55);
+  padding: 8px 10px;
+}
+.ov8-mode-metric span {
+  color: #8fa5d8;
+  font-size: 12px;
+}
+.ov8-mode-metric strong {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── 顶部三卡 ─────────────────────────────────────────────── */
 .ov8-toprow {
   display: grid;
-  grid-template-columns: 560px 1fr 400px;
-  gap: 20px;
+  grid-template-columns: 320px minmax(0, 1fr) 316px;
+  grid-template-areas:
+    "faceit faceit faceit"
+    "upcoming glance glance";
+  gap: 16px 20px;
   padding: 18px 28px 6px;
-  align-items: stretch;
+  align-items: start;
 }
+
+.ov8-toprow > .faceit-mini-card { grid-area: faceit; }
+.ov8-toprow > .ov8-upc { grid-area: upcoming; min-height: 132px; }
+.ov8-toprow > .ov8-glance { grid-area: glance; min-height: 132px; }
 
 /* 即将开始赛事 */
 .ov8-upc-list { display: flex; flex-direction: column; gap: 6px; flex: 1; justify-content: center; }
 .ov8-upc-row {
-  display: flex; align-items: center; gap: 10px; padding: 6px 12px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 92px; align-items: center; gap: 10px; padding: 6px 12px;
   border-radius: 8px; background: rgba(20, 32, 80, .55); cursor: pointer;
   transition: background .15s ease;
 }
 .ov8-upc-row:hover { background: rgba(24, 38, 96, .65); }
+.ov8-upc-event { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 800; }
+.ov8-upc-date { color: #c7d4f5; font-size: 12px; text-align: right; white-space: nowrap; }
 .ov8-team-badge {
   width: 22px; height: 22px; flex: none; border-radius: 6px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -135,6 +543,14 @@
 .ov8-tile { border-radius: 8px; background: rgba(20, 32, 80, .55); padding: 10px 14px; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
 .ov8-tile-label { font-size: 12px; color: #8fa5d8; }
 .ov8-tile-value { font-size: 24px; font-weight: 800; }
+.ov8-glance--compact { padding-left: 14px; padding-right: 14px; }
+.ov8-glance--compact .ov8-card-title { font-size: 14px; }
+.ov8-glance--compact .ov8-card-right { display: block; }
+.ov8-glance--compact .ov8-glance-grid { gap: 7px; }
+.ov8-toprow > .ov8-glance--compact .ov8-glance-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ov8-glance--compact .ov8-tile { padding: 10px 10px; min-height: 72px; }
+.ov8-glance--compact .ov8-tile-label { font-size: 11px; line-height: 1.25; }
+.ov8-glance--compact .ov8-tile-value { font-size: 23px; line-height: 1.05; }
 
 /* 今日训练安排 */
 .ov8-plan-list { display: flex; flex-direction: column; gap: 6px; flex: 1; justify-content: center; }
@@ -153,14 +569,16 @@
 /* ── 主区 grid ────────────────────────────────────────────── */
 .ov8-main {
   display: grid;
-  grid-template-columns: 560px 1fr 400px;
+  grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr);
   gap: 20px;
   padding: 16px 28px 0;
 }
 .ov8-panel { border-radius: 14px; padding: 18px 20px 14px; }
 .ov8-col1-r1 { grid-column: 1; grid-row: 1; }
 .ov8-col1-r2 { grid-column: 1; grid-row: 2; }
-.ov8-mapspan { grid-column: 2 / 4; }
+.ov8-trend-panel { grid-column: 1 / -1; }
+.ov8-error-panel { grid-column: 1; }
+.ov8-mapspan { grid-column: 2; }
 .ov8-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .ov8-panel-title { font-size: 18px; font-weight: 700; }
 
@@ -363,12 +781,67 @@
 /* ── 窄屏回退 ─────────────────────────────────────────────── */
 @media (max-width: 1280px) {
   .ov8-toprow, .ov8-main { grid-template-columns: 1fr; }
+  .ov8-toprow { grid-template-areas: "faceit" "upcoming" "glance"; }
+  .ov8-toprow > .ov8-glance--compact .ov8-glance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ov8-mode-grid { grid-template-columns: 1fr; }
+  .ov8-mode-card { min-height: 0; }
+  .ov8-mode-panel { min-height: 0; }
   .ov8-col1-r1, .ov8-col1-r2, .ov8-mapspan { grid-column: auto; grid-row: auto; }
+  .ov8-trend-panel,
+  .ov8-error-panel { grid-column: auto; }
   .ov8-hero-title { font-size: 34px; white-space: normal; }
   .ov8-hero-art, .ov8-hero-floats { display: none; }
   .ov8-hero-copy { width: auto; }
+  .ov8-hero-glance .ov8-glance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ov8-map-grid { grid-template-columns: repeat(3, 1fr) !important; }
   .ov8-bottom { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 680px) {
+  .ov8-mode-stack,
+  .ov8-main,
+  .ov8-bottom {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+  .ov8-mode-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+  }
+  .ov8-mode-row-right {
+    text-align: left;
+  }
+  .ov8-hero-inner {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+  .ov8-hero-copy {
+    padding-left: 0;
+  }
+  .ov8-hero-glance .ov8-glance-grid {
+    grid-template-columns: 1fr;
+  }
+  .ov8-map-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ov8-hero,
+  .ov8-hero::before,
+  .ov8-hero::after,
+  .ov8-hero-content,
+  .ov8-hero-copy,
+  .ov8-hero-floats,
+  .ov8-hero-motion {
+    animation: none !important;
+    transition-duration: .01ms !important;
+  }
+  .ov8-motion-scan,
+  .ov8-motion-streaks,
+  .ov8-motion-particles {
+    display: none;
+  }
 }
 
 /* 平局改橙 20260707 */
@@ -378,3 +851,207 @@
 /* 首页比赛行/圆点 平局改橙 20260707 */
 .ov8-dot-d { color: #fde7cf; background: rgba(249, 115, 22, .38); }
 .ov8-match-row.ov8-draw { border-left: 3px solid #f97316; background: linear-gradient(90deg, rgba(249,115,22,.07), rgba(14,23,62,.5)); }
+
+/* 首页重排：Hero / 首排 / FACEIT / 训练 / 地图 20260712 */
+.ov8-hero-inner {
+  min-height: 360px;
+}
+.ov8-hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.ov8-hero-tags span {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(80, 160, 255, .28);
+  border-radius: 6px;
+  background: rgba(7, 13, 38, .62);
+  color: #c7d4f5;
+  font-size: 12px;
+  padding: 0 13px;
+}
+.ov8-hero-tags svg {
+  flex: none;
+  color: #37d8ff;
+  filter: drop-shadow(0 0 5px rgba(55, 216, 255, .48));
+}
+.ov8-top-data-row,
+.ov8-training-data-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 16px 28px 0;
+}
+.ov8-faceit-row {
+  padding: 10px 28px 0;
+}
+.ov8-home-card {
+  min-height: 172px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(12, 28, 66, .86), rgba(6, 14, 34, .88));
+  box-shadow: 0 0 24px rgba(32, 199, 255, .06);
+}
+.ov8-home-card .ov8-card-head {
+  margin-bottom: 5px;
+}
+.ov8-empty-with-icon {
+  flex-direction: column;
+  gap: 9px;
+  min-height: 112px;
+}
+.ov8-stat-list {
+  display: grid;
+  gap: 8px;
+}
+.ov8-card-link {
+  align-self: center;
+  border: 0;
+  background: transparent;
+  color: #20c7ff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 3px 0 0;
+}
+.ov8-card-link:hover {
+  color: #ffffff;
+}
+.ov8-green-card {
+  border-color: rgba(121, 172, 105, .55);
+  background:
+    radial-gradient(420px 160px at 88% -18%, rgba(121, 172, 105, .16), transparent 68%),
+    linear-gradient(180deg, rgba(28, 45, 54, .88), rgba(7, 18, 22, .9));
+  box-shadow: 0 0 24px rgba(121, 172, 105, .08);
+}
+.ov8-green-card:hover {
+  border-color: rgba(121, 172, 105, .82);
+}
+.ov8-green-card .ov8-card-title,
+.ov8-green-card .ov8-panel-title {
+  color: #dff5dc;
+}
+.ov8-green-link {
+  color: #79AC69;
+}
+.ov8-player-table {
+  display: grid;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.ov8-player-row {
+  display: grid;
+  grid-template-columns: minmax(86px, 1.05fr) repeat(3, minmax(72px, .9fr));
+  align-items: center;
+  min-height: 23px;
+  column-gap: 10px;
+  color: #e8f2ed;
+  font-size: 12px;
+}
+.ov8-player-row span,
+.ov8-player-row strong {
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov8-player-row span:first-child {
+  text-align: left;
+}
+.ov8-player-row.is-head {
+  color: #79AC69;
+  font-size: 11px;
+  font-weight: 900;
+}
+.ov8-player-row strong {
+  font-weight: 850;
+}
+.ov8-green-donut {
+  margin-top: 4px;
+}
+.ov8-green-donut .ov8-err-row b {
+  color: #f5fff4;
+}
+.ov8-focus-map-row {
+  display: grid;
+  grid-template-columns: minmax(0, .45fr) minmax(0, .55fr);
+  gap: 20px;
+  padding: 16px 28px 0;
+}
+.ov8-focus-map-row .ov8-panel {
+  min-height: 216px;
+}
+.ov8-focus-map-row .ov8-trend-panel {
+  grid-column: auto;
+}
+.ov8-focus-map-row .ov8-map-panel {
+  min-width: 0;
+}
+.ov8-six-map-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+}
+.ov8-six-map-grid .ov8-map-img {
+  height: 70px;
+}
+.ov8-six-map-grid .ov8-map-card {
+  padding-top: 10px;
+}
+.ov8-bottom > div {
+  border: 1px solid rgba(80, 120, 255, .30);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(13, 22, 60, .72), rgba(8, 13, 38, .72));
+  padding: 14px 16px 16px;
+}
+.ov8-bottom .ov8-entry-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.ov8-bottom .ov8-entry {
+  min-width: 0;
+  padding: 10px 12px;
+}
+@media (max-width: 1280px) {
+  .ov8-top-data-row,
+  .ov8-training-data-row,
+  .ov8-focus-map-row {
+    grid-template-columns: 1fr;
+  }
+  .ov8-six-map-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .ov8-bottom .ov8-entry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 680px) {
+  .ov8-top-data-row,
+  .ov8-faceit-row,
+  .ov8-training-data-row,
+  .ov8-focus-map-row {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+  .ov8-six-map-grid,
+  .ov8-bottom .ov8-entry-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .ov8-player-row {
+    grid-template-columns: minmax(58px, 1fr) repeat(3, 56px);
+    column-gap: 6px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 760px) {
+  .ov8-motion-grid { inset: 8% -8% 0 18%; }
+  .ov8-motion-aura { left: 34%; width: 66%; opacity: .38; }
+  .ov8-motion-floor { left: 36%; width: 66%; }
+  .ov8-motion-orbit--outer { left: 35%; width: 67%; opacity: .58; }
+  .ov8-motion-orbit--inner { left: 46%; width: 48%; opacity: .48; }
+  .ov8-motion-streak:nth-child(3),
+  .ov8-motion-streak:nth-child(4) { display: none; }
+}

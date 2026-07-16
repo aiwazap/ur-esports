@@ -40,6 +40,7 @@ const DICT = {
   'nav.overview':     { zh: '赛训总览', en: 'Overview', mn: 'Yeronkhii' },
   'nav.members':      { zh: '赛训团队', en: 'Members', mn: 'Gishuud' },
   'nav.matches':      { zh: '近期赛事', en: 'Matches', mn: 'Togloltuud' },
+  'nav.faceitSea':    { zh: 'FACEIT SEA', en: 'FACEIT SEA', mn: 'FACEIT SEA' },
   'nav.training':     { zh: '每日赛训', en: 'Training', mn: 'Beltgel' },
   'nav.analytics':    { zh: '赛训汇总报告', en: 'Summary Report', mn: 'Shinjilgee' },
   'nav.tactics':      { zh: '战术总表', en: 'Tactics', mn: 'Taktik' },

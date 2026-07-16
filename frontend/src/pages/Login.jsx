@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../api';
 
 export default function Login() {
@@ -85,10 +85,7 @@ export default function Login() {
           {loading ? '登录中...' : '登录'}
         </button>
 
-        <div className="login-register">
-          没有账号？{' '}
-          <Link to="/register">立即注册</Link>
-        </div>
+        <p className="login-guest-note">本系统仅限授权账号访问</p>
       </form>
     </div>
   );

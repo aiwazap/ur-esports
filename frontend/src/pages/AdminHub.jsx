@@ -85,6 +85,14 @@ export default function AdminHub() {
 
   const CARDS = [
     {
+      icon: 'trend',
+      name: 'FACEIT SEA 任务',
+      stat: '五排冲分看板 · 账号 / 目标 / API Key 配置',
+      badge: null,
+      note: '用于 7 月 31 日前 3200 ELO 目标复核',
+      actions: [{ t: '配置 / 查看 →', to: '/faceit-sea?tab=config' }],
+    },
+    {
       icon: 'schedule', name: '比赛记录', stat: scrimTotal != null ? `训练赛 ${scrimTotal} 场 · 展示与查询` : '统计加载中…',
       badge: null, note: '只看不改；数据修正走"赛事编辑"',
       actions: [{ t: '查看 →', to: '/matches' }],
